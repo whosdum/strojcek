@@ -565,11 +565,28 @@ Better Auth with email/password. Creates its own tables (`user`, `session`, `acc
 
 ## Seed Data
 
+Initial data — all editable via admin panel after setup.
+
+### Barbers
 - 3 barbers (Martin, Jakub, Peter)
-- 5 services (Pansky strih, Strih + uprava brady, Uprava brady, Detsky strih, Premium balik)
+
+### Services (from real Strojcek offering)
+
+| Name | Duration | Price | Description |
+|------|----------|-------|-------------|
+| Pansky strih | 60 min | 18 EUR | Kompletny pansky strih zahrna osobnu konzultaciu, strih podla vasho stylu, umytie vlasov a finalny styling. Profesionalna starostlivost a fresh cut. |
+| Pansky strih a uprava brady | 90 min | 23 EUR | Komplexna starostlivost o vlasy aj bradu. Zahrna konzultaciu, presny strih, umytie vlasov, upravu brady alebo kontur a profesionalny styling. Perfektne upraveny vzhlad v jednej sluzbe. |
+| Strojcek Ritual – kompletny strih, brada, vosk a hot towel | 90 min | 30 EUR | Zazite kompletnu starostlivost o vlasy a bradu – od presneho strihu a umytia vlasov, cez upravu brady alebo kontur, az po profesionalny styling. Sucastou je aj depilacia voskom, relaxacny zabal horucim utorakom a tradicne turecke opalovanie usi. Vsetko v jednej sluzbe pre perfektne upraveny vzhlad a pocit absolutnej starostlivosti. |
+| Uprava brady | 30 min | 15 EUR | Uprava brady na mieru – od jemneho zastrihnutia az po presne, ostre linie. Zameriavame sa na detail, symetriu a cisty finish. Sviezi, moderny vzhlad, ktory zvyrazni tvoj styl. |
+| Studentsky strih | 60 min | 15 EUR | Zvyhodneny studentsky strih obsahuje strih na mieru a finalnu upravu. Profesionalny pristup, fresh look a prijemna atmosfera. Zlava plati po predlozeni studentskeho preukazu. |
+
+### Schedule (editable via admin panel)
 - Working hours: Mon-Fri 9:00-17:00, Sat 9:00-13:00
 - Lunch break: 12:00-12:30
-- Service-barber assignments
+- All working hours, breaks, and overrides are fully manageable in `/admin/schedule`
+
+### Other
+- Service-barber assignments (all barbers offer all services)
 - 1 admin account (admin@barbershop.sk / changeme123)
 
 ## Environment Variables
@@ -589,7 +606,6 @@ NEXT_PUBLIC_SHOP_TIMEZONE="Europe/Bratislava"
 
 ## Out of Scope (MVP)
 
-- Online payments / Stripe
 - Google Calendar sync
 - Walk-in queue
 - Analytics dashboard with charts
