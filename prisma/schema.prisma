@@ -1,0 +1,172 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Barber {
+  id        String   @id @default(uuid())
+  firstName String   @map("first_name")
+  lastName  String   @map("last_name")
+  email     String?  @unique
+  phone     String?
+  bio       String?
+  avatarUrl String?  @map("avatar_url")
+  isActive  Boolean  @default(true) @map("is_active")
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  services          BarberService[]
+  schedules         Schedule[]
+  scheduleOverrides ScheduleOverride[]
+  scheduleBreaks    ScheduleBreak[]
+  appointments      Appointment[]
+
+  @@map("barbers")
+}
+
+model Service {
+  id              String   @id @default(uuid())
+  name            String   @unique
+  description     String?
+  durationMinutes Int      @map("duration_minutes")
+  price           Decimal  @db.Decimal(10, 2)
+  bufferMinutes   Int      @default(5) @map("buffer_minutes")
+  isActive        Boolean  @default(true) @map("is_active")
+  sortOrder       Int      @default(0) @map("sort_order")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  barbers      BarberService[]
+  appointments Appointment[]
+
+  @@map("services")
+}
+
+model BarberService {
+  barberId       String   @map("barber_id")
+  serviceId      String   @map("service_id")
+  customPrice    Decimal? @map("custom_price") @db.Decimal(10, 2)
+  customDuration Int?     @map("custom_duration_minutes")
+
+  barber  Barber  @relation(fields: [barberId], references: [id])
+  service Service @relation(fields: [serviceId], references: [id])
+
+  @@id([barberId, serviceId])
+  @@map("barber_services")
+}
+
+model Schedule {
+  id        String  @id @default(uuid())
+  barberId  String  @map("barber_id")
+  dayOfWeek Int     @map("day_of_week")
+  startTime String  @map("start_time")
+  endTime   String  @map("end_time")
+  isActive  Boolean @default(true) @map("is_active")
+
+  barber Barber @relation(fields: [barberId], references: [id])
+
+  @@map("schedules")
+}
+
+model ScheduleOverride {
+  id           String   @id @default(uuid())
+  barberId     String   @map("barber_id")
+  overrideDate DateTime @map("override_date") @db.Date
+  isAvailable  Boolean  @default(false) @map("is_available")
+  startTime    String?  @map("start_time")
+  endTime      String?  @map("end_time")
+  reason       String?
+
+  barber Barber @relation(fields: [barberId], references: [id])
+
+  @@unique([barberId, overrideDate])
+  @@map("schedule_overrides")
+}
+
+model ScheduleBreak {
+  id        String @id @default(uuid())
+  barberId  String @map("barber_id")
+  dayOfWeek Int    @map("day_of_week")
+  startTime String @map("start_time")
+  endTime   String @map("end_time")
+  label     String @default("Prestavka")
+
+  barber Barber @relation(fields: [barberId], references: [id])
+
+  @@unique([barberId, dayOfWeek, startTime])
+  @@map("schedule_breaks")
+}
+
+model Customer {
+  id         String   @id @default(uuid())
+  firstName  String   @map("first_name")
+  lastName   String?  @map("last_name")
+  phone      String   @unique
+  email      String?
+  notes      String?
+  visitCount Int      @default(0) @map("visit_count")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  appointments Appointment[]
+
+  @@map("customers")
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+model Appointment {
+  id                 String            @id @default(uuid())
+  barberId           String            @map("barber_id")
+  customerId         String?           @map("customer_id")
+  serviceId          String            @map("service_id")
+  startTime          DateTime          @map("start_time")
+  endTime            DateTime          @map("end_time")
+  status             AppointmentStatus @default(PENDING)
+  priceExpected      Decimal           @map("price_expected") @db.Decimal(10, 2)
+  priceFinal         Decimal?          @map("price_final") @db.Decimal(10, 2)
+  customerName       String?           @map("customer_name")
+  customerPhone      String?           @map("customer_phone")
+  customerEmail      String?           @map("customer_email")
+  cancellationToken  String?           @unique @map("cancellation_token")
+  cancellationReason String?           @map("cancellation_reason")
+  notes              String?
+  source             String            @default("online")
+  reminderSentAt     DateTime?         @map("reminder_sent_at")
+  createdAt          DateTime          @default(now()) @map("created_at")
+  updatedAt          DateTime          @updatedAt @map("updated_at")
+
+  barber        Barber                     @relation(fields: [barberId], references: [id])
+  customer      Customer?                  @relation(fields: [customerId], references: [id])
+  service       Service                    @relation(fields: [serviceId], references: [id])
+  statusHistory AppointmentStatusHistory[]
+
+  @@index([barberId, startTime])
+  @@map("appointments")
+}
+
+model AppointmentStatusHistory {
+  id            String             @id @default(uuid())
+  appointmentId String             @map("appointment_id")
+  oldStatus     AppointmentStatus? @map("old_status")
+  newStatus     AppointmentStatus  @map("new_status")
+  changedBy     String?            @map("changed_by")
+  reason        String?
+  changedAt     DateTime           @default(now()) @map("changed_at")
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+
+  @@map("appointment_status_history")
+}
