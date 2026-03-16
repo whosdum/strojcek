@@ -1,0 +1,285 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import {
+  upsertSchedule,
+  deleteSchedule,
+  createBreak,
+  deleteBreak,
+  createOverride,
+  deleteOverride,
+} from "@/server/actions/schedules";
+import { Loader2Icon, PlusIcon, TrashIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
+
+const DAYS = [
+  "Nedeľa",
+  "Pondelok",
+  "Utorok",
+  "Streda",
+  "Štvrtok",
+  "Piatok",
+  "Sobota",
+];
+
+interface Barber {
+  id: string;
+  firstName: string;
+  lastName: string;
+  schedules: {
+    id: string;
+    dayOfWeek: number;
+    startTime: string;
+    endTime: string;
+    isActive: boolean;
+  }[];
+  scheduleBreaks: {
+    id: string;
+    dayOfWeek: number;
+    startTime: string;
+    endTime: string;
+    label: string;
+  }[];
+}
+
+interface ScheduleManagerProps {
+  barbers: Barber[];
+}
+
+export function ScheduleManager({ barbers }: ScheduleManagerProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [selectedBarber, setSelectedBarber] = useState(barbers[0]?.id ?? "");
+
+  const barber = barbers.find((b) => b.id === selectedBarber);
+
+  const handleSaveSchedule = (dayOfWeek: number, startTime: string, endTime: string, isActive: boolean) => {
+    startTransition(async () => {
+      await upsertSchedule({
+        barberId: selectedBarber,
+        dayOfWeek,
+        startTime,
+        endTime,
+        isActive,
+      });
+      router.refresh();
+    });
+  };
+
+  const handleDeleteBreak = (breakId: string) => {
+    startTransition(async () => {
+      await deleteBreak(breakId);
+      router.refresh();
+    });
+  };
+
+  const handleAddBreak = (dayOfWeek: number, startTime: string, endTime: string) => {
+    startTransition(async () => {
+      await createBreak({
+        barberId: selectedBarber,
+        dayOfWeek,
+        startTime,
+        endTime,
+        label: "Prestávka",
+      });
+      router.refresh();
+    });
+  };
+
+  return (
+    <div>
+      {barbers.length > 1 && (
+        <div className="mb-4">
+          <Label>Barbier</Label>
+          <select
+            className="mt-1 block w-48 rounded-lg border px-3 py-2 text-sm"
+            value={selectedBarber}
+            onChange={(e) => setSelectedBarber(e.target.value)}
+          >
+            {barbers.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.firstName} {b.lastName}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {barber && (
+        <Tabs defaultValue="schedule">
+          <TabsList>
+            <TabsTrigger value="schedule">Pracovné hodiny</TabsTrigger>
+            <TabsTrigger value="breaks">Prestávky</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="schedule" className="mt-4">
+            <div className="space-y-3">
+              {DAYS.map((dayName, dayOfWeek) => {
+                const schedule = barber.schedules.find(
+                  (s) => s.dayOfWeek === dayOfWeek
+                );
+                return (
+                  <DayScheduleRow
+                    key={dayOfWeek}
+                    dayName={dayName}
+                    dayOfWeek={dayOfWeek}
+                    startTime={schedule?.startTime ?? "09:00"}
+                    endTime={schedule?.endTime ?? "17:00"}
+                    isActive={schedule?.isActive ?? false}
+                    isPending={isPending}
+                    onSave={handleSaveSchedule}
+                  />
+                );
+              })}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="breaks" className="mt-4">
+            <div className="space-y-3">
+              {DAYS.map((dayName, dayOfWeek) => {
+                const dayBreaks = barber.scheduleBreaks.filter(
+                  (b) => b.dayOfWeek === dayOfWeek
+                );
+                return (
+                  <Card key={dayOfWeek}>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">{dayName}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      {dayBreaks.map((brk) => (
+                        <div
+                          key={brk.id}
+                          className="flex items-center gap-2 text-sm"
+                        >
+                          <span>
+                            {brk.startTime} — {brk.endTime}
+                          </span>
+                          <Badge variant="secondary">{brk.label}</Badge>
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            onClick={() => handleDeleteBreak(brk.id)}
+                            disabled={isPending}
+                          >
+                            <TrashIcon className="size-3" />
+                          </Button>
+                        </div>
+                      ))}
+                      <AddBreakRow
+                        dayOfWeek={dayOfWeek}
+                        isPending={isPending}
+                        onAdd={handleAddBreak}
+                      />
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </TabsContent>
+        </Tabs>
+      )}
+    </div>
+  );
+}
+
+function DayScheduleRow({
+  dayName,
+  dayOfWeek,
+  startTime: defaultStart,
+  endTime: defaultEnd,
+  isActive: defaultActive,
+  isPending,
+  onSave,
+}: {
+  dayName: string;
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  isActive: boolean;
+  isPending: boolean;
+  onSave: (dayOfWeek: number, startTime: string, endTime: string, isActive: boolean) => void;
+}) {
+  const [startTime, setStartTime] = useState(defaultStart);
+  const [endTime, setEndTime] = useState(defaultEnd);
+  const [isActive, setIsActive] = useState(defaultActive);
+
+  return (
+    <div className="flex items-center gap-3 rounded-lg border p-3">
+      <div className="w-20 text-sm font-medium">{dayName}</div>
+      <Switch
+        checked={isActive}
+        onCheckedChange={setIsActive}
+      />
+      <Input
+        type="time"
+        value={startTime}
+        onChange={(e) => setStartTime(e.target.value)}
+        className="w-28"
+        disabled={!isActive}
+      />
+      <span className="text-muted-foreground">—</span>
+      <Input
+        type="time"
+        value={endTime}
+        onChange={(e) => setEndTime(e.target.value)}
+        className="w-28"
+        disabled={!isActive}
+      />
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={isPending}
+        onClick={() => onSave(dayOfWeek, startTime, endTime, isActive)}
+      >
+        {isPending ? <Loader2Icon className="size-3 animate-spin" /> : "Uložiť"}
+      </Button>
+    </div>
+  );
+}
+
+function AddBreakRow({
+  dayOfWeek,
+  isPending,
+  onAdd,
+}: {
+  dayOfWeek: number;
+  isPending: boolean;
+  onAdd: (dayOfWeek: number, startTime: string, endTime: string) => void;
+}) {
+  const [startTime, setStartTime] = useState("12:00");
+  const [endTime, setEndTime] = useState("12:30");
+
+  return (
+    <div className="flex items-center gap-2">
+      <Input
+        type="time"
+        value={startTime}
+        onChange={(e) => setStartTime(e.target.value)}
+        className="w-28"
+      />
+      <span className="text-muted-foreground">—</span>
+      <Input
+        type="time"
+        value={endTime}
+        onChange={(e) => setEndTime(e.target.value)}
+        className="w-28"
+      />
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={isPending}
+        onClick={() => onAdd(dayOfWeek, startTime, endTime)}
+      >
+        <PlusIcon className="mr-1 size-3" />
+        Pridať
+      </Button>
+    </div>
+  );
+}

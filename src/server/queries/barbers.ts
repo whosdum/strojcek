@@ -26,6 +26,16 @@ export async function getAllBarbers() {
   });
 }
 
+export async function getAllBarbersWithSchedules() {
+  return prisma.barber.findMany({
+    orderBy: { sortOrder: "asc" },
+    include: {
+      schedules: { orderBy: { dayOfWeek: "asc" } },
+      scheduleBreaks: { orderBy: { dayOfWeek: "asc" } },
+    },
+  });
+}
+
 export async function getBarberById(id: string) {
   return prisma.barber.findUnique({
     where: { id },
