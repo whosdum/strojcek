@@ -7,7 +7,7 @@ export const bookingInputSchema = z.object({
   time: z.string().regex(/^\d{2}:\d{2}$/),
   firstName: z.string().min(1, "Meno je povinné"),
   lastName: z.string().optional().default(""),
-  phone: z.string().min(1, "Telefón je povinný"),
+  phone: z.string().min(1, "Telefón je povinný").regex(/^9\d{8}$/, "Neplatné telefónne číslo"),
   email: z.string().email("Zadajte platný email"),
   note: z.string().optional().default(""),
 });

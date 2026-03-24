@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateAppointmentStatus } from "@/server/actions/appointments";
 import { AppointmentStatus } from "@/generated/prisma/client";
+import { VALID_STATUS_TRANSITIONS } from "@/lib/constants";
 import { Loader2Icon } from "lucide-react";
 import {
   Select,
@@ -22,8 +23,6 @@ const STATUS_LABELS: Record<string, string> = {
   NO_SHOW: "Neprišiel",
 };
 
-const ALL_STATUSES = Object.keys(STATUS_LABELS);
-
 interface StatusActionsProps {
   appointmentId: string;
   currentStatus: string;
@@ -32,6 +31,10 @@ interface StatusActionsProps {
 export function StatusActions({ appointmentId, currentStatus }: StatusActionsProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+
+  // Only show valid next statuses + current status
+  const validNextStatuses = VALID_STATUS_TRANSITIONS[currentStatus] ?? [];
+  const selectableStatuses = [currentStatus, ...validNextStatuses];
 
   const handleChange = (newStatus: string | null) => {
     if (!newStatus || newStatus === currentStatus) return;
@@ -51,7 +54,7 @@ export function StatusActions({ appointmentId, currentStatus }: StatusActionsPro
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {ALL_STATUSES.map((status) => (
+          {selectableStatuses.map((status) => (
             <SelectItem key={status} value={status}>
               {STATUS_LABELS[status]}
             </SelectItem>

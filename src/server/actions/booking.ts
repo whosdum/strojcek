@@ -9,9 +9,9 @@ import { sendSMS } from "@/server/lib/sms";
 import { sendTelegramNotification } from "@/server/lib/telegram";
 import { bookingConfirmationHtml } from "@/emails/booking-confirmation";
 import { bookingCancellationHtml } from "@/emails/booking-cancellation";
-import { MIN_CANCEL_HOURS, CANCELLABLE_STATUSES } from "@/lib/constants";
+import { MIN_CANCEL_HOURS, CANCELLABLE_STATUSES, TIMEZONE } from "@/lib/constants";
 import { addMinutes, format, addHours, isBefore } from "date-fns";
-import { parseISO } from "date-fns";
+import { fromZonedTime } from "date-fns-tz";
 
 type ActionResult = {
   success: boolean;
@@ -44,10 +44,8 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
     const duration = barberService.customDuration ?? service.durationMinutes;
     const price = barberService.customPrice ?? service.price;
 
-    // Calculate start and end times
-    const [hours, mins] = data.time.split(":").map(Number);
-    const startTime = parseISO(data.date);
-    startTime.setHours(hours, mins, 0, 0);
+    // Calculate start and end times (interpret date+time as Europe/Bratislava)
+    const startTime = fromZonedTime(`${data.date}T${data.time}:00`, TIMEZONE);
     const endTime = addMinutes(startTime, duration);
 
     // Find or create customer (identified by normalized phone)
@@ -212,7 +210,8 @@ export async function cancelBooking(rawToken: string): Promise<ActionResult> {
       return { success: false, error: "Táto rezervácia už bola zrušená." };
     }
 
-    const minCancelTime = addHours(new Date(), MIN_CANCEL_HOURS);
+    const now = new Date();
+    const minCancelTime = addHours(now, MIN_CANCEL_HOURS);
     if (isBefore(appointment.startTime, minCancelTime)) {
       return {
         success: false,

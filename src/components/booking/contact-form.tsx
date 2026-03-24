@@ -14,7 +14,7 @@ const contactSchema = z.object({
   phone: z
     .string()
     .min(1, "Telefón je povinný")
-    .regex(/^\d{9}$/, "Zadajte 9-miestne číslo (napr. 903 123 456)"),
+    .regex(/^9\d{8}$/, "Zadajte platné SK číslo (napr. 903 123 456)"),
   email: z.string().email("Zadajte platný email"),
   note: z.string(),
 });

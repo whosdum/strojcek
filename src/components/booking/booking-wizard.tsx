@@ -24,6 +24,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { Checkbox } from "@/components/ui/checkbox";
 
 import { SectionWrapper } from "./section-wrapper";
 import { TimeSlots } from "./time-slots";
@@ -287,17 +288,8 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
   const handleSelectService = useCallback(
     (serviceId: string) => {
       dispatch({ type: "SELECT_SERVICE", serviceId });
-      const matching = barbers.filter((b) => b.serviceIds.includes(serviceId));
-      if (matching.length === 1) {
-        const barber = matching[0];
-        dispatch({ type: "SELECT_BARBER", barberId: barber.id });
-        startTransition(async () => {
-          const days = await fetchWorkingDays(barber.id);
-          dispatch({ type: "SET_WORKING_DAYS", workingDays: days });
-        });
-      }
     },
-    [barbers]
+    []
   );
 
   const handleSelectBarber = useCallback((barberId: string) => {
@@ -625,11 +617,11 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
 
             {/* Terms checkbox */}
             <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-xl border border-border/40 bg-muted/20 p-4">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={termsAccepted}
-                onChange={(e) => setTermsAccepted(e.target.checked)}
-                className="mt-0.5 size-5 shrink-0 accent-primary"
+                onCheckedChange={(checked) => setTermsAccepted(checked === true)}
+                aria-label="Súhlasím s obchodnými podmienkami a zásadami ochrany osobných údajov"
+                className="mt-0.5 size-5 shrink-0"
               />
               <span className="text-[14px] leading-snug text-muted-foreground">
                 Súhlasím s{" "}
@@ -777,7 +769,7 @@ function BarberCardWizard({
       type="button"
       onClick={onClick}
       className={cn(
-        "flex w-full items-center gap-3.5 rounded-xl border p-3.5 text-left transition-all active:scale-[0.98] sm:p-4",
+        "flex w-full flex-col items-center gap-3 rounded-xl border p-5 text-center transition-all active:scale-[0.98]",
         isSelected
           ? "border-primary/60 bg-primary/10 shadow-sm"
           : "border-border/40 bg-muted/30 hover:border-border/70 hover:bg-muted/50"
@@ -786,8 +778,8 @@ function BarberCardWizard({
       {/* Avatar */}
       <div
         className={cn(
-          "flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-full",
-          isSelected ? "ring-2 ring-primary" : "ring-1 ring-border/60"
+          "flex size-28 shrink-0 items-center justify-center overflow-hidden rounded-full",
+          isSelected ? "ring-3 ring-primary" : "ring-1 ring-border/60"
         )}
       >
         {avatarUrl ? (
@@ -799,28 +791,32 @@ function BarberCardWizard({
           />
         ) : (
           <div className="flex size-full items-center justify-center bg-muted">
-            <UserIcon className="size-6 text-muted-foreground" />
+            <UserIcon className="size-10 text-muted-foreground" />
           </div>
         )}
       </div>
 
       {/* Content */}
-      <div className="min-w-0 flex-1">
+      <div>
         <h3 className="text-[17px] font-semibold leading-tight text-foreground">
           {firstName} {lastName}
         </h3>
         {bio && (
-          <p className="mt-0.5 text-[15px] leading-snug text-muted-foreground">
+          <p className="mt-1 text-[15px] leading-snug text-muted-foreground">
             {bio}
           </p>
         )}
       </div>
 
-      {/* Check */}
-      {isSelected && (
+      {/* Hint / Check */}
+      {isSelected ? (
         <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary">
           <CheckCircle2Icon className="size-4 text-primary-foreground" />
         </div>
+      ) : (
+        <span className="mt-1 text-[13px] font-medium text-primary/70">
+          Klikni pre výber →
+        </span>
       )}
     </button>
   );

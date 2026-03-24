@@ -217,6 +217,7 @@ model Appointment {
   statusHistory AppointmentStatusHistory[]
 
   @@index([barberId, startTime])
+  @@index([status, startTime])
   @@map("appointments")
 }
 

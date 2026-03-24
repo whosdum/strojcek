@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/server/lib/prisma";
 import { sendEmail } from "@/server/lib/email";
+import { sendSMS } from "@/server/lib/sms";
+import { generateToken, hashToken } from "@/server/lib/tokens";
 import { bookingReminderHtml } from "@/emails/booking-reminder";
 import { addHours, format } from "date-fns";
 
@@ -39,9 +41,15 @@ export async function GET(request: NextRequest) {
     if (!appt.customerEmail) continue;
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    // Note: we don't have the raw token, so cancel link can't be generated here.
-    // The original cancel URL was sent in the confirmation email.
-    const cancelUrl = `${appUrl}/book`;
+
+    // Generate a fresh cancellation token so the reminder email has a working cancel link
+    const rawToken = generateToken();
+    const hashedToken = hashToken(rawToken);
+    await prisma.appointment.update({
+      where: { id: appt.id },
+      data: { cancellationToken: hashedToken },
+    });
+    const cancelUrl = `${appUrl}/cancel?token=${rawToken}`;
 
     try {
       await sendEmail({
@@ -56,6 +64,16 @@ export async function GET(request: NextRequest) {
           cancelUrl,
         }),
       });
+
+      // Send SMS reminder (non-blocking)
+      if (appt.customerPhone) {
+        sendSMS({
+          phone: appt.customerPhone,
+          message: `Pripomienka: zajtra ${format(appt.startTime, "HH:mm")} máte rezerváciu v Strojčeku (${appt.service.name}). Ak potrebujete zrušiť, kontaktujte nás.`,
+        }).catch((err) =>
+          console.error(`[cron/reminders] SMS failed for ${appt.id}:`, err)
+        );
+      }
 
       await prisma.appointment.update({
         where: { id: appt.id },

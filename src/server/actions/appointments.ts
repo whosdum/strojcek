@@ -2,6 +2,7 @@
 
 import { prisma } from "@/server/lib/prisma";
 import { AppointmentStatus } from "@/generated/prisma/client";
+import { VALID_STATUS_TRANSITIONS } from "@/lib/constants";
 
 type ActionResult = { success: boolean; error?: string };
 
@@ -22,6 +23,14 @@ export async function updateAppointmentStatus(
 
     if (appointment.status === newStatus) {
       return { success: true };
+    }
+
+    const allowed = VALID_STATUS_TRANSITIONS[appointment.status] ?? [];
+    if (!allowed.includes(newStatus)) {
+      return {
+        success: false,
+        error: `Nie je možné zmeniť stav z "${appointment.status}" na "${newStatus}".`,
+      };
     }
 
     await prisma.$transaction(async (tx) => {

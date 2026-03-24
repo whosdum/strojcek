@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { PlusIcon, PencilIcon } from "lucide-react";
+import { PlusIcon, PencilIcon, Loader2Icon } from "lucide-react";
 
 // This needs to be a server component but we need dialog state.
 // Using a hybrid approach: server data + client dialog.
@@ -32,6 +32,7 @@ export default function ServicesPage() {
 
 function ServicesContent() {
   const [services, setServices] = useState<Awaited<ReturnType<typeof getAllServices>>>([]);
+  const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editService, setEditService] = useState<typeof services[number] | null>(null);
 
@@ -39,6 +40,7 @@ function ServicesContent() {
     const res = await fetch("/api/admin/services");
     const data = await res.json();
     setServices(data);
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -49,6 +51,7 @@ function ServicesContent() {
       .then((data) => {
         if (!ignore) {
           setServices(data);
+          setLoading(false);
         }
       });
 
@@ -104,7 +107,17 @@ function ServicesContent() {
         </DialogContent>
       </Dialog>
 
-      <div className="space-y-3 md:hidden">
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2Icon className="size-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : services.length === 0 ? (
+        <p className="py-12 text-center text-muted-foreground">
+          Žiadne služby. Pridajte prvú službu.
+        </p>
+      ) : null}
+
+      <div className={loading || services.length === 0 ? "hidden" : "space-y-3 md:hidden"}>
         {services.map((service) => (
           <div key={service.id} className="rounded-xl border bg-card p-4">
             <div className="flex items-start justify-between gap-3">
@@ -139,7 +152,7 @@ function ServicesContent() {
         ))}
       </div>
 
-      <div className="hidden md:block">
+      <div className={loading || services.length === 0 ? "hidden" : "hidden md:block"}>
         <Table className="table-fixed">
           <TableHeader>
             <TableRow>
