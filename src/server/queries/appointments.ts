@@ -1,10 +1,15 @@
 import { prisma } from "@/server/lib/prisma";
-import { PAGE_SIZE } from "@/lib/constants";
-import { startOfDay, endOfDay, startOfWeek, startOfMonth } from "date-fns";
+import { PAGE_SIZE, TIMEZONE } from "@/lib/constants";
+import { startOfDay, endOfDay, startOfMonth } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
 import { AppointmentStatus } from "@/generated/prisma/client";
 
+function nowInTz() {
+  return toZonedTime(new Date(), TIMEZONE);
+}
+
 export async function getTodayAppointments() {
-  const today = startOfDay(new Date());
+  const today = startOfDay(nowInTz());
   const tomorrow = endOfDay(today);
 
   return prisma.appointment.findMany({
@@ -23,7 +28,7 @@ export async function getTodayAppointments() {
 export async function getUpcomingAppointments(limit = 5) {
   return prisma.appointment.findMany({
     where: {
-      startTime: { gte: new Date() },
+      startTime: { gte: nowInTz() },
       status: { notIn: ["CANCELLED", "NO_SHOW"] },
     },
     include: {
@@ -110,7 +115,7 @@ export async function getAppointmentsForCalendar(
   });
 }
 
-export async function getDayStats(date: Date) {
+export async function getDayStats(date: Date = nowInTz()) {
   const dayStart = startOfDay(date);
   const dayEnd = endOfDay(date);
 
@@ -142,35 +147,8 @@ const REVENUE_WHERE = {
   status: { notIn: ["CANCELLED", "NO_SHOW"] as AppointmentStatus[] },
 };
 
-async function sumRevenue(gte: Date, lte: Date): Promise<number> {
-  const result = await prisma.appointment.aggregate({
-    _sum: { priceExpected: true },
-    where: {
-      ...REVENUE_WHERE,
-      startTime: { gte, lte },
-    },
-  });
-  return Number(result._sum.priceExpected ?? 0);
-}
-
-export async function getRevenueStats() {
-  const now = new Date();
-  const todayStart = startOfDay(now);
-  const todayEnd = endOfDay(now);
-  const weekStart = startOfWeek(now, { weekStartsOn: 1 });
-  const monthStart = startOfMonth(now);
-
-  const [today, week, month] = await Promise.all([
-    sumRevenue(todayStart, todayEnd),
-    sumRevenue(weekStart, todayEnd),
-    sumRevenue(monthStart, todayEnd),
-  ]);
-
-  return { today, week, month };
-}
-
 export async function getServicePopularity(limit = 5) {
-  const monthStart = startOfMonth(new Date());
+  const monthStart = startOfMonth(nowInTz());
 
   const grouped = await prisma.appointment.groupBy({
     by: ["serviceId"],

@@ -1,6 +1,5 @@
 export const MIN_CANCEL_HOURS = 2;
 export const SLOT_INTERVAL_MINUTES = 60; // Default fallback — actual value from DB (ShopSettings)
-export const DEFAULT_BUFFER_MINUTES = 5;
 export const PAGE_SIZE = 25;
 
 export const SLOT_GROUP_BOUNDARIES = {

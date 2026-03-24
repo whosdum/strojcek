@@ -94,19 +94,3 @@ export async function deleteAppointment(id: string): Promise<ActionResult> {
     return { success: false, error: "Nastala chyba pri mazaní rezervácie." };
   }
 }
-
-export async function updateAppointmentNotes(
-  id: string,
-  notes: string
-): Promise<ActionResult> {
-  try {
-    await prisma.appointment.update({
-      where: { id },
-      data: { notes },
-    });
-    return { success: true };
-  } catch (e) {
-    console.error("[updateAppointmentNotes]", e);
-    return { success: false, error: "Nastala chyba." };
-  }
-}

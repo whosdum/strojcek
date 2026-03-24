@@ -69,18 +69,3 @@ export async function updateBarberServices(
     return { success: false, error: "Nastala chyba." };
   }
 }
-
-export async function toggleBarberActive(id: string): Promise<ActionResult> {
-  try {
-    const barber = await prisma.barber.findUnique({ where: { id } });
-    if (!barber) return { success: false, error: "Barber nenájdený." };
-    await prisma.barber.update({
-      where: { id },
-      data: { isActive: !barber.isActive },
-    });
-    return { success: true };
-  } catch (e) {
-    console.error("[toggleBarberActive]", e);
-    return { success: false, error: "Nastala chyba." };
-  }
-}

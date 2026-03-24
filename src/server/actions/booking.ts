@@ -11,7 +11,7 @@ import { bookingConfirmationHtml } from "@/emails/booking-confirmation";
 import { bookingCancellationHtml } from "@/emails/booking-cancellation";
 import { MIN_CANCEL_HOURS, CANCELLABLE_STATUSES, TIMEZONE } from "@/lib/constants";
 import { addMinutes, format, addHours, isBefore } from "date-fns";
-import { fromZonedTime } from "date-fns-tz";
+import { fromZonedTime, toZonedTime } from "date-fns-tz";
 
 type ActionResult = {
   success: boolean;
@@ -210,7 +210,7 @@ export async function cancelBooking(rawToken: string): Promise<ActionResult> {
       return { success: false, error: "Táto rezervácia už bola zrušená." };
     }
 
-    const now = new Date();
+    const now = toZonedTime(new Date(), TIMEZONE);
     const minCancelTime = addHours(now, MIN_CANCEL_HOURS);
     if (isBefore(appointment.startTime, minCancelTime)) {
       return {

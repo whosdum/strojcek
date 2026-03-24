@@ -3,6 +3,8 @@ import { auth } from "@/server/lib/auth";
 import { getAppointmentsForCalendar } from "@/server/queries/appointments";
 import { parseISO } from "date-fns";
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function GET(request: NextRequest) {
   // Auth check — only logged-in admin users
   const session = await auth.api.getSession({
@@ -15,7 +17,8 @@ export async function GET(request: NextRequest) {
 
   const start = request.nextUrl.searchParams.get("start");
   const end = request.nextUrl.searchParams.get("end");
-  const barberId = request.nextUrl.searchParams.get("barberId") || undefined;
+  const rawBarberId = request.nextUrl.searchParams.get("barberId");
+  const barberId = rawBarberId && UUID_RE.test(rawBarberId) ? rawBarberId : undefined;
 
   if (!start || !end) {
     return NextResponse.json({ error: "Missing start/end" }, { status: 400 });

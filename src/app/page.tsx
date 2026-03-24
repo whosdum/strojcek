@@ -12,6 +12,7 @@ import {
   InstagramIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LandingShell } from "@/components/landing-shell";
 
 const DAY_LABELS = [
   "Nedeľa",
@@ -33,7 +34,7 @@ export default async function HomePage() {
   const schedules = barber?.schedules ?? [];
 
   return (
-    <div className="booking-theme min-h-dvh bg-background text-foreground">
+    <LandingShell>
       {/* Hero */}
       <section className="flex flex-col items-center px-4 pb-10 pt-12 text-center sm:pb-14 sm:pt-16">
         <Image
@@ -110,7 +111,7 @@ export default async function HomePage() {
 
       {/* Barber */}
       {barber && (
-        <section className="px-4 py-10 sm:py-14">
+        <section id="o-nas" className="px-4 py-10 sm:py-14">
           <div className="mx-auto max-w-3xl">
             <h2 className="mb-6 text-center text-xl font-bold sm:text-2xl">
               Váš barbier
@@ -188,73 +189,64 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Contact & Map */}
+      {/* Contact */}
       <section className="px-4 py-10 sm:py-14">
         <div className="mx-auto max-w-3xl">
           <h2 className="mb-6 text-center text-xl font-bold sm:text-2xl">
             Kontakt
           </h2>
-          <div className="grid gap-6 sm:grid-cols-2">
-            <div className="space-y-4 rounded-2xl border border-border/40 bg-card/80 p-5">
-              <div className="flex items-center gap-3">
-                <MapPinIcon className="size-5 shrink-0 text-primary" />
-                <div>
-                  <p className="font-medium">Adresa</p>
-                  <p className="text-sm text-muted-foreground">
-                    Moyzesova 379/2, 014 01 Bytča
-                  </p>
-                </div>
+          <div className="mx-auto max-w-md space-y-4 rounded-2xl border border-border/40 bg-card/80 p-5">
+            <a
+              href="https://maps.app.goo.gl/xYANzT31jAz3viW37"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 rounded-lg p-1 transition-colors hover:bg-muted/50"
+            >
+              <MapPinIcon className="size-5 shrink-0 text-primary" />
+              <div>
+                <p className="font-medium">Adresa</p>
+                <p className="text-sm text-muted-foreground">
+                  Moyzesova 379/2, 014 01 Bytča
+                </p>
               </div>
-              <div className="flex items-center gap-3">
-                <PhoneIcon className="size-5 shrink-0 text-primary" />
-                <div>
-                  <p className="font-medium">Telefón</p>
-                  <a
-                    href="tel:+421944932871"
-                    className="text-sm text-muted-foreground hover:text-primary"
-                  >
-                    +421 944 932 871
-                  </a>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <MailIcon className="size-5 shrink-0 text-primary" />
-                <div>
-                  <p className="font-medium">Email</p>
-                  <a
-                    href="mailto:strojcekbarbershop@gmail.com"
-                    className="text-sm text-muted-foreground hover:text-primary"
-                  >
-                    strojcekbarbershop@gmail.com
-                  </a>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <InstagramIcon className="size-5 shrink-0 text-primary" />
-                <div>
-                  <p className="font-medium">Instagram</p>
-                  <a
-                    href="https://instagram.com/strojcek_barbershop"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-muted-foreground hover:text-primary"
-                  >
-                    @strojcek_barbershop
-                  </a>
-                </div>
+            </a>
+            <div className="flex items-center gap-3 p-1">
+              <PhoneIcon className="size-5 shrink-0 text-primary" />
+              <div>
+                <p className="font-medium">Telefón</p>
+                <a
+                  href="tel:+421944932871"
+                  className="text-sm text-muted-foreground hover:text-primary"
+                >
+                  +421 944 932 871
+                </a>
               </div>
             </div>
-            <div className="overflow-hidden rounded-2xl border border-border/40">
-              <iframe
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2609.8!2d18.5583!3d49.2241!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNDnCsDEzJzI3LjAiTiAxOMKwMzMnMzAuMCJF!5e0!3m2!1ssk!2ssk!4v1"
-                width="100%"
-                height="280"
-                style={{ border: 0 }}
-                allowFullScreen
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                title="Strojček barbershop na mape"
-              />
+            <div className="flex items-center gap-3 p-1">
+              <MailIcon className="size-5 shrink-0 text-primary" />
+              <div>
+                <p className="font-medium">Email</p>
+                <a
+                  href="mailto:strojcekbarbershop@gmail.com"
+                  className="text-sm text-muted-foreground hover:text-primary"
+                >
+                  strojcekbarbershop@gmail.com
+                </a>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-1">
+              <InstagramIcon className="size-5 shrink-0 text-primary" />
+              <div>
+                <p className="font-medium">Instagram</p>
+                <a
+                  href="https://instagram.com/strojcek_barbershop"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-muted-foreground hover:text-primary"
+                >
+                  @strojcek_barbershop
+                </a>
+              </div>
             </div>
           </div>
         </div>
@@ -297,6 +289,6 @@ export default async function HomePage() {
           © {new Date().getFullYear()} STROJČEK s.r.o. | IČO: 57286477
         </p>
       </footer>
-    </div>
+    </LandingShell>
   );
 }

@@ -26,18 +26,3 @@ export async function updateService(id: string, input: unknown): Promise<ActionR
     return { success: false, error: "Nastala chyba pri aktualizácii služby." };
   }
 }
-
-export async function toggleServiceActive(id: string): Promise<ActionResult> {
-  try {
-    const service = await prisma.service.findUnique({ where: { id } });
-    if (!service) return { success: false, error: "Služba nenájdená." };
-    await prisma.service.update({
-      where: { id },
-      data: { isActive: !service.isActive },
-    });
-    return { success: true };
-  } catch (e) {
-    console.error("[toggleServiceActive]", e);
-    return { success: false, error: "Nastala chyba." };
-  }
-}
