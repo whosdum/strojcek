@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
+import { StructuredData } from "@/components/structured-data";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -7,9 +8,60 @@ const geistSans = Geist({
   subsets: ["latin", "latin-ext"],
 });
 
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://strojcek.sk";
+
 export const metadata: Metadata = {
-  title: "Strojček — Rezervácia",
-  description: "Rezervujte si termín v barbershope Strojček",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "Strojček — Barbershop Bytča",
+    template: "%s | Strojček",
+  },
+  description:
+    "Pánsky barbershop v Bytči. Strih, úprava brady, hot towel rituál. Rezervujte si termín online.",
+  keywords: [
+    "barber",
+    "barbershop",
+    "Bytča",
+    "pánsky strih",
+    "úprava brady",
+    "Strojček",
+    "holič",
+    "rezervácia",
+  ],
+  authors: [{ name: "STROJČEK s.r.o." }],
+  creator: "STROJČEK s.r.o.",
+  openGraph: {
+    type: "website",
+    locale: "sk_SK",
+    url: SITE_URL,
+    siteName: "Strojček",
+    title: "Strojček — Barbershop Bytča",
+    description:
+      "Pánsky barbershop v Bytči. Strih, úprava brady, hot towel rituál. Rezervujte si termín online.",
+    images: [
+      {
+        url: "/logo.jpg",
+        width: 800,
+        height: 600,
+        alt: "Strojček Barbershop",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Strojček — Barbershop Bytča",
+    description:
+      "Pánsky barbershop v Bytči. Rezervujte si termín online.",
+    images: ["/logo.jpg"],
+  },
+  icons: {
+    icon: "/logo.jpg",
+    apple: "/logo.jpg",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({
@@ -20,6 +72,7 @@ export default function RootLayout({
   return (
     <html lang="sk">
       <body className={`${geistSans.variable} font-sans antialiased`}>
+        <StructuredData />
         {children}
       </body>
     </html>

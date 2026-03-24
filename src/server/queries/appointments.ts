@@ -1,6 +1,6 @@
 import { prisma } from "@/server/lib/prisma";
 import { PAGE_SIZE } from "@/lib/constants";
-import { startOfDay, endOfDay } from "date-fns";
+import { startOfDay, endOfDay, startOfWeek, startOfMonth } from "date-fns";
 import { AppointmentStatus } from "@/generated/prisma/client";
 
 export async function getTodayAppointments() {
@@ -136,4 +136,65 @@ export async function getDayStats(date: Date) {
   ]);
 
   return { total, completed, noShow, noShowRate: total > 0 ? noShow / total : 0 };
+}
+
+const REVENUE_WHERE = {
+  status: { notIn: ["CANCELLED", "NO_SHOW"] as AppointmentStatus[] },
+};
+
+async function sumRevenue(gte: Date, lte: Date): Promise<number> {
+  const result = await prisma.appointment.aggregate({
+    _sum: { priceExpected: true },
+    where: {
+      ...REVENUE_WHERE,
+      startTime: { gte, lte },
+    },
+  });
+  return Number(result._sum.priceExpected ?? 0);
+}
+
+export async function getRevenueStats() {
+  const now = new Date();
+  const todayStart = startOfDay(now);
+  const todayEnd = endOfDay(now);
+  const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+  const monthStart = startOfMonth(now);
+
+  const [today, week, month] = await Promise.all([
+    sumRevenue(todayStart, todayEnd),
+    sumRevenue(weekStart, todayEnd),
+    sumRevenue(monthStart, todayEnd),
+  ]);
+
+  return { today, week, month };
+}
+
+export async function getServicePopularity(limit = 5) {
+  const monthStart = startOfMonth(new Date());
+
+  const grouped = await prisma.appointment.groupBy({
+    by: ["serviceId"],
+    _count: { id: true },
+    _sum: { priceExpected: true },
+    where: {
+      ...REVENUE_WHERE,
+      startTime: { gte: monthStart },
+    },
+    orderBy: { _count: { id: "desc" } },
+    take: limit,
+  });
+
+  const serviceIds = grouped.map((g) => g.serviceId);
+  const services = await prisma.service.findMany({
+    where: { id: { in: serviceIds } },
+    select: { id: true, name: true },
+  });
+
+  const serviceMap = new Map(services.map((s) => [s.id, s.name]));
+
+  return grouped.map((g) => ({
+    serviceName: serviceMap.get(g.serviceId) ?? "Neznáma",
+    count: g._count.id,
+    revenue: Number(g._sum.priceExpected ?? 0),
+  }));
 }

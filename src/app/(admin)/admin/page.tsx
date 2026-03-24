@@ -1,9 +1,9 @@
-import { getTodayAppointments, getUpcomingAppointments, getDayStats } from "@/server/queries/appointments";
+import { getTodayAppointments, getUpcomingAppointments, getDayStats, getServicePopularity } from "@/server/queries/appointments";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { sk } from "date-fns/locale";
-import { CalendarDaysIcon, ClockIcon, UsersIcon, TrendingUpIcon } from "lucide-react";
+import { CalendarDaysIcon, ClockIcon, UsersIcon, TrendingUpIcon, BarChart3Icon } from "lucide-react";
 import Link from "next/link";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -25,10 +25,11 @@ const STATUS_VARIANTS: Record<string, "default" | "secondary" | "destructive" | 
 };
 
 export default async function AdminDashboardPage() {
-  const [todayAppointments, upcoming, stats] = await Promise.all([
+  const [todayAppointments, upcoming, stats, popularity] = await Promise.all([
     getTodayAppointments(),
     getUpcomingAppointments(5),
     getDayStats(new Date()),
+    getServicePopularity(),
   ]);
 
   return (
@@ -145,6 +146,36 @@ export default async function AdminDashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Service popularity */}
+      {popularity.length > 0 && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3Icon className="size-5" />
+              Top služby tento mesiac
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {popularity.map((item, i) => (
+                <div key={i} className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-3">
+                    <span className="flex size-6 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                      {i + 1}
+                    </span>
+                    <span className="font-medium">{item.serviceName}</span>
+                  </div>
+                  <div className="flex items-center gap-4 text-muted-foreground">
+                    <span>{item.count}× rezervácií</span>
+                    <span className="font-medium text-foreground">{item.revenue} €</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
