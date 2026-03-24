@@ -1,3 +1,0 @@
-[     190ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/admin/calendar?start=2026-03-16T00:00:00+01:00&end=2026-03-23T00:00:00+01:00:0
-[     190ms] [WARNING] Failed to execute 'json' on 'Response': Unexpected end of JSON input SyntaxError: Failed to execute 'json' on 'Response': Unexpected end of JSON input
-    at AdminCalendar.useCallback[fetchEvents] (http://localhost:3000/_next/static/chunks/strojcek_src_components_admin_admin-calendar_tsx_c57862cb._.js:33:42) @ http://localhost:3000/_next/static/chunks/dc81f_next_dist_3253c1c8._.js:2297
