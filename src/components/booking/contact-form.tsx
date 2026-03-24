@@ -11,7 +11,10 @@ import { Textarea } from "@/components/ui/textarea";
 const contactSchema = z.object({
   firstName: z.string().min(1, "Meno je povinné"),
   lastName: z.string(),
-  phone: z.string().min(1, "Telefón je povinný"),
+  phone: z
+    .string()
+    .min(1, "Telefón je povinný")
+    .regex(/^\d{9}$/, "Zadajte 9-miestne číslo (napr. 903 123 456)"),
   email: z.string().email("Zadajte platný email"),
   note: z.string(),
 });
@@ -20,9 +23,10 @@ type ContactFormValues = z.infer<typeof contactSchema>;
 
 interface ContactFormProps {
   onSubmit: (data: ContactFormValues) => void;
+  defaultValues?: Partial<ContactFormValues>;
 }
 
-export function ContactForm({ onSubmit }: ContactFormProps) {
+export function ContactForm(props: ContactFormProps) {
   const {
     register,
     handleSubmit,
@@ -35,63 +39,104 @@ export function ContactForm({ onSubmit }: ContactFormProps) {
       phone: "",
       email: "",
       note: "",
+      ...props.defaultValues,
     },
   });
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(props.onSubmit)} className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="firstName">Meno *</Label>
-          <Input id="firstName" {...register("firstName")} />
+          <Label htmlFor="firstName" className="text-[15px] font-medium text-foreground">
+            Meno <span className="text-primary">*</span>
+          </Label>
+          <Input
+            id="firstName"
+            className="h-11 bg-muted/30 text-foreground placeholder:text-muted-foreground/60"
+            placeholder="Ján"
+            {...register("firstName")}
+          />
           {errors.firstName && (
-            <p className="text-xs text-destructive">{errors.firstName.message}</p>
+            <p className="text-[13px] font-medium text-destructive">
+              {errors.firstName.message}
+            </p>
           )}
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="lastName">Priezvisko</Label>
-          <Input id="lastName" {...register("lastName")} />
+          <Label htmlFor="lastName" className="text-[15px] font-medium text-foreground">
+            Priezvisko
+          </Label>
+          <Input
+            id="lastName"
+            className="h-11 bg-muted/30 text-foreground placeholder:text-muted-foreground/60"
+            placeholder="Novák"
+            {...register("lastName")}
+          />
         </div>
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="phone">Telefón *</Label>
+        <Label htmlFor="phone" className="text-[15px] font-medium text-foreground">
+          Telefón <span className="text-primary">*</span>
+        </Label>
         <div className="flex gap-2">
-          <span className="flex h-9 items-center rounded-lg border bg-muted px-3 text-sm text-muted-foreground">
+          <span className="flex h-11 items-center rounded-lg border border-border/40 bg-muted/30 px-3 text-sm font-medium text-muted-foreground">
             +421
           </span>
           <Input
             id="phone"
             type="tel"
+            inputMode="numeric"
+            maxLength={9}
             placeholder="9XX XXX XXX"
-            {...register("phone")}
+            className="h-11 bg-muted/30 text-foreground placeholder:text-muted-foreground/60"
+            {...register("phone", {
+              onChange: (e) => {
+                e.target.value = e.target.value.replace(/\D/g, "").slice(0, 9);
+              },
+            })}
           />
         </div>
         {errors.phone && (
-          <p className="text-xs text-destructive">{errors.phone.message}</p>
+          <p className="text-[13px] font-medium text-destructive">
+            {errors.phone.message}
+          </p>
         )}
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="email">Email *</Label>
-        <Input id="email" type="email" {...register("email")} />
+        <Label htmlFor="email" className="text-[15px] font-medium text-foreground">
+          Email <span className="text-primary">*</span>
+        </Label>
+        <Input
+          id="email"
+          type="email"
+          placeholder="jan@email.sk"
+          className="h-11 bg-muted/30 text-foreground placeholder:text-muted-foreground/60"
+          {...register("email")}
+        />
         {errors.email && (
-          <p className="text-xs text-destructive">{errors.email.message}</p>
+          <p className="text-[13px] font-medium text-destructive">
+            {errors.email.message}
+          </p>
         )}
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="note">Poznámka</Label>
+        <Label htmlFor="note" className="text-[15px] font-medium text-foreground">
+          Poznámka
+        </Label>
         <Textarea
           id="note"
           rows={3}
-          placeholder="Akékoľvek špeciálne požiadavky..."
+          placeholder="Špeciálne požiadavky..."
+          className="bg-muted/30 text-foreground placeholder:text-muted-foreground/60"
           {...register("note")}
         />
       </div>
 
-      <Button type="submit" className="w-full" size="lg">
-        Pokračovať
+      <Button type="submit" className="h-12 w-full text-base font-semibold" size="lg">
+        Ďalej
       </Button>
     </form>
   );

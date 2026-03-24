@@ -1,32 +1,22 @@
-import { BookingSteps } from "@/components/booking/booking-steps";
-import { ServiceCard } from "@/components/booking/service-card";
 import { getActiveServices } from "@/server/queries/services";
+import { getActiveBarbersWithServices } from "@/server/queries/barbers";
+import { BookingWizard } from "@/components/booking/booking-wizard";
 
-export default async function BookingServicePage() {
-  const services = await getActiveServices();
+export const dynamic = "force-dynamic";
 
-  return (
-    <>
-      <BookingSteps currentStep={1} />
-      <h2 className="mb-4 text-lg font-semibold">Vyberte službu</h2>
-      {services.length === 0 ? (
-        <p className="text-center text-muted-foreground">
-          Momentálne nie sú dostupné žiadne služby.
-        </p>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {services.map((service) => (
-            <ServiceCard
-              key={service.id}
-              id={service.id}
-              name={service.name}
-              description={service.description}
-              durationMinutes={service.durationMinutes}
-              price={service.price.toString()}
-            />
-          ))}
-        </div>
-      )}
-    </>
-  );
+export default async function BookingPage() {
+  const [services, barbers] = await Promise.all([
+    getActiveServices(),
+    getActiveBarbersWithServices(),
+  ]);
+
+  const serializedServices = services.map((s) => ({
+    id: s.id,
+    name: s.name,
+    description: s.description,
+    durationMinutes: s.durationMinutes,
+    price: s.price.toString(),
+  }));
+
+  return <BookingWizard services={serializedServices} barbers={barbers} />;
 }

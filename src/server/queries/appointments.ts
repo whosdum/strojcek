@@ -1,6 +1,6 @@
 import { prisma } from "@/server/lib/prisma";
 import { PAGE_SIZE } from "@/lib/constants";
-import { startOfDay, endOfDay, addDays } from "date-fns";
+import { startOfDay, endOfDay } from "date-fns";
 import { AppointmentStatus } from "@/generated/prisma/client";
 
 export async function getTodayAppointments() {

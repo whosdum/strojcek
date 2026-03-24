@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { getAppointments } from "@/server/queries/appointments";
-import { getActiveBarbers } from "@/server/queries/barbers";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,20 +44,17 @@ export default async function ReservationsPage({
 }) {
   const params = await searchParams;
   const page = parseInt(params.page || "1");
-  const barberId = params.barberId;
+  const barberId = params.barberId || undefined;
   const status = params.status as AppointmentStatus | undefined;
 
-  const [{ items, total, pages }, barbers] = await Promise.all([
-    getAppointments({ page, barberId, status }),
-    getActiveBarbers(),
-  ]);
+  const { items, pages } = await getAppointments({ page, barberId, status });
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold">Rezervácie</h1>
+      <h1 className="mb-6 text-2xl font-bold sm:text-3xl">Rezervácie</h1>
 
       {/* Filters */}
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div className="mb-4 flex gap-2 overflow-x-auto pb-1 sm:flex-wrap">
         <Link href="/admin/reservations">
           <Badge variant={!status ? "default" : "outline"}>Všetky</Badge>
         </Link>
@@ -71,54 +67,84 @@ export default async function ReservationsPage({
         ))}
       </div>
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Dátum</TableHead>
-            <TableHead>Čas</TableHead>
-            <TableHead>Zákazník</TableHead>
-            <TableHead>Barbier</TableHead>
-            <TableHead>Služba</TableHead>
-            <TableHead>Stav</TableHead>
-            <TableHead className="w-12" />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {items.map((appt) => (
-            <TableRow key={appt.id}>
-              <TableCell>
-                {format(appt.startTime, "d.M.yyyy")}
-              </TableCell>
-              <TableCell>
-                {format(appt.startTime, "HH:mm")}
-              </TableCell>
-              <TableCell className="font-medium">
-                {appt.customerName}
-              </TableCell>
-              <TableCell>
-                {appt.barber.firstName} {appt.barber.lastName}
-              </TableCell>
-              <TableCell>{appt.service.name}</TableCell>
-              <TableCell>
-                <Badge variant={STATUS_VARIANTS[appt.status]}>
-                  {STATUS_LABELS[appt.status]}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                <Link href={`/admin/reservations/${appt.id}`}>
-                  <Button variant="ghost" size="icon-sm">
-                    <EyeIcon className="size-4" />
-                  </Button>
-                </Link>
-              </TableCell>
+      <div className="space-y-3 md:hidden">
+        {items.map((appt) => (
+          <Link
+            key={appt.id}
+            href={`/admin/reservations/${appt.id}`}
+            className="block rounded-xl border bg-card p-4"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="font-medium">{appt.customerName}</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {format(appt.startTime, "EEEE d.M. HH:mm", { locale: sk })}
+                </p>
+              </div>
+              <Badge variant={STATUS_VARIANTS[appt.status]}>
+                {STATUS_LABELS[appt.status]}
+              </Badge>
+            </div>
+            <div className="mt-3 space-y-1 text-sm text-muted-foreground">
+              <p>
+                Barbier: {appt.barber.firstName} {appt.barber.lastName}
+              </p>
+              <p>Služba: {appt.service.name}</p>
+            </div>
+          </Link>
+        ))}
+      </div>
+
+      <div className="hidden md:block">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Dátum</TableHead>
+              <TableHead>Čas</TableHead>
+              <TableHead>Zákazník</TableHead>
+              <TableHead>Barbier</TableHead>
+              <TableHead>Služba</TableHead>
+              <TableHead>Stav</TableHead>
+              <TableHead className="w-12" />
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {items.map((appt) => (
+              <TableRow key={appt.id}>
+                <TableCell>
+                  {format(appt.startTime, "d.M.yyyy")}
+                </TableCell>
+                <TableCell>
+                  {format(appt.startTime, "HH:mm")}
+                </TableCell>
+                <TableCell className="font-medium">
+                  {appt.customerName}
+                </TableCell>
+                <TableCell>
+                  {appt.barber.firstName} {appt.barber.lastName}
+                </TableCell>
+                <TableCell>{appt.service.name}</TableCell>
+                <TableCell>
+                  <Badge variant={STATUS_VARIANTS[appt.status]}>
+                    {STATUS_LABELS[appt.status]}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <Link href={`/admin/reservations/${appt.id}`}>
+                    <Button variant="ghost" size="icon-sm">
+                      <EyeIcon className="size-4" />
+                    </Button>
+                  </Link>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
 
       {/* Pagination */}
       {pages > 1 && (
-        <div className="mt-4 flex items-center justify-center gap-2">
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
           {Array.from({ length: pages }, (_, i) => i + 1).map((p) => (
             <Link
               key={p}

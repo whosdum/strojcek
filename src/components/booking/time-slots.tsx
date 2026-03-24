@@ -2,6 +2,7 @@
 
 import { SLOT_GROUP_BOUNDARIES } from "@/lib/constants";
 import { SlotChip } from "./slot-chip";
+import { CalendarClockIcon } from "lucide-react";
 
 interface TimeSlotsProps {
   slots: string[];
@@ -12,9 +13,12 @@ interface TimeSlotsProps {
 export function TimeSlots({ slots, selectedTime, onSelect }: TimeSlotsProps) {
   if (slots.length === 0) {
     return (
-      <p className="py-8 text-center text-sm text-muted-foreground">
-        Na vybraný deň nie sú dostupné žiadne termíny.
-      </p>
+      <div className="flex flex-col items-center gap-2 py-10 text-center">
+        <CalendarClockIcon className="size-8 text-muted-foreground/60" />
+        <p className="text-[15px] text-muted-foreground">
+          Na vybraný deň nie sú dostupné žiadne termíny.
+        </p>
+      </div>
     );
   }
 
@@ -30,13 +34,13 @@ export function TimeSlots({ slots, selectedTime, onSelect }: TimeSlotsProps) {
     .filter((g) => g.slots.length > 0);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {groups.map((group) => (
         <div key={group.key}>
-          <h4 className="mb-2 text-sm font-medium text-muted-foreground">
+          <h4 className="mb-2.5 text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">
             {group.label}
           </h4>
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap">
             {group.slots.map((time) => (
               <SlotChip
                 key={time}

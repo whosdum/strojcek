@@ -1,7 +1,6 @@
 "use server";
 
 import { prisma } from "@/server/lib/prisma";
-import { VALID_STATUS_TRANSITIONS } from "@/lib/constants";
 import { AppointmentStatus } from "@/generated/prisma/client";
 
 type ActionResult = { success: boolean; error?: string };
@@ -21,12 +20,8 @@ export async function updateAppointmentStatus(
       return { success: false, error: "Rezervácia nenájdená." };
     }
 
-    const allowed = VALID_STATUS_TRANSITIONS[appointment.status] || [];
-    if (!allowed.includes(newStatus)) {
-      return {
-        success: false,
-        error: `Prechod z ${appointment.status} na ${newStatus} nie je povolený.`,
-      };
+    if (appointment.status === newStatus) {
+      return { success: true };
     }
 
     await prisma.$transaction(async (tx) => {
@@ -45,12 +40,19 @@ export async function updateAppointmentStatus(
         },
       });
 
-      // Increment visitCount when completing
-      if (newStatus === "COMPLETED" && appointment.customerId) {
-        await tx.customer.update({
-          where: { id: appointment.customerId },
-          data: { visitCount: { increment: 1 } },
-        });
+      // Adjust visitCount: +1 when completing, -1 when leaving completed
+      if (appointment.customerId) {
+        if (newStatus === "COMPLETED" && appointment.status !== "COMPLETED") {
+          await tx.customer.update({
+            where: { id: appointment.customerId },
+            data: { visitCount: { increment: 1 } },
+          });
+        } else if (appointment.status === "COMPLETED" && newStatus !== "COMPLETED") {
+          await tx.customer.update({
+            where: { id: appointment.customerId },
+            data: { visitCount: { decrement: 1 } },
+          });
+        }
       }
     });
 
@@ -58,6 +60,29 @@ export async function updateAppointmentStatus(
   } catch (e) {
     console.error("[updateAppointmentStatus]", e);
     return { success: false, error: "Nastala chyba pri aktualizácii." };
+  }
+}
+
+export async function deleteAppointment(id: string): Promise<ActionResult> {
+  try {
+    await prisma.$transaction(async (tx) => {
+      // If it was COMPLETED, decrement visitCount
+      const appointment = await tx.appointment.findUnique({ where: { id } });
+      if (appointment?.status === "COMPLETED" && appointment.customerId) {
+        await tx.customer.update({
+          where: { id: appointment.customerId },
+          data: { visitCount: { decrement: 1 } },
+        });
+      }
+
+      await tx.appointmentStatusHistory.deleteMany({ where: { appointmentId: id } });
+      await tx.appointment.delete({ where: { id } });
+    });
+
+    return { success: true };
+  } catch (e) {
+    console.error("[deleteAppointment]", e);
+    return { success: false, error: "Nastala chyba pri mazaní rezervácie." };
   }
 }
 

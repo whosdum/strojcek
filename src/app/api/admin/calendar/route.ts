@@ -19,10 +19,11 @@ export async function GET(request: NextRequest) {
 
   const events = appointments.map((appt) => ({
     id: appt.id,
-    title: `${appt.service.name} — ${appt.customerName}`,
+    title: `${appt.barber.firstName} — ${appt.service.name} — ${appt.customerName}`,
     start: appt.startTime.toISOString(),
     end: appt.endTime.toISOString(),
     extendedProps: {
+      barberId: appt.barberId,
       barberName: `${appt.barber.firstName} ${appt.barber.lastName}`,
       status: appt.status,
     },

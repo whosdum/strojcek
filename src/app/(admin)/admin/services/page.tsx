@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { getAllServices } from "@/server/queries/services";
-import { toggleServiceActive } from "@/server/actions/services";
 import { ServiceForm } from "@/components/admin/service-form";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +10,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Table,
@@ -44,7 +42,19 @@ function ServicesContent() {
   };
 
   useEffect(() => {
-    loadServices();
+    let ignore = false;
+
+    void fetch("/api/admin/services")
+      .then((res) => res.json())
+      .then((data) => {
+        if (!ignore) {
+          setServices(data);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   const handleEdit = (service: typeof services[number]) => {
@@ -65,8 +75,8 @@ function ServicesContent() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Služby</h1>
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-2xl font-bold sm:text-3xl">Služby</h1>
         <Button size="sm" onClick={handleNew}>
           <PlusIcon className="mr-1 size-4" />
           Pridať
@@ -74,7 +84,7 @@ function ServicesContent() {
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editService ? "Upraviť službu" : "Nová služba"}
@@ -94,51 +104,90 @@ function ServicesContent() {
         </DialogContent>
       </Dialog>
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Názov</TableHead>
-            <TableHead>Trvanie</TableHead>
-            <TableHead>Cena</TableHead>
-            <TableHead>Buffer</TableHead>
-            <TableHead>Stav</TableHead>
-            <TableHead className="w-12" />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {services.map((service) => (
-            <TableRow key={service.id}>
-              <TableCell>
-                <div>
-                  <p className="font-medium">{service.name}</p>
-                  {service.description && (
-                    <p className="text-xs text-muted-foreground line-clamp-1">
-                      {service.description}
-                    </p>
-                  )}
-                </div>
-              </TableCell>
-              <TableCell>{service.durationMinutes} min</TableCell>
-              <TableCell>{parseFloat(service.price.toString()).toFixed(2)} €</TableCell>
-              <TableCell>{service.bufferMinutes} min</TableCell>
-              <TableCell>
-                <Badge variant={service.isActive ? "default" : "secondary"}>
-                  {service.isActive ? "Aktívna" : "Neaktívna"}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => handleEdit(service)}
-                >
-                  <PencilIcon className="size-4" />
-                </Button>
-              </TableCell>
+      <div className="space-y-3 md:hidden">
+        {services.map((service) => (
+          <div key={service.id} className="rounded-xl border bg-card p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-medium">{service.name}</p>
+                {service.description && (
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {service.description}
+                  </p>
+                )}
+              </div>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => handleEdit(service)}
+                className="shrink-0"
+              >
+                <PencilIcon className="size-4" />
+              </Button>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
+              <Badge variant="outline">{service.durationMinutes} min</Badge>
+              <Badge variant="outline">
+                {parseFloat(service.price.toString()).toFixed(2)} €
+              </Badge>
+              <Badge variant="outline">{service.bufferMinutes} min buffer</Badge>
+              <Badge variant={service.isActive ? "default" : "secondary"}>
+                {service.isActive ? "Aktívna" : "Neaktívna"}
+              </Badge>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="hidden md:block">
+        <Table className="table-fixed">
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[40%]">Názov</TableHead>
+              <TableHead className="w-[10%]">Trvanie</TableHead>
+              <TableHead className="w-[10%]">Cena</TableHead>
+              <TableHead className="w-[10%]">Buffer</TableHead>
+              <TableHead className="w-[15%]">Stav</TableHead>
+              <TableHead className="w-[5%]" />
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {services.map((service) => (
+              <TableRow key={service.id}>
+                <TableCell>
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{service.name}</p>
+                    {service.description && (
+                      <p className="truncate text-xs text-muted-foreground">
+                        {service.description}
+                      </p>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>{service.durationMinutes} min</TableCell>
+                <TableCell>
+                  {parseFloat(service.price.toString()).toFixed(2)} €
+                </TableCell>
+                <TableCell>{service.bufferMinutes} min</TableCell>
+                <TableCell>
+                  <Badge variant={service.isActive ? "default" : "secondary"}>
+                    {service.isActive ? "Aktívna" : "Neaktívna"}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => handleEdit(service)}
+                  >
+                    <PencilIcon className="size-4" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }

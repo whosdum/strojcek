@@ -10,11 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import {
   upsertSchedule,
-  deleteSchedule,
   createBreak,
   deleteBreak,
-  createOverride,
-  deleteOverride,
 } from "@/server/actions/schedules";
 import { Loader2Icon, PlusIcon, TrashIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -99,7 +96,7 @@ export function ScheduleManager({ barbers }: ScheduleManagerProps) {
         <div className="mb-4">
           <Label>Barbier</Label>
           <select
-            className="mt-1 block w-48 rounded-lg border px-3 py-2 text-sm"
+            className="mt-1 block w-full rounded-lg border px-3 py-2 text-sm sm:w-64"
             value={selectedBarber}
             onChange={(e) => setSelectedBarber(e.target.value)}
           >
@@ -114,7 +111,7 @@ export function ScheduleManager({ barbers }: ScheduleManagerProps) {
 
       {barber && (
         <Tabs defaultValue="schedule">
-          <TabsList>
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="schedule">Pracovné hodiny</TabsTrigger>
             <TabsTrigger value="breaks">Prestávky</TabsTrigger>
           </TabsList>
@@ -156,7 +153,7 @@ export function ScheduleManager({ barbers }: ScheduleManagerProps) {
                       {dayBreaks.map((brk) => (
                         <div
                           key={brk.id}
-                          className="flex items-center gap-2 text-sm"
+                          className="flex flex-wrap items-center gap-2 text-sm"
                         >
                           <span>
                             {brk.startTime} — {brk.endTime}
@@ -211,35 +208,45 @@ function DayScheduleRow({
   const [isActive, setIsActive] = useState(defaultActive);
 
   return (
-    <div className="flex items-center gap-3 rounded-lg border p-3">
-      <div className="w-20 text-sm font-medium">{dayName}</div>
-      <Switch
-        checked={isActive}
-        onCheckedChange={setIsActive}
-      />
-      <Input
-        type="time"
-        value={startTime}
-        onChange={(e) => setStartTime(e.target.value)}
-        className="w-28"
-        disabled={!isActive}
-      />
-      <span className="text-muted-foreground">—</span>
-      <Input
-        type="time"
-        value={endTime}
-        onChange={(e) => setEndTime(e.target.value)}
-        className="w-28"
-        disabled={!isActive}
-      />
-      <Button
-        size="sm"
-        variant="outline"
-        disabled={isPending}
-        onClick={() => onSave(dayOfWeek, startTime, endTime, isActive)}
-      >
-        {isPending ? <Loader2Icon className="size-3 animate-spin" /> : "Uložiť"}
-      </Button>
+    <div className="rounded-lg border p-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-sm font-medium">{dayName}</div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>{isActive ? "Aktívny" : "Neaktívny"}</span>
+          <Switch
+            checked={isActive}
+            onCheckedChange={setIsActive}
+          />
+        </div>
+      </div>
+      <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex items-center gap-2">
+          <Input
+            type="time"
+            value={startTime}
+            onChange={(e) => setStartTime(e.target.value)}
+            className="w-full sm:w-28"
+            disabled={!isActive}
+          />
+          <span className="text-muted-foreground">—</span>
+          <Input
+            type="time"
+            value={endTime}
+            onChange={(e) => setEndTime(e.target.value)}
+            className="w-full sm:w-28"
+            disabled={!isActive}
+          />
+        </div>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={isPending}
+          onClick={() => onSave(dayOfWeek, startTime, endTime, isActive)}
+          className="w-full sm:w-auto"
+        >
+          {isPending ? <Loader2Icon className="size-3 animate-spin" /> : "Uložiť"}
+        </Button>
+      </div>
     </div>
   );
 }
@@ -257,25 +264,28 @@ function AddBreakRow({
   const [endTime, setEndTime] = useState("12:30");
 
   return (
-    <div className="flex items-center gap-2">
-      <Input
-        type="time"
-        value={startTime}
-        onChange={(e) => setStartTime(e.target.value)}
-        className="w-28"
-      />
-      <span className="text-muted-foreground">—</span>
-      <Input
-        type="time"
-        value={endTime}
-        onChange={(e) => setEndTime(e.target.value)}
-        className="w-28"
-      />
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+      <div className="flex items-center gap-2">
+        <Input
+          type="time"
+          value={startTime}
+          onChange={(e) => setStartTime(e.target.value)}
+          className="w-full sm:w-28"
+        />
+        <span className="text-muted-foreground">—</span>
+        <Input
+          type="time"
+          value={endTime}
+          onChange={(e) => setEndTime(e.target.value)}
+          className="w-full sm:w-28"
+        />
+      </div>
       <Button
         size="sm"
         variant="outline"
         disabled={isPending}
         onClick={() => onAdd(dayOfWeek, startTime, endTime)}
+        className="w-full sm:w-auto"
       >
         <PlusIcon className="mr-1 size-3" />
         Pridať

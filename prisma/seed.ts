@@ -18,45 +18,23 @@ async function main() {
   await prisma.customer.deleteMany();
   await prisma.service.deleteMany();
   await prisma.barber.deleteMany();
+  await prisma.shopSettings.deleteMany();
 
-  // Create barbers
+  // Create barber
   const martin = await prisma.barber.create({
     data: {
       firstName: "Martin",
-      lastName: "Novák",
-      email: "martin@strojcek.sk",
-      phone: "+421901234567",
-      bio: "Hlavný barber s 10 ročnými skúsenosťami.",
+      lastName: "Mikolášik",
+      email: "strojcekbarbershop@gmail.com",
+      phone: "+421944932871",
+      bio: "Váš barber v Strojčeku.",
+      avatarUrl: "/barbers/martin.png",
       isActive: true,
       sortOrder: 0,
     },
   });
 
-  const jakub = await prisma.barber.create({
-    data: {
-      firstName: "Jakub",
-      lastName: "Horváth",
-      email: "jakub@strojcek.sk",
-      phone: "+421902345678",
-      bio: "Špecialista na úpravu brady a moderné strihy.",
-      isActive: true,
-      sortOrder: 1,
-    },
-  });
-
-  const peter = await prisma.barber.create({
-    data: {
-      firstName: "Peter",
-      lastName: "Kováč",
-      email: "peter@strojcek.sk",
-      phone: "+421903456789",
-      bio: "Kreatívny barber so zmyslom pre detail.",
-      isActive: true,
-      sortOrder: 2,
-    },
-  });
-
-  const barbers = [martin, jakub, peter];
+  const barbers = [martin];
 
   // Create services
   const services = await Promise.all([
@@ -169,6 +147,13 @@ async function main() {
       });
     }
   }
+
+  // Create shop settings
+  await prisma.shopSettings.create({
+    data: {
+      slotIntervalMinutes: 60,
+    },
+  });
 
   console.log("Seed completed:");
   console.log(`  - ${barbers.length} barbers`);

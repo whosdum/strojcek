@@ -36,6 +36,24 @@ export async function getAllBarbersWithSchedules() {
   });
 }
 
+export async function getActiveBarbersWithServices() {
+  const barbers = await prisma.barber.findMany({
+    where: { isActive: true },
+    orderBy: { sortOrder: "asc" },
+    include: {
+      services: { select: { serviceId: true } },
+    },
+  });
+  return barbers.map((b) => ({
+    id: b.id,
+    firstName: b.firstName,
+    lastName: b.lastName,
+    bio: b.bio,
+    avatarUrl: b.avatarUrl,
+    serviceIds: b.services.map((s) => s.serviceId),
+  }));
+}
+
 export async function getBarberById(id: string) {
   return prisma.barber.findUnique({
     where: { id },

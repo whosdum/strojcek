@@ -1,4 +1,11 @@
-import { Separator } from "@/components/ui/separator";
+import {
+  ScissorsIcon,
+  UserIcon,
+  CalendarIcon,
+  ClockIcon,
+  TimerIcon,
+  BanknoteIcon,
+} from "lucide-react";
 
 interface BookingSummaryProps {
   serviceName: string;
@@ -17,37 +24,40 @@ export function BookingSummary({
   duration,
   price,
 }: BookingSummaryProps) {
+  const rows = [
+    { icon: ScissorsIcon, label: "Služba", value: serviceName },
+    { icon: UserIcon, label: "Barbier", value: barberName },
+    { icon: CalendarIcon, label: "Dátum", value: date },
+    { icon: ClockIcon, label: "Čas", value: time },
+    { icon: TimerIcon, label: "Trvanie", value: `${duration} min` },
+  ];
+
   return (
-    <div className="rounded-lg border p-4">
-      <div className="space-y-3 text-sm">
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Služba</span>
-          <span className="font-medium">{serviceName}</span>
-        </div>
-        <Separator />
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Barbier</span>
-          <span className="font-medium">{barberName}</span>
-        </div>
-        <Separator />
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Dátum</span>
-          <span className="font-medium">{date}</span>
-        </div>
-        <Separator />
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Čas</span>
-          <span className="font-medium">{time}</span>
-        </div>
-        <Separator />
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Trvanie</span>
-          <span className="font-medium">{duration} min</span>
-        </div>
-        <Separator />
-        <div className="flex justify-between text-base">
-          <span className="font-medium">Cena</span>
-          <span className="font-bold">{price} €</span>
+    <div className="rounded-xl bg-muted/40 p-4">
+      <div className="space-y-3">
+        {rows.map((row, i) => (
+          <div key={row.label}>
+            <div className="flex items-center gap-3 text-[15px]">
+              <row.icon className="size-4 shrink-0 text-muted-foreground" />
+              <span className="text-muted-foreground">{row.label}</span>
+              <span className="ml-auto text-right font-medium text-foreground">
+                {row.value}
+              </span>
+            </div>
+            {i < rows.length - 1 && (
+              <div className="ml-7 mt-3 h-px bg-border/40" />
+            )}
+          </div>
+        ))}
+
+        {/* Price row — highlighted */}
+        <div className="ml-7 h-px bg-border/40" />
+        <div className="flex items-center gap-3 text-[15px]">
+          <BanknoteIcon className="size-4 shrink-0 text-primary" />
+          <span className="font-semibold text-foreground">Cena</span>
+          <span className="ml-auto text-lg font-bold text-primary tabular-nums">
+            {price} €
+          </span>
         </div>
       </div>
     </div>

@@ -1,18 +1,27 @@
 /**
  * Normalize phone number to E.164 format (+421XXXXXXXXX)
  * - Strips spaces, dashes, parentheses
- * - Converts leading 0 to +421 (Slovak numbers)
+ * - Handles all common Slovak input formats
  */
 export function normalizePhone(phone: string): string {
-  let cleaned = phone.replace(/[\s\-\(\)]/g, "");
+  // Strip everything except digits
+  const digits = phone.replace(/\D/g, "");
 
-  if (cleaned.startsWith("00421")) {
-    cleaned = "+" + cleaned.slice(2);
-  } else if (cleaned.startsWith("0") && !cleaned.startsWith("00")) {
-    cleaned = "+421" + cleaned.slice(1);
-  } else if (!cleaned.startsWith("+")) {
-    cleaned = "+" + cleaned;
+  // Already has full Slovak prefix: 421903...
+  if (digits.startsWith("421") && digits.length >= 12) {
+    return "+" + digits;
   }
 
-  return cleaned;
+  // Leading 0: 0903... → 421903...
+  if (digits.startsWith("0") && digits.length === 10) {
+    return "+421" + digits.slice(1);
+  }
+
+  // Just the 9-digit number: 903... (from form with +421 prefix shown)
+  if (digits.length === 9 && /^[0-9]/.test(digits)) {
+    return "+421" + digits;
+  }
+
+  // Fallback: return with + prefix
+  return "+" + digits;
 }

@@ -38,12 +38,12 @@ interface BarberFormProps {
 export function BarberForm({ barber, allServices }: BarberFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [isActive, setIsActive] = useState(barber?.isActive ?? true);
   const isEdit = !!barber;
 
   const {
     register,
     handleSubmit,
-    watch,
     setValue,
     formState: { errors },
   } = useForm<BarberInput>({
@@ -89,7 +89,7 @@ export function BarberForm({ barber, allServices }: BarberFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="max-w-lg space-y-4">
+    <form onSubmit={handleSubmit(onSubmit)} className="max-w-2xl space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label htmlFor="firstName">Meno *</Label>
@@ -139,8 +139,11 @@ export function BarberForm({ barber, allServices }: BarberFormProps) {
       <div className="flex items-center gap-2">
         <Switch
           id="isActive"
-          checked={watch("isActive")}
-          onCheckedChange={(v) => setValue("isActive", v)}
+          checked={isActive}
+          onCheckedChange={(v) => {
+            setIsActive(v);
+            setValue("isActive", v);
+          }}
         />
         <Label htmlFor="isActive">Aktívny</Label>
       </div>
@@ -148,7 +151,7 @@ export function BarberForm({ barber, allServices }: BarberFormProps) {
       {allServices.length > 0 && (
         <div className="space-y-2">
           <Label>Služby</Label>
-          <div className="space-y-2">
+          <div className="grid gap-2 sm:grid-cols-2">
             {allServices.map((service) => (
               <div key={service.id} className="flex items-center gap-2">
                 <Checkbox
@@ -165,11 +168,10 @@ export function BarberForm({ barber, allServices }: BarberFormProps) {
         </div>
       )}
 
-      <Button type="submit" disabled={isPending}>
+      <Button type="submit" disabled={isPending} className="w-full sm:w-auto">
         {isPending && <Loader2Icon className="mr-2 size-4 animate-spin" />}
         {isEdit ? "Uložiť" : "Vytvoriť"}
       </Button>
     </form>
   );
 }
-

@@ -54,8 +54,8 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.637 0.202 25.5);
+  --primary-foreground: oklch(1 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
@@ -65,8 +65,8 @@
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.809 0.105 251.813);
+  --ring: oklch(0.637 0.202 25.5);
+  --chart-1: oklch(0.637 0.202 25.5);
   --chart-2: oklch(0.623 0.214 259.815);
   --chart-3: oklch(0.546 0.245 262.881);
   --chart-4: oklch(0.488 0.243 264.376);
@@ -74,12 +74,12 @@
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.637 0.202 25.5);
+  --sidebar-primary-foreground: oklch(1 0 0);
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar-ring: oklch(0.637 0.202 25.5);
 }
 
 .dark {
@@ -89,8 +89,8 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
+  --primary: oklch(0.637 0.202 25.5);
+  --primary-foreground: oklch(1 0 0);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
@@ -100,20 +100,135 @@
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.809 0.105 251.813);
+  --ring: oklch(0.637 0.202 25.5);
+  --chart-1: oklch(0.637 0.202 25.5);
   --chart-2: oklch(0.623 0.214 259.815);
   --chart-3: oklch(0.546 0.245 262.881);
   --chart-4: oklch(0.488 0.243 264.376);
   --chart-5: oklch(0.424 0.199 265.638);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.637 0.202 25.5);
+  --sidebar-primary-foreground: oklch(1 0 0);
   --sidebar-accent: oklch(0.269 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar-ring: oklch(0.637 0.202 25.5);
+}
+
+/* Scoped dark theme for public booking pages */
+.booking-theme {
+  --background: oklch(0.145 0.014 285);
+  --foreground: oklch(0.98 0 0);
+  --card: oklch(0.21 0.016 280);
+  --card-foreground: oklch(0.98 0 0);
+  --popover: oklch(0.21 0.016 280);
+  --popover-foreground: oklch(0.98 0 0);
+  --primary: oklch(0.68 0.19 30);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.27 0.014 280);
+  --secondary-foreground: oklch(0.98 0 0);
+  --muted: oklch(0.25 0.014 280);
+  --muted-foreground: oklch(0.78 0 0);
+  --accent: oklch(0.27 0.014 280);
+  --accent-foreground: oklch(0.98 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 18%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.637 0.202 25.5);
+}
+
+/* ─── Booking calendar: full-width, touch-friendly ─── */
+.booking-calendar [data-slot="calendar"] {
+  width: 100%;
+  padding: 0;
+  background: transparent;
+}
+
+.booking-calendar .rdp-months {
+  width: 100%;
+}
+
+.booking-calendar .rdp-month {
+  width: 100%;
+}
+
+.booking-calendar .rdp-month_caption {
+  padding-bottom: 0.75rem;
+}
+
+.booking-calendar .rdp-caption_label {
+  font-size: 1.125rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.booking-calendar .rdp-nav {
+  gap: 0.25rem;
+}
+
+.booking-calendar .rdp-button_previous,
+.booking-calendar .rdp-button_next {
+  width: 2.5rem !important;
+  height: 2.5rem !important;
+}
+
+.booking-calendar .rdp-weekdays {
+  display: grid !important;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.booking-calendar .rdp-weekday {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.375rem 0;
+  color: var(--muted-foreground);
+}
+
+.booking-calendar .rdp-week {
+  display: grid !important;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  margin-top: 2px;
+}
+
+.booking-calendar .rdp-day {
+  width: 100% !important;
+  aspect-ratio: 1;
+  padding: 2px;
+}
+
+.booking-calendar .rdp-day button {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 44px;
+  min-width: 0 !important;
+  border-radius: var(--radius);
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.booking-calendar .rdp-day[data-disabled] {
+  opacity: 0.4;
+}
+
+.booking-calendar .rdp-day[data-today] {
+  background: var(--muted);
+  border-radius: var(--radius);
+}
+
+.booking-calendar .rdp-day[data-selected] button {
+  background: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+  font-weight: 600;
+}
+
+.booking-calendar .rdp-outside {
+  opacity: 0.25;
 }
 
 @layer base {

@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
-import { ClockIcon, ChevronRightIcon } from "lucide-react";
+import { CheckIcon, ClockIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ServiceCardProps {
   id: string;
@@ -10,41 +10,50 @@ interface ServiceCardProps {
   description: string | null;
   durationMinutes: number;
   price: number | string;
+  onClick?: () => void;
+  isSelected?: boolean;
 }
 
 export function ServiceCard({
-  id,
   name,
   description,
   durationMinutes,
   price,
+  onClick,
+  isSelected,
 }: ServiceCardProps) {
   const priceNum = typeof price === "string" ? parseFloat(price) : price;
 
   return (
-    <Link href={`/book/barber?serviceId=${id}`}>
-      <Card className="cursor-pointer transition-shadow hover:shadow-md">
-        <CardContent className="flex items-center justify-between gap-4">
-          <div className="min-w-0 flex-1">
-            <h3 className="font-semibold">{name}</h3>
-            {description && (
-              <p className="mt-0.5 text-sm text-muted-foreground line-clamp-2">
-                {description}
-              </p>
-            )}
-            <div className="mt-2 flex items-center gap-3 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <ClockIcon className="size-3.5" />
-                {durationMinutes} min
-              </span>
-              <span className="font-semibold text-foreground">
-                {priceNum.toFixed(2)} €
-              </span>
-            </div>
+    <Card
+      className={cn(
+        "cursor-pointer transition-shadow hover:shadow-md",
+        isSelected && "border-l-4 border-primary bg-primary/10"
+      )}
+      onClick={onClick}
+    >
+      <CardContent className="flex items-start justify-between gap-3 sm:items-center sm:gap-4">
+        <div className="min-w-0 flex-1">
+          <h3 className="font-semibold">{name}</h3>
+          {description && (
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              {description}
+            </p>
+          )}
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <ClockIcon className="size-3.5" />
+              {durationMinutes} min
+            </span>
+            <span className="font-semibold text-foreground">
+              {priceNum.toFixed(2)} €
+            </span>
           </div>
-          <ChevronRightIcon className="size-5 shrink-0 text-muted-foreground" />
-        </CardContent>
-      </Card>
-    </Link>
+        </div>
+        {isSelected && (
+          <CheckIcon className="size-5 shrink-0 text-primary" />
+        )}
+      </CardContent>
+    </Card>
   );
 }

@@ -2,19 +2,27 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { updateAppointmentStatus } from "@/server/actions/appointments";
-import { VALID_STATUS_TRANSITIONS } from "@/lib/constants";
 import { AppointmentStatus } from "@/generated/prisma/client";
 import { Loader2Icon } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-const ACTION_LABELS: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  CONFIRMED: { label: "Potvrdiť", variant: "default" },
-  IN_PROGRESS: { label: "Začať", variant: "secondary" },
-  COMPLETED: { label: "Dokončiť", variant: "default" },
-  CANCELLED: { label: "Zrušiť", variant: "destructive" },
-  NO_SHOW: { label: "Neprišiel", variant: "destructive" },
+const STATUS_LABELS: Record<string, string> = {
+  PENDING: "Čakajúca",
+  CONFIRMED: "Potvrdená",
+  IN_PROGRESS: "Prebieha",
+  COMPLETED: "Dokončená",
+  CANCELLED: "Zrušená",
+  NO_SHOW: "Neprišiel",
 };
+
+const ALL_STATUSES = Object.keys(STATUS_LABELS);
 
 interface StatusActionsProps {
   appointmentId: string;
@@ -25,13 +33,8 @@ export function StatusActions({ appointmentId, currentStatus }: StatusActionsPro
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  const validTransitions = VALID_STATUS_TRANSITIONS[currentStatus] ?? [];
-
-  if (validTransitions.length === 0) {
-    return <p className="text-sm text-muted-foreground">Žiadne dostupné akcie.</p>;
-  }
-
-  const handleTransition = (newStatus: string) => {
+  const handleChange = (newStatus: string | null) => {
+    if (!newStatus || newStatus === currentStatus) return;
     startTransition(async () => {
       await updateAppointmentStatus(appointmentId, newStatus as AppointmentStatus);
       router.refresh();
@@ -39,25 +42,22 @@ export function StatusActions({ appointmentId, currentStatus }: StatusActionsPro
   };
 
   return (
-    <div className="flex flex-wrap gap-2">
-      {validTransitions.map((status) => {
-        const action = ACTION_LABELS[status];
-        if (!action) return null;
-        return (
-          <Button
-            key={status}
-            variant={action.variant}
-            size="sm"
-            disabled={isPending}
-            onClick={() => handleTransition(status)}
-          >
-            {isPending ? (
-              <Loader2Icon className="mr-1 size-3 animate-spin" />
-            ) : null}
-            {action.label}
-          </Button>
-        );
-      })}
+    <div className="flex items-center gap-2">
+      <Select value={currentStatus} onValueChange={handleChange} disabled={isPending}>
+        <SelectTrigger className="w-full sm:w-[180px]">
+          {isPending ? (
+            <Loader2Icon className="mr-2 size-4 animate-spin" />
+          ) : null}
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {ALL_STATUSES.map((status) => (
+            <SelectItem key={status} value={status}>
+              {STATUS_LABELS[status]}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }

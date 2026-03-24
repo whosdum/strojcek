@@ -4,31 +4,32 @@ interface SendSMSOptions {
 }
 
 export async function sendSMS({ phone, message }: SendSMSOptions) {
-  const token = process.env.GATEWAYAPI_TOKEN;
+  const apiKey = process.env.SMSTOOLS_API_KEY;
 
-  if (!token) {
+  if (!apiKey) {
     console.log("[SMS STUB]", { phone, message });
     return { success: true, stub: true };
   }
 
-  const response = await fetch("https://gatewayapi.com/rest/mtsms", {
+  const response = await fetch("https://api.smstools.sk/3/send_batch", {
     method: "POST",
-    headers: {
-      Authorization: `Basic ${Buffer.from(token + ":").toString("base64")}`,
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json;charset=UTF-8" },
     body: JSON.stringify({
-      sender: "Strojcek",
-      recipients: [{ msisdn: phone.replace("+", "") }],
-      message,
+      auth: { apikey: apiKey },
+      data: {
+        message,
+        sender: { text: "Strojcek" },
+        recipients: [{ phonenr: phone }],
+      },
     }),
   });
 
-  if (!response.ok) {
-    const error = await response.text();
-    console.error("[SMS ERROR]", error);
-    return { success: false, error };
+  const result = await response.json();
+
+  if (result.id !== "OK") {
+    console.error("[SMS ERROR]", result);
+    return { success: false, error: result.note || result.id };
   }
 
-  return { success: true };
+  return { success: true, batchId: result.data?.batch_id };
 }

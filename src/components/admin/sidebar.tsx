@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboardIcon,
@@ -12,9 +14,19 @@ import {
   ClockIcon,
   UsersIcon,
   LogOutIcon,
+  MenuIcon,
 } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 const NAV_ITEMS = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboardIcon },
@@ -29,17 +41,30 @@ const NAV_ITEMS = [
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const [open, setOpen] = useState(false);
 
   const handleLogout = async () => {
     await authClient.signOut();
+    setOpen(false);
     router.push("/login");
   };
 
-  return (
-    <aside className="flex h-screen w-56 flex-col border-r bg-card">
+  const navContent = (
+    <>
       <div className="border-b px-4 py-4">
-        <h2 className="text-lg font-bold">Strojček</h2>
-        <p className="text-xs text-muted-foreground">Administrácia</p>
+        <div className="flex items-center gap-3">
+          <Image
+            src="/logo.jpg"
+            alt="Strojček"
+            width={36}
+            height={20}
+            className="rounded"
+          />
+          <div>
+            <h2 className="text-lg font-bold text-primary">Strojček</h2>
+            <p className="text-xs text-muted-foreground">Administrácia</p>
+          </div>
+        </div>
       </div>
       <nav className="flex-1 space-y-1 p-2">
         {NAV_ITEMS.map((item) => {
@@ -50,6 +75,7 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={() => setOpen(false)}
               className={cn(
                 "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                 isActive
@@ -72,6 +98,48 @@ export function Sidebar() {
           Odhlásiť sa
         </button>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      <div className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur-sm md:hidden">
+        <div className="flex h-14 items-center justify-between px-4">
+          <div className="flex items-center gap-2">
+            <Image src="/logo.jpg" alt="Strojček" width={28} height={15} className="rounded" />
+            <div>
+              <p className="text-sm font-semibold text-primary">Strojček</p>
+              <p className="text-xs text-muted-foreground">Administrácia</p>
+            </div>
+          </div>
+          <Sheet open={open} onOpenChange={setOpen}>
+            <SheetTrigger
+              render={<Button variant="outline" size="icon-sm" />}
+            >
+              <MenuIcon className="size-4" />
+              <span className="sr-only">Otvoriť menu</span>
+            </SheetTrigger>
+            <SheetContent
+              side="left"
+              className="w-[85vw] max-w-sm p-0"
+            >
+              <SheetHeader className="sr-only">
+                <SheetTitle>Navigácia administrácie</SheetTitle>
+                <SheetDescription>
+                  Navigácia medzi admin sekciami.
+                </SheetDescription>
+              </SheetHeader>
+              <div className="flex h-full flex-col bg-card">
+                {navContent}
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
+      </div>
+
+      <aside className="hidden h-screen w-60 shrink-0 flex-col border-r bg-card md:flex">
+        {navContent}
+      </aside>
+    </>
   );
 }

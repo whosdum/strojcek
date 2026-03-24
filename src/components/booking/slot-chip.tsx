@@ -14,10 +14,10 @@ export function SlotChip({ time, isSelected, onClick }: SlotChipProps) {
       type="button"
       onClick={onClick}
       className={cn(
-        "min-h-[44px] min-w-[72px] rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+        "inline-flex min-h-[48px] w-full items-center justify-center rounded-xl border px-3 py-2.5 text-[15px] font-semibold tabular-nums transition-all active:scale-95 sm:min-w-[80px] sm:w-auto",
         isSelected
-          ? "border-primary bg-primary text-primary-foreground"
-          : "border-border bg-background hover:border-primary/50 hover:bg-primary/5"
+          ? "border-primary bg-primary text-primary-foreground shadow-sm"
+          : "border-border/40 bg-muted/30 text-foreground hover:border-primary/40 hover:bg-primary/5"
       )}
     >
       {time}

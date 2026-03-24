@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Loader2Icon } from "lucide-react";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createService, updateService } from "@/server/actions/services";
 
@@ -30,12 +30,12 @@ interface ServiceFormProps {
 export function ServiceForm({ service, onClose }: ServiceFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [isActive, setIsActive] = useState(service?.isActive ?? true);
   const isEdit = !!service;
 
   const {
     register,
     handleSubmit,
-    watch,
     setValue,
     formState: { errors },
   } = useForm<ServiceInput>({
@@ -113,19 +113,31 @@ export function ServiceForm({ service, onClose }: ServiceFormProps) {
       <div className="flex items-center gap-2">
         <Switch
           id="isActive"
-          checked={watch("isActive")}
-          onCheckedChange={(v) => setValue("isActive", v)}
+          checked={isActive}
+          onCheckedChange={(v) => {
+            setIsActive(v);
+            setValue("isActive", v);
+          }}
         />
         <Label htmlFor="isActive">Aktívna</Label>
       </div>
 
-      <div className="flex gap-2">
-        <Button type="submit" disabled={isPending}>
+      <div className="flex flex-col-reverse gap-2 sm:flex-row">
+        <Button
+          type="submit"
+          disabled={isPending}
+          className="w-full sm:w-auto"
+        >
           {isPending && <Loader2Icon className="mr-2 size-4 animate-spin" />}
           {isEdit ? "Uložiť" : "Vytvoriť"}
         </Button>
         {onClose && (
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            className="w-full sm:w-auto"
+          >
             Zrušiť
           </Button>
         )}

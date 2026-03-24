@@ -20,22 +20,57 @@ export function bookingConfirmationHtml({
   return `
 <!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"></head>
-<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <h2 style="color: #ea580c;">Rezervácia potvrdená</h2>
-  <p>Dobrý deň, ${customerName},</p>
-  <p>Vaša rezervácia bola úspešne potvrdená.</p>
-  <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-    <tr><td style="padding: 8px; border-bottom: 1px solid #eee; color: #666;">Služba</td><td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold;">${serviceName}</td></tr>
-    <tr><td style="padding: 8px; border-bottom: 1px solid #eee; color: #666;">Barber</td><td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold;">${barberName}</td></tr>
-    <tr><td style="padding: 8px; border-bottom: 1px solid #eee; color: #666;">Dátum</td><td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold;">${date}</td></tr>
-    <tr><td style="padding: 8px; border-bottom: 1px solid #eee; color: #666;">Čas</td><td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold;">${time}</td></tr>
-    <tr><td style="padding: 8px; border-bottom: 1px solid #eee; color: #666;">Cena</td><td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold;">${price} €</td></tr>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto;">
+    <tr>
+      <td style="background-color: #1a1a2e; padding: 24px; text-align: center; border-radius: 8px 8px 0 0;">
+        <h1 style="color: #ff703a; margin: 0; font-size: 24px; font-weight: bold;">Strojček</h1>
+        <p style="color: #999; margin: 4px 0 0; font-size: 13px;">Barbershop</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="background-color: #ffffff; padding: 32px 24px;">
+        <div style="background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 10px 16px; margin-bottom: 24px; text-align: center;">
+          <span style="color: #059669; font-weight: bold; font-size: 14px;">✓ Potvrdená</span>
+        </div>
+        <p style="color: #333; margin: 0 0 20px; font-size: 15px;">Dobrý deň, ${customerName},</p>
+        <p style="color: #333; margin: 0 0 24px; font-size: 15px;">Vaša rezervácia bola úspešne potvrdená.</p>
+        <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+          <tr>
+            <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; color: #888; font-size: 14px; width: 100px;">Služba</td>
+            <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; font-weight: bold; font-size: 14px; text-align: right;">${serviceName}</td>
+          </tr>
+          <tr>
+            <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; color: #888; font-size: 14px;">Barbier</td>
+            <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; font-weight: bold; font-size: 14px; text-align: right;">${barberName}</td>
+          </tr>
+          <tr>
+            <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; color: #888; font-size: 14px;">Dátum</td>
+            <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; font-weight: bold; font-size: 14px; text-align: right;">${date}</td>
+          </tr>
+          <tr>
+            <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; color: #888; font-size: 14px;">Čas</td>
+            <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; font-weight: bold; font-size: 14px; text-align: right;">${time}</td>
+          </tr>
+          <tr>
+            <td style="padding: 12px 0; color: #888; font-size: 14px;">Cena</td>
+            <td style="padding: 12px 0; font-weight: bold; font-size: 16px; text-align: right; color: #ff703a;">${price} €</td>
+          </tr>
+        </table>
+        <p style="color: #666; margin: 24px 0 16px; font-size: 13px;">Ak potrebujete rezerváciu zrušiť (najneskôr 2 hodiny pred termínom):</p>
+        <div style="text-align: center;">
+          <a href="${cancelUrl}" style="display: inline-block; padding: 12px 32px; background-color: #ff703a; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px;">Zrušiť rezerváciu</a>
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td style="background-color: #1a1a2e; padding: 20px 24px; text-align: center; border-radius: 0 0 8px 8px;">
+        <p style="color: #888; margin: 0; font-size: 12px;">Strojček Barbershop · Moyzesova 379/2, Bytča</p>
+        <p style="color: #666; margin: 4px 0 0; font-size: 11px;">Tel: 0944 932 871</p>
+      </td>
+    </tr>
   </table>
-  <p>Ak potrebujete rezerváciu zrušiť, kliknite na odkaz nižšie (najneskôr 2 hodiny pred termínom):</p>
-  <p><a href="${cancelUrl}" style="color: #ea580c;">Zrušiť rezerváciu</a></p>
-  <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-  <p style="color: #999; font-size: 12px;">Strojček Barber Shop</p>
 </body>
 </html>`;
 }

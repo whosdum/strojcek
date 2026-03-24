@@ -19,12 +19,15 @@ interface TimeRange {
 /**
  * Get available booking slots for a specific barber, service, and date.
  * Slots are computed dynamically — never stored in the database.
+ * @param slotInterval - optional interval in minutes (from ShopSettings); falls back to constant
  */
 export async function getAvailableSlots(
   barberId: string,
   serviceId: string,
-  dateStr: string // YYYY-MM-DD
+  dateStr: string, // YYYY-MM-DD
+  slotInterval?: number
 ): Promise<string[]> {
+  const intervalMinutes = slotInterval ?? SLOT_INTERVAL_MINUTES;
   const date = parseISO(dateStr);
   const dayOfWeek = date.getDay(); // 0=Sunday..6=Saturday
 
@@ -131,7 +134,7 @@ export async function getAvailableSlots(
       slots.push(`${hours}:${mins}`);
     }
 
-    candidate = addMinutes(candidate, SLOT_INTERVAL_MINUTES);
+    candidate = addMinutes(candidate, intervalMinutes);
   }
 
   return slots;
@@ -141,9 +144,7 @@ export async function getAvailableSlots(
  * Get dates where a barber works within a date range (for calendar disabled days).
  */
 export async function getBarberWorkingDays(
-  barberId: string,
-  startDate: Date,
-  endDate: Date
+  barberId: string
 ): Promise<Set<number>> {
   const schedules = await prisma.schedule.findMany({
     where: { barberId, isActive: true },

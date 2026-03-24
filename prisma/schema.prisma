@@ -220,6 +220,14 @@ model Appointment {
   @@map("appointments")
 }
 
+model ShopSettings {
+  id                  String   @id @default(cuid())
+  slotIntervalMinutes Int      @default(60) @map("slot_interval_minutes")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@map("shop_settings")
+}
+
 model AppointmentStatusHistory {
   id            String             @id @default(uuid())
   appointmentId String             @map("appointment_id")

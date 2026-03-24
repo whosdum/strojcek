@@ -1,11 +1,12 @@
 "use server";
 
 import { prisma } from "@/server/lib/prisma";
-import { bookingInputSchema, cancelBookingSchema } from "@/lib/validators";
+import { bookingInputSchema } from "@/lib/validators";
 import { normalizePhone } from "@/server/lib/phone";
 import { generateToken, hashToken } from "@/server/lib/tokens";
 import { sendEmail } from "@/server/lib/email";
 import { sendSMS } from "@/server/lib/sms";
+import { sendTelegramNotification } from "@/server/lib/telegram";
 import { bookingConfirmationHtml } from "@/emails/booking-confirmation";
 import { bookingCancellationHtml } from "@/emails/booking-cancellation";
 import { MIN_CANCEL_HOURS, CANCELLABLE_STATUSES } from "@/lib/constants";
@@ -49,7 +50,7 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
     startTime.setHours(hours, mins, 0, 0);
     const endTime = addMinutes(startTime, duration);
 
-    // Find or create customer
+    // Find or create customer (identified by normalized phone)
     const customer = await prisma.customer.upsert({
       where: { phone },
       update: {
@@ -62,6 +63,7 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
         lastName: data.lastName || null,
         phone,
         email: data.email || null,
+        visitCount: 0,
       },
     });
 
@@ -166,6 +168,20 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
       message: `Rezervácia potvrdená: ${service.name} u ${barberName}, ${formattedDate} o ${formattedTime}. Zrušiť: ${cancelUrl}`,
     }).catch(console.error);
 
+    // Telegram notification to barber
+    const chatId = process.env.TELEGRAM_CHAT_ID;
+    if (chatId) {
+      sendTelegramNotification({
+        chatId,
+        message:
+          `<b>Nová rezervácia</b>\n` +
+          `Zákazník: ${data.firstName} ${data.lastName || ""}\n` +
+          `Služba: ${service.name}\n` +
+          `Dátum: ${formattedDate} o ${formattedTime}\n` +
+          `Tel: ${phone}`,
+      }).catch(console.error);
+    }
+
     return { success: true, appointmentId };
   } catch (e) {
     console.error("[createBooking]", e);
@@ -223,6 +239,7 @@ export async function cancelBooking(rawToken: string): Promise<ActionResult> {
 
     // Send cancellation email
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const cancelBarberName = `${appointment.barber.firstName} ${appointment.barber.lastName}`;
     if (appointment.customerEmail) {
       sendEmail({
         to: appointment.customerEmail,
@@ -230,11 +247,24 @@ export async function cancelBooking(rawToken: string): Promise<ActionResult> {
         html: bookingCancellationHtml({
           customerName: appointment.customerName || "zákazník",
           serviceName: appointment.service.name,
-          barberName: `${appointment.barber.firstName} ${appointment.barber.lastName}`,
+          barberName: cancelBarberName,
           date: format(appointment.startTime, "d.M.yyyy"),
           time: format(appointment.startTime, "HH:mm"),
           bookUrl: `${appUrl}/book`,
         }),
+      }).catch(console.error);
+    }
+
+    // Telegram notification to barber
+    const chatId = process.env.TELEGRAM_CHAT_ID;
+    if (chatId) {
+      sendTelegramNotification({
+        chatId,
+        message:
+          `<b>Zrušená rezervácia</b>\n` +
+          `Zákazník: ${appointment.customerName || "neznámy"}\n` +
+          `Služba: ${appointment.service.name}\n` +
+          `Dátum: ${format(appointment.startTime, "d.M.yyyy")} o ${format(appointment.startTime, "HH:mm")}`,
       }).catch(console.error);
     }
 
