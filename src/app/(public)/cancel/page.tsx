@@ -1,8 +1,8 @@
-import { format } from "date-fns";
 import { sk } from "date-fns/locale";
+import { formatInTimeZone } from "date-fns-tz";
 import { getAppointmentByToken } from "@/server/queries/tokens";
 import { CancelButton } from "@/components/booking/cancel-button";
-import { CANCELLABLE_STATUSES, MIN_CANCEL_HOURS } from "@/lib/constants";
+import { CANCELLABLE_STATUSES, MIN_CANCEL_HOURS, TIMEZONE } from "@/lib/constants";
 import { XCircleIcon, AlertTriangleIcon, CalendarXIcon } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -68,10 +68,10 @@ export default async function CancelPage({
   const tooLate = isBefore(appointment.startTime, minCancelTime);
   const alreadyCancelled = appointment.status === "CANCELLED";
   const barberName = `${appointment.barber.firstName} ${appointment.barber.lastName}`;
-  const formattedDate = format(appointment.startTime, "EEEE, d. MMMM yyyy", {
+  const formattedDate = formatInTimeZone(appointment.startTime, TIMEZONE, "EEEE, d. MMMM yyyy", {
     locale: sk,
   });
-  const formattedTime = format(appointment.startTime, "HH:mm");
+  const formattedTime = formatInTimeZone(appointment.startTime, TIMEZONE, "HH:mm");
 
   return (
     <div className="booking-theme min-h-dvh bg-background text-foreground px-4 py-8 sm:py-12">

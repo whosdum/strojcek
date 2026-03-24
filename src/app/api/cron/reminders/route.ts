@@ -42,16 +42,14 @@ export async function GET(request: NextRequest) {
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
-    // Generate a fresh cancellation token so the reminder email has a working cancel link
+    // Generate a fresh cancellation token for the reminder email
     const rawToken = generateToken();
     const hashedToken = hashToken(rawToken);
-    await prisma.appointment.update({
-      where: { id: appt.id },
-      data: { cancellationToken: hashedToken },
-    });
     const cancelUrl = `${appUrl}/cancel?token=${rawToken}`;
 
     try {
+      // Send email FIRST — only update token in DB if email succeeds
+      // This avoids invalidating the old confirmation-email cancel link on failure
       await sendEmail({
         to: appt.customerEmail,
         subject: "Pripomienka rezervácie — Strojček",
@@ -65,6 +63,15 @@ export async function GET(request: NextRequest) {
         }),
       });
 
+      // Email sent successfully — now persist the new token and mark as sent
+      await prisma.appointment.update({
+        where: { id: appt.id },
+        data: {
+          cancellationToken: hashedToken,
+          reminderSentAt: new Date(),
+        },
+      });
+
       // Send SMS reminder (non-blocking)
       if (appt.customerPhone) {
         sendSMS({
@@ -74,11 +81,6 @@ export async function GET(request: NextRequest) {
           console.error(`[cron/reminders] SMS failed for ${appt.id}:`, err)
         );
       }
-
-      await prisma.appointment.update({
-        where: { id: appt.id },
-        data: { reminderSentAt: new Date() },
-      });
 
       sent++;
     } catch (err) {

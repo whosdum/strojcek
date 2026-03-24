@@ -44,7 +44,11 @@ export function Sidebar() {
   const [open, setOpen] = useState(false);
 
   const handleLogout = async () => {
-    await authClient.signOut();
+    try {
+      await authClient.signOut();
+    } catch (e) {
+      console.error("[logout]", e);
+    }
     setOpen(false);
     router.push("/login");
   };

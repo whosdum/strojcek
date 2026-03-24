@@ -271,6 +271,22 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
     }
   }, [state.step]);
 
+  // Force re-render at midnight so calendar disabled dates stay fresh
+  const [, forceRender] = useState(0);
+  useEffect(() => {
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    const msUntilMidnight = tomorrow.getTime() - now.getTime();
+
+    const timer = setTimeout(() => {
+      forceRender((n) => n + 1);
+    }, msUntilMidnight + 500); // 500ms buffer after midnight
+
+    return () => clearTimeout(timer);
+  });
+
   // ---------------------------------------------------------------------------
   // Derived
   // ---------------------------------------------------------------------------

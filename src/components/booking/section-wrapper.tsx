@@ -42,8 +42,8 @@ export const SectionWrapper = forwardRef<HTMLDivElement, SectionWrapperProps>(
         {/* Header */}
         <div
           className={cn(
-            "flex items-center gap-3 p-4",
-            isCompleted && "cursor-pointer active:bg-muted/30",
+            "flex items-center gap-3 rounded-xl p-4 outline-none",
+            isCompleted && "cursor-pointer active:bg-muted/30 focus-visible:ring-2 focus-visible:ring-primary/50",
             isActive && "pb-2"
           )}
           onClick={isCompleted ? onEdit : undefined}

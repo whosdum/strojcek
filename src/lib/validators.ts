@@ -77,7 +77,7 @@ export type BreakInput = z.infer<typeof breakInputSchema>;
 export const customerInputSchema = z.object({
   firstName: z.string().min(1, "Meno je povinné"),
   lastName: z.string().optional().default(""),
-  phone: z.string().min(1, "Telefón je povinný"),
+  phone: z.string().min(1, "Telefón je povinný").regex(/^(\+421)?9\d{8}$/, "Neplatné SK telefónne číslo"),
   email: z.string().email().optional().or(z.literal("")),
   notes: z.string().optional().default(""),
 });

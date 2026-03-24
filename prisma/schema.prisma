@@ -218,6 +218,7 @@ model Appointment {
 
   @@index([barberId, startTime])
   @@index([status, startTime])
+  @@index([barberId, status, startTime])
   @@map("appointments")
 }
 
