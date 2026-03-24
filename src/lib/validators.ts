@@ -7,12 +7,24 @@ export const bookingInputSchema = z.object({
   time: z.string().regex(/^\d{2}:\d{2}$/),
   firstName: z.string().min(1, "Meno je povinné"),
   lastName: z.string().optional().default(""),
-  phone: z.string().min(1, "Telefón je povinný").regex(/^9\d{8}$/, "Neplatné telefónne číslo"),
+  phone: z.string().min(1, "Telefón je povinný").regex(/^(\+421)?9\d{8}$/, "Neplatné telefónne číslo"),
   email: z.string().email("Zadajte platný email"),
   note: z.string().optional().default(""),
 });
 
 export type BookingInput = z.infer<typeof bookingInputSchema>;
+
+export const cancelBookingInputSchema = z.object({
+  token: z.string().min(1, "Neplatný odkaz na zrušenie"),
+  reason: z
+    .string()
+    .trim()
+    .max(500, "Dôvod zrušenia môže mať najviac 500 znakov")
+    .optional()
+    .default(""),
+});
+
+export type CancelBookingInput = z.infer<typeof cancelBookingInputSchema>;
 
 export const serviceInputSchema = z.object({
   name: z.string().min(1, "Názov je povinný"),
@@ -49,17 +61,6 @@ export const scheduleInputSchema = z.object({
 
 export type ScheduleInput = z.infer<typeof scheduleInputSchema>;
 
-export const scheduleOverrideInputSchema = z.object({
-  barberId: z.string().uuid(),
-  overrideDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  isAvailable: z.boolean(),
-  startTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
-  endTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
-  reason: z.string().optional().default(""),
-});
-
-export type ScheduleOverrideInput = z.infer<typeof scheduleOverrideInputSchema>;
-
 export const breakInputSchema = z.object({
   barberId: z.string().uuid(),
   dayOfWeek: z.coerce.number().min(0).max(6),
@@ -79,4 +80,3 @@ export const customerInputSchema = z.object({
 });
 
 export type CustomerInput = z.infer<typeof customerInputSchema>;
-

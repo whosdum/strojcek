@@ -1,11 +1,23 @@
 import { prisma } from "@/server/lib/prisma";
-import { hashToken } from "@/server/lib/tokens";
+import { getTokenLookupValues } from "@/server/lib/tokens";
 
 export async function getAppointmentByToken(rawToken: string) {
-  const hashed = hashToken(rawToken);
+  const [primaryToken, fallbackToken] = getTokenLookupValues(rawToken);
+
+  const appointment = await prisma.appointment.findUnique({
+    where: { cancellationToken: primaryToken },
+    include: {
+      barber: { select: { firstName: true, lastName: true } },
+      service: { select: { name: true, durationMinutes: true, price: true } },
+    },
+  });
+
+  if (appointment || !fallbackToken) {
+    return appointment;
+  }
 
   return prisma.appointment.findUnique({
-    where: { cancellationToken: hashed },
+    where: { cancellationToken: fallbackToken },
     include: {
       barber: { select: { firstName: true, lastName: true } },
       service: { select: { name: true, durationMinutes: true, price: true } },

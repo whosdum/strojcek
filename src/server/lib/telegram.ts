@@ -3,6 +3,13 @@ interface TelegramOptions {
   message: string;
 }
 
+export function escapeTelegramHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
+
 export async function sendTelegramNotification({
   chatId,
   message,

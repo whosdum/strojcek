@@ -119,6 +119,17 @@ export default async function ReservationDetailPage({
               <span className="text-muted-foreground">Zdroj</span>
               <span className="break-words sm:text-right">{appointment.source}</span>
             </div>
+            {(appointment.status === "CANCELLED" || appointment.cancellationReason) && (
+              <>
+                <Separator />
+                <div>
+                  <span className="text-muted-foreground">Dôvod zrušenia:</span>
+                  <p className="mt-1 whitespace-pre-wrap break-words">
+                    {appointment.cancellationReason || "Neuvedený"}
+                  </p>
+                </div>
+              </>
+            )}
             {appointment.notes && (
               <>
                 <Separator />
@@ -159,20 +170,27 @@ export default async function ReservationDetailPage({
                   {appointment.statusHistory.map((h) => (
                     <div
                       key={h.id}
-                      className="flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:justify-between"
+                      className="rounded-xl border border-border/50 p-3 text-sm"
                     >
-                      <div>
-                        <span className="text-muted-foreground">
-                          {h.oldStatus ?? "—"}
-                        </span>
-                        <span className="mx-1">→</span>
-                        <span className="font-medium">
-                          {STATUS_LABELS[h.newStatus] ?? h.newStatus}
+                      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <span className="text-muted-foreground">
+                            {h.oldStatus ?? "—"}
+                          </span>
+                          <span className="mx-1">→</span>
+                          <span className="font-medium">
+                            {STATUS_LABELS[h.newStatus] ?? h.newStatus}
+                          </span>
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          {format(h.changedAt, "d.M. HH:mm")}
                         </span>
                       </div>
-                      <span className="text-xs text-muted-foreground">
-                        {format(h.changedAt, "d.M. HH:mm")}
-                      </span>
+                      {h.reason && (
+                        <p className="mt-2 whitespace-pre-wrap break-words text-muted-foreground">
+                          {h.reason}
+                        </p>
+                      )}
                     </div>
                   ))}
                 </div>

@@ -1,12 +1,12 @@
 "use server";
 
 import { prisma } from "@/server/lib/prisma";
-import { bookingInputSchema } from "@/lib/validators";
+import { bookingInputSchema, cancelBookingInputSchema } from "@/lib/validators";
 import { normalizePhone } from "@/server/lib/phone";
-import { generateToken, hashToken } from "@/server/lib/tokens";
+import { generateToken, getTokenLookupValues, hashToken } from "@/server/lib/tokens";
 import { sendEmail } from "@/server/lib/email";
 import { sendSMS } from "@/server/lib/sms";
-import { sendTelegramNotification } from "@/server/lib/telegram";
+import { escapeTelegramHtml, sendTelegramNotification } from "@/server/lib/telegram";
 import { bookingConfirmationHtml } from "@/emails/booking-confirmation";
 import { bookingCancellationHtml } from "@/emails/booking-cancellation";
 import { MIN_CANCEL_HOURS, CANCELLABLE_STATUSES, TIMEZONE } from "@/lib/constants";
@@ -173,10 +173,10 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
         chatId,
         message:
           `<b>Nová rezervácia</b>\n` +
-          `Zákazník: ${data.firstName} ${data.lastName || ""}\n` +
-          `Služba: ${service.name}\n` +
-          `Dátum: ${formattedDate} o ${formattedTime}\n` +
-          `Tel: ${phone}`,
+          `Zákazník: ${escapeTelegramHtml(`${data.firstName} ${data.lastName || ""}`.trim())}\n` +
+          `Služba: ${escapeTelegramHtml(service.name)}\n` +
+          `Dátum: ${escapeTelegramHtml(formattedDate)} o ${escapeTelegramHtml(formattedTime)}\n` +
+          `Tel: ${escapeTelegramHtml(phone)}`,
       }).catch(console.error);
     }
 
@@ -190,17 +190,29 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
   }
 }
 
-export async function cancelBooking(rawToken: string): Promise<ActionResult> {
+export async function cancelBooking(input: unknown): Promise<ActionResult> {
   try {
-    const hashedToken = hashToken(rawToken);
+    const data = cancelBookingInputSchema.parse(input);
+    const [primaryToken, fallbackToken] = getTokenLookupValues(data.token);
+    const cancellationReason = data.reason || null;
 
-    const appointment = await prisma.appointment.findUnique({
-      where: { cancellationToken: hashedToken },
+    let appointment = await prisma.appointment.findUnique({
+      where: { cancellationToken: primaryToken },
       include: {
         barber: { select: { firstName: true, lastName: true } },
         service: { select: { name: true } },
       },
     });
+
+    if (!appointment && fallbackToken) {
+      appointment = await prisma.appointment.findUnique({
+        where: { cancellationToken: fallbackToken },
+        include: {
+          barber: { select: { firstName: true, lastName: true } },
+          service: { select: { name: true } },
+        },
+      });
+    }
 
     if (!appointment) {
       return { success: false, error: "Neplatný alebo expirovaný odkaz." };
@@ -222,7 +234,10 @@ export async function cancelBooking(rawToken: string): Promise<ActionResult> {
     await prisma.$transaction(async (tx) => {
       await tx.appointment.update({
         where: { id: appointment.id },
-        data: { status: "CANCELLED" },
+        data: {
+          status: "CANCELLED",
+          cancellationReason,
+        },
       });
 
       await tx.appointmentStatusHistory.create({
@@ -231,7 +246,9 @@ export async function cancelBooking(rawToken: string): Promise<ActionResult> {
           oldStatus: appointment.status,
           newStatus: "CANCELLED",
           changedBy: "customer",
-          reason: "Zrušené zákazníkom",
+          reason: cancellationReason
+            ? `Zrušené zákazníkom: ${cancellationReason}`
+            : "Zrušené zákazníkom",
         },
       });
     });
@@ -257,19 +274,35 @@ export async function cancelBooking(rawToken: string): Promise<ActionResult> {
     // Telegram notification to barber
     const chatId = process.env.TELEGRAM_CHAT_ID;
     if (chatId) {
+      const formattedDate = format(appointment.startTime, "d.M.yyyy");
+      const formattedTime = format(appointment.startTime, "HH:mm");
+      const safeCustomerName = escapeTelegramHtml(appointment.customerName || "neznámy");
+      const safeServiceName = escapeTelegramHtml(appointment.service.name);
+      const safePhone = appointment.customerPhone
+        ? escapeTelegramHtml(appointment.customerPhone)
+        : null;
+      const safeReason = cancellationReason
+        ? escapeTelegramHtml(cancellationReason)
+        : null;
+
       sendTelegramNotification({
         chatId,
         message:
           `<b>Zrušená rezervácia</b>\n` +
-          `Zákazník: ${appointment.customerName || "neznámy"}\n` +
-          `Služba: ${appointment.service.name}\n` +
-          `Dátum: ${format(appointment.startTime, "d.M.yyyy")} o ${format(appointment.startTime, "HH:mm")}`,
+          `Zákazník: ${safeCustomerName}\n` +
+          `Služba: ${safeServiceName}\n` +
+          `Dátum: ${escapeTelegramHtml(formattedDate)} o ${escapeTelegramHtml(formattedTime)}` +
+          `${safePhone ? `\nTel: ${safePhone}` : ""}` +
+          `${safeReason ? `\nDôvod: ${safeReason}` : ""}`,
       }).catch(console.error);
     }
 
     return { success: true };
   } catch (e) {
     console.error("[cancelBooking]", e);
+    if (e instanceof Error && e.name === "ZodError") {
+      return { success: false, error: "Skontrolujte odkaz alebo dôvod zrušenia." };
+    }
     return { success: false, error: "Nastala neočakávaná chyba. Skúste to znova." };
   }
 }

@@ -2,16 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/server/lib/prisma";
 import { sendEmail } from "@/server/lib/email";
 import { sendSMS } from "@/server/lib/sms";
-import { generateToken, hashToken } from "@/server/lib/tokens";
 import { bookingReminderHtml } from "@/emails/booking-reminder";
 import { addHours, format } from "date-fns";
 
 export async function GET(request: NextRequest) {
-  // Verify cron secret
+  // Verify cron secret — mandatory, reject if not configured
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -40,16 +39,7 @@ export async function GET(request: NextRequest) {
   for (const appt of appointments) {
     if (!appt.customerEmail) continue;
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-
-    // Generate a fresh cancellation token for the reminder email
-    const rawToken = generateToken();
-    const hashedToken = hashToken(rawToken);
-    const cancelUrl = `${appUrl}/cancel?token=${rawToken}`;
-
     try {
-      // Send email FIRST — only update token in DB if email succeeds
-      // This avoids invalidating the old confirmation-email cancel link on failure
       await sendEmail({
         to: appt.customerEmail,
         subject: "Pripomienka rezervácie — Strojček",
@@ -59,24 +49,19 @@ export async function GET(request: NextRequest) {
           barberName: `${appt.barber.firstName} ${appt.barber.lastName}`,
           date: format(appt.startTime, "d.M.yyyy"),
           time: format(appt.startTime, "HH:mm"),
-          cancelUrl,
         }),
       });
 
-      // Email sent successfully — now persist the new token and mark as sent
       await prisma.appointment.update({
         where: { id: appt.id },
-        data: {
-          cancellationToken: hashedToken,
-          reminderSentAt: new Date(),
-        },
+        data: { reminderSentAt: new Date() },
       });
 
       // Send SMS reminder (non-blocking)
       if (appt.customerPhone) {
         sendSMS({
           phone: appt.customerPhone,
-          message: `Pripomienka: zajtra ${format(appt.startTime, "HH:mm")} máte rezerváciu v Strojčeku (${appt.service.name}). Ak potrebujete zrušiť, kontaktujte nás.`,
+          message: `Pripomienka: zajtra ${format(appt.startTime, "HH:mm")} máte rezerváciu v Strojčeku (${appt.service.name}). Ak potrebujete zrušiť, použite odkaz z potvrdzovacieho emailu.`,
         }).catch((err) =>
           console.error(`[cron/reminders] SMS failed for ${appt.id}:`, err)
         );

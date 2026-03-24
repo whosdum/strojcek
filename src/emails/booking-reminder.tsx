@@ -4,7 +4,7 @@ interface BookingReminderProps {
   barberName: string;
   date: string;
   time: string;
-  cancelUrl: string;
+  cancelUrl?: string;
 }
 
 export function bookingReminderHtml({
@@ -52,10 +52,13 @@ export function bookingReminderHtml({
             <td style="padding: 12px 0; font-weight: bold; font-size: 14px; text-align: right;">${time}</td>
           </tr>
         </table>
-        <p style="color: #666; margin: 24px 0 8px; font-size: 13px;">Ak potrebujete rezerváciu zrušiť (najneskôr 2 hodiny pred termínom):</p>
+        ${cancelUrl
+          ? `<p style="color: #666; margin: 24px 0 8px; font-size: 13px;">Ak potrebujete rezerváciu zrušiť (najneskôr 2 hodiny pred termínom):</p>
         <div style="text-align: center; margin-top: 12px;">
           <a href="${cancelUrl}" style="color: #ff703a; font-size: 14px; text-decoration: underline;">Zrušiť rezerváciu</a>
-        </div>
+        </div>`
+          : `<p style="color: #666; margin: 24px 0 8px; font-size: 13px;">Ak potrebujete rezerváciu zrušiť, použite odkaz z potvrdzovacieho emailu.</p>`
+        }
         <p style="color: #333; margin: 24px 0 0; font-size: 15px; text-align: center;">Tešíme sa na vás! 💈</p>
       </td>
     </tr>
