@@ -241,5 +241,7 @@ model AppointmentStatusHistory {
 
   appointment Appointment @relation(fields: [appointmentId], references: [id])
 
+  @@index([appointmentId])
+  @@index([changedAt])
   @@map("appointment_status_history")
 }

@@ -3,7 +3,9 @@ import { prisma } from "@/server/lib/prisma";
 import { sendEmail } from "@/server/lib/email";
 import { sendSMS } from "@/server/lib/sms";
 import { bookingReminderHtml } from "@/emails/booking-reminder";
-import { addHours, format } from "date-fns";
+import { startOfDay, endOfDay, addDays, format } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
+import { TIMEZONE } from "@/lib/constants";
 
 export async function GET(request: NextRequest) {
   // Verify cron secret — mandatory, reject if not configured
@@ -14,11 +16,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const now = new Date();
-  const reminderWindowStart = addHours(now, 23);
-  const reminderWindowEnd = addHours(now, 25);
+  // Send reminders for all of tomorrow's appointments (runs once daily)
+  const nowLocal = toZonedTime(new Date(), TIMEZONE);
+  const tomorrow = addDays(nowLocal, 1);
+  const reminderWindowStart = startOfDay(tomorrow);
+  const reminderWindowEnd = endOfDay(tomorrow);
 
-  // Find CONFIRMED appointments 23-25h away with no reminder sent
+  // Find CONFIRMED appointments tomorrow with no reminder sent
   const appointments = await prisma.appointment.findMany({
     where: {
       status: "CONFIRMED",
