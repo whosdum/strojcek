@@ -31,18 +31,18 @@ export default async function BarbersPage() {
         {barbers.map((barber) => (
           <div key={barber.id} className="rounded-xl border bg-card p-4">
             <div className="flex items-start justify-between gap-3">
-              <div>
+              <div className="min-w-0">
                 <p className="font-medium">
                   {barber.firstName} {barber.lastName}
                 </p>
-                <p className="mt-1 text-sm text-muted-foreground">
+                <p className="mt-1 truncate text-sm text-muted-foreground">
                   {barber.email || "Bez emailu"}
                 </p>
                 <p className="text-sm text-muted-foreground">
                   {barber.phone || "Bez telefónu"}
                 </p>
               </div>
-              <Link href={`/admin/barbers/${barber.id}`}>
+              <Link href={`/admin/barbers/${barber.id}`} className="shrink-0">
                 <Button variant="ghost" size="icon-sm">
                   <PencilIcon className="size-4" />
                 </Button>
@@ -63,15 +63,15 @@ export default async function BarbersPage() {
       </div>
 
       <div className="hidden md:block">
-        <Table>
+        <Table className="table-fixed">
           <TableHeader>
             <TableRow>
-              <TableHead>Meno</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Telefón</TableHead>
-              <TableHead>Služby</TableHead>
-              <TableHead>Stav</TableHead>
-              <TableHead className="w-12" />
+              <TableHead className="w-[20%]">Meno</TableHead>
+              <TableHead className="w-[20%]">Email</TableHead>
+              <TableHead className="w-[15%]">Telefón</TableHead>
+              <TableHead className="w-[30%]">Služby</TableHead>
+              <TableHead className="w-[10%]">Stav</TableHead>
+              <TableHead className="w-[5%]" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -80,12 +80,14 @@ export default async function BarbersPage() {
                 <TableCell className="font-medium">
                   {barber.firstName} {barber.lastName}
                 </TableCell>
-                <TableCell>{barber.email || "—"}</TableCell>
+                <TableCell className="truncate">{barber.email || "—"}</TableCell>
                 <TableCell>{barber.phone || "—"}</TableCell>
                 <TableCell>
-                  {barber.services.length > 0
-                    ? barber.services.map((bs) => bs.service.name).join(", ")
-                    : "—"}
+                  <p className="line-clamp-2 text-sm">
+                    {barber.services.length > 0
+                      ? barber.services.map((bs) => bs.service.name).join(", ")
+                      : "—"}
+                  </p>
                 </TableCell>
                 <TableCell>
                   <Badge variant={barber.isActive ? "default" : "secondary"}>
