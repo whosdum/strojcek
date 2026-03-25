@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,20 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checking, setChecking] = useState(true);
+
+  // Redirect to /admin if already logged in
+  useEffect(() => {
+    authClient.getSession().then((res) => {
+      if (res.data?.session) {
+        router.replace("/admin");
+      } else {
+        setChecking(false);
+      }
+    }).catch(() => {
+      setChecking(false);
+    });
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,7 +44,7 @@ export default function LoginPage() {
       if (result.error) {
         setError("Nesprávny email alebo heslo.");
       } else {
-        router.push("/admin");
+        router.replace("/admin");
       }
     } catch {
       setError("Nastala chyba. Skúste to znova.");
@@ -41,6 +55,9 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
+      {checking ? (
+        <Loader2Icon className="size-6 animate-spin text-muted-foreground" />
+      ) : (
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <CardTitle className="text-xl">Strojček Admin</CardTitle>
@@ -79,6 +96,7 @@ export default function LoginPage() {
           </form>
         </CardContent>
       </Card>
+      )}
     </div>
   );
 }

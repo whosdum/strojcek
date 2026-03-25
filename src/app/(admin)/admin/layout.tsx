@@ -8,9 +8,16 @@ export default async function AdminAuthLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  let session;
+  try {
+    session = await auth.api.getSession({
+      headers: await headers(),
+    });
+  } catch (e) {
+    console.error("[admin/layout] Session check failed:", e);
+    // DB cold start or transient error — don't redirect to login
+    // Let the page render; client-side auth will handle it
+  }
 
   if (!session) {
     redirect("/login");

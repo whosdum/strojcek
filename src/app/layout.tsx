@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
+import { Inter } from "next/font/google";
 import { StructuredData } from "@/components/structured-data";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin", "latin-ext"],
 });
 
@@ -71,7 +71,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="sk">
-      <body className={`${geistSans.variable} font-sans antialiased`}>
+      <body className={`${inter.variable} font-sans antialiased`}>
         <StructuredData />
         {children}
       </body>
