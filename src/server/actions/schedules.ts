@@ -1,6 +1,6 @@
 "use server";
 
-import { updateTag } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { prisma } from "@/server/lib/prisma";
 import {
   scheduleInputSchema,
@@ -8,6 +8,11 @@ import {
 } from "@/lib/validators";
 
 type ActionResult = { success: boolean; error?: string };
+
+function invalidateScheduleCaches() {
+  revalidateTag("schedules", "max");
+  revalidatePath("/");
+}
 
 export async function upsertSchedule(input: unknown): Promise<ActionResult> {
   try {
@@ -30,7 +35,7 @@ export async function upsertSchedule(input: unknown): Promise<ActionResult> {
       await prisma.schedule.create({ data });
     }
 
-    updateTag("schedules");
+    invalidateScheduleCaches();
     return { success: true };
   } catch (e) {
     console.error("[upsertSchedule]", e);
@@ -41,7 +46,7 @@ export async function upsertSchedule(input: unknown): Promise<ActionResult> {
 export async function deleteSchedule(id: string): Promise<ActionResult> {
   try {
     await prisma.schedule.delete({ where: { id } });
-    updateTag("schedules");
+    invalidateScheduleCaches();
     return { success: true };
   } catch (e) {
     console.error("[deleteSchedule]", e);
@@ -53,7 +58,7 @@ export async function createBreak(input: unknown): Promise<ActionResult> {
   try {
     const data = breakInputSchema.parse(input);
     await prisma.scheduleBreak.create({ data });
-    updateTag("schedules");
+    invalidateScheduleCaches();
     return { success: true };
   } catch (e) {
     console.error("[createBreak]", e);
@@ -64,7 +69,7 @@ export async function createBreak(input: unknown): Promise<ActionResult> {
 export async function deleteBreak(id: string): Promise<ActionResult> {
   try {
     await prisma.scheduleBreak.delete({ where: { id } });
-    updateTag("schedules");
+    invalidateScheduleCaches();
     return { success: true };
   } catch (e) {
     console.error("[deleteBreak]", e);
