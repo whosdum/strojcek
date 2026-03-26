@@ -2,8 +2,7 @@ export const dynamic = "force-dynamic";
 
 import Image from "next/image";
 import Link from "next/link";
-import { getActiveServices } from "@/server/queries/services";
-import { getAllBarbersWithSchedules } from "@/server/queries/barbers";
+import { getCachedActiveServices, getCachedAllBarbersWithSchedules } from "@/server/queries/cached";
 import {
   ScissorsIcon,
   ClockIcon,
@@ -28,8 +27,8 @@ const DAY_LABELS = [
 
 export default async function HomePage() {
   const [services, barbers] = await Promise.all([
-    getActiveServices(),
-    getAllBarbersWithSchedules(),
+    getCachedActiveServices(),
+    getCachedAllBarbersWithSchedules(),
   ]);
 
   const barber = barbers[0];

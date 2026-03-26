@@ -1,5 +1,6 @@
 "use server";
 
+import { updateTag } from "next/cache";
 import { prisma } from "@/server/lib/prisma";
 import { barberInputSchema } from "@/lib/validators";
 
@@ -20,6 +21,7 @@ export async function createBarber(input: unknown): Promise<ActionResult> {
         sortOrder: data.sortOrder,
       },
     });
+    updateTag("barbers");
     return { success: true };
   } catch (e) {
     console.error("[createBarber]", e);
@@ -43,6 +45,7 @@ export async function updateBarber(id: string, input: unknown): Promise<ActionRe
         sortOrder: data.sortOrder,
       },
     });
+    updateTag("barbers");
     return { success: true };
   } catch (e) {
     console.error("[updateBarber]", e);
@@ -63,6 +66,7 @@ export async function updateBarberServices(
         });
       }
     });
+    updateTag("barbers");
     return { success: true };
   } catch (e) {
     console.error("[updateBarberServices]", e);

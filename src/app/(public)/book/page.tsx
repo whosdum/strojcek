@@ -1,13 +1,12 @@
-import { getActiveServices } from "@/server/queries/services";
-import { getActiveBarbersWithServices } from "@/server/queries/barbers";
-import { BookingWizard } from "@/components/booking/booking-wizard";
-
 export const dynamic = "force-dynamic";
+
+import { getCachedActiveServices, getCachedActiveBarbersWithServices } from "@/server/queries/cached";
+import { BookingWizard } from "@/components/booking/booking-wizard";
 
 export default async function BookingPage() {
   const [services, barbers] = await Promise.all([
-    getActiveServices(),
-    getActiveBarbersWithServices(),
+    getCachedActiveServices(),
+    getCachedActiveBarbersWithServices(),
   ]);
 
   const serializedServices = services.map((s) => ({
