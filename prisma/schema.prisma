@@ -133,6 +133,7 @@ model Schedule {
 
   barber Barber @relation(fields: [barberId], references: [id])
 
+  @@index([barberId, dayOfWeek])
   @@map("schedules")
 }
 
@@ -219,6 +220,7 @@ model Appointment {
   @@index([barberId, startTime])
   @@index([status, startTime])
   @@index([barberId, status, startTime])
+  @@index([customerId])
   @@map("appointments")
 }
 
