@@ -42,20 +42,6 @@ export const getCachedActiveBarbersWithServices = unstable_cache(
   { tags: ["barbers"], revalidate: 3600 }
 );
 
-export const getCachedAllBarbersWithSchedules = unstable_cache(
-  async () => {
-    return prisma.barber.findMany({
-      orderBy: { sortOrder: "asc" },
-      include: {
-        schedules: { orderBy: { dayOfWeek: "asc" } },
-        scheduleBreaks: { orderBy: { dayOfWeek: "asc" } },
-      },
-    });
-  },
-  ["all-barbers-with-schedules"],
-  { tags: ["barbers", "schedules"], revalidate: 3600 }
-);
-
 // ─── Shop Settings ───────────────────────────────────────────────────
 export const getCachedShopSettings = unstable_cache(
   async () => {
