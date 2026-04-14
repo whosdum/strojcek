@@ -1,12 +1,12 @@
 import { getAllBarbersWithSchedules } from "@/server/queries/barbers";
-import { getShopSettings } from "@/server/queries/settings";
+import { getCachedShopSettings } from "@/server/queries/cached";
 import { ScheduleManager } from "@/components/admin/schedule-manager";
 import { SlotIntervalSetting } from "@/components/admin/slot-interval-setting";
 
 export default async function SchedulePage() {
   const [barbers, settings] = await Promise.all([
     getAllBarbersWithSchedules(),
-    getShopSettings(),
+    getCachedShopSettings(),
   ]);
 
   return (

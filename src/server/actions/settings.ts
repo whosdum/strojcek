@@ -1,7 +1,8 @@
 "use server";
 
+import { revalidateTag } from "next/cache";
 import { prisma } from "@/server/lib/prisma";
-import { getShopSettings } from "@/server/queries/settings";
+import { getCachedShopSettings } from "@/server/queries/cached";
 
 const VALID_INTERVALS = [15, 30, 60];
 
@@ -15,11 +16,12 @@ export async function updateSlotInterval(
     };
   }
 
-  const settings = await getShopSettings();
+  const settings = await getCachedShopSettings();
   await prisma.shopSettings.update({
     where: { id: settings.id },
     data: { slotIntervalMinutes: minutes },
   });
 
+  revalidateTag("settings", "max");
   return { success: true };
 }

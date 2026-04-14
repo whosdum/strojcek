@@ -1,20 +1,22 @@
 "use server";
 
-import { getAvailableSlots, getBarberWorkingDays } from "@/server/queries/slots";
-import { getShopSettings } from "@/server/queries/settings";
+import { getAvailableSlots } from "@/server/queries/slots";
+import {
+  getCachedShopSettings,
+  getCachedWorkingDays,
+} from "@/server/queries/cached";
 
 export async function fetchSlots(
   barberId: string,
   serviceId: string,
   dateStr: string
 ): Promise<string[]> {
-  const settings = await getShopSettings();
+  const settings = await getCachedShopSettings();
   return getAvailableSlots(barberId, serviceId, dateStr, settings.slotIntervalMinutes);
 }
 
 export async function fetchWorkingDays(
   barberId: string
 ): Promise<number[]> {
-  const days = await getBarberWorkingDays(barberId);
-  return Array.from(days);
+  return getCachedWorkingDays(barberId);
 }
