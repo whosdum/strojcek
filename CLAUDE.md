@@ -38,7 +38,7 @@ npx tsx scripts/create-admin.ts  # Create default admin user (admin@strojcek.sk 
   - `prisma.ts` — Prisma client singleton using PrismaPg adapter with `pg.Pool`
   - `auth.ts` — Better Auth config (email/password, PostgreSQL backend)
   - `email.ts` — Resend integration for booking confirmations/reminders
-  - `sms.ts` — GatewayAPI SMS notifications
+  - `sms.ts` — SMStools.sk SMS notifications
   - `phone.ts` — Phone number normalization
   - `tokens.ts` — Cancellation token generation and hashing
 
@@ -78,4 +78,4 @@ Better Auth with email/password for admin users only. Auth guard lives in the ad
 
 ## Environment Variables
 
-See `.env.example` for all required variables. Key ones: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `RESEND_API_KEY`, `GATEWAYAPI_TOKEN`, `CRON_SECRET`.
+See `.env.example` for all required variables. Key ones: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `RESEND_API_KEY`, `SMSTOOLS_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `CRON_SECRET`.
