@@ -18,6 +18,7 @@ import {
   AlertCircleIcon,
   ScissorsIcon,
   CalendarCheckIcon,
+  ChevronLeftIcon,
 } from "lucide-react";
 
 import Link from "next/link";
@@ -45,6 +46,7 @@ interface BarberWithServices {
   bio: string | null;
   avatarUrl: string | null;
   serviceIds: string[];
+  serviceOverrides: Record<string, { price?: string; duration?: number }>;
 }
 
 interface ServiceData {
@@ -234,6 +236,18 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
 }
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const TOTAL_STEPS = 6;
+
+/** Format phone for display: "+421 903123456" → "+421 903 123 456" */
+function formatPhoneDisplay(prefix: string, phone: string): string {
+  const formatted = phone.replace(/(\d{3})(?=\d)/g, "$1 ");
+  return `${prefix} ${formatted}`.trim();
+}
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
@@ -286,6 +300,15 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
   const availableBarbers = state.serviceId
     ? barbers.filter((b) => b.serviceIds.includes(state.serviceId!))
     : [];
+
+  // Effective price/duration (barber custom overrides > base service)
+  const overrides =
+    selectedBarber && state.serviceId
+      ? selectedBarber.serviceOverrides[state.serviceId]
+      : undefined;
+  const effectivePrice = overrides?.price ?? selectedService?.price;
+  const effectiveDuration =
+    overrides?.duration ?? selectedService?.durationMinutes;
 
   // ---------------------------------------------------------------------------
   // Handlers
@@ -384,6 +407,13 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
   // Success screen
   // ---------------------------------------------------------------------------
 
+  // Scroll to top on success
+  useEffect(() => {
+    if (state.result?.success) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [state.result?.success]);
+
   if (state.result?.success) {
     const formattedDate = state.date
       ? format(parseISO(state.date), "EEEE, d. MMMM yyyy", { locale: sk })
@@ -399,7 +429,7 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
             Rezervácia potvrdená!
           </h2>
           <p className="mt-2 text-[15px] text-muted-foreground">
-            Na váš email sme odoslali potvrdenie s detailmi.
+            Potvrdenie sme odoslali na váš email.
           </p>
 
           <div className="mt-6 space-y-3 rounded-xl bg-muted/50 p-4 text-left text-[15px]">
@@ -494,6 +524,34 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
 
   return (
     <div className="space-y-3">
+      {/* Progress indicator */}
+      <div className="flex items-center gap-3 px-1">
+        {state.step > 1 && (
+          <button
+            type="button"
+            onClick={() => handleEdit(state.step - 1)}
+            className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95"
+            aria-label="Späť"
+          >
+            <ChevronLeftIcon className="size-5" />
+          </button>
+        )}
+        <div className="flex flex-1 items-center gap-1.5">
+          {Array.from({ length: TOTAL_STEPS }, (_, i) => (
+            <div
+              key={i}
+              className={cn(
+                "h-1 flex-1 rounded-full transition-colors",
+                i + 1 <= state.step ? "bg-primary" : "bg-muted"
+              )}
+            />
+          ))}
+        </div>
+        <span className="text-[13px] tabular-nums text-muted-foreground">
+          {state.step}/{TOTAL_STEPS}
+        </span>
+      </div>
+
       {/* 1 — Služba */}
       <SectionWrapper
         ref={setSectionRef(1)}
@@ -503,7 +561,7 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
         isCompleted={state.step > 1}
         completedSummary={
           selectedService
-            ? `${selectedService.name} — ${parseFloat(selectedService.price).toFixed(0)} €`
+            ? `${selectedService.name} — ${parseFloat(effectivePrice ?? selectedService.price).toFixed(0)} €`
             : undefined
         }
         onEdit={() => handleEdit(1)}
@@ -537,7 +595,7 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
         }
         onEdit={() => handleEdit(2)}
       >
-        <div className="space-y-2">
+        <div className="grid gap-2 sm:grid-cols-2">
           {availableBarbers.map((barber) => (
             <BarberCardWizard
               key={barber.id}
@@ -641,10 +699,10 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
                 locale: sk,
               })}
               time={state.time}
-              duration={selectedService.durationMinutes}
-              price={parseFloat(selectedService.price).toFixed(2)}
+              duration={effectiveDuration ?? selectedService.durationMinutes}
+              price={parseFloat(effectivePrice ?? selectedService.price).toFixed(0)}
               contactName={state.contact ? `${state.contact.firstName} ${state.contact.lastName}`.trim() : undefined}
-              contactPhone={state.contact ? `${state.contact.prefix} ${state.contact.phone}` : undefined}
+              contactPhone={state.contact ? formatPhoneDisplay(state.contact.prefix, state.contact.phone) : undefined}
               contactEmail={state.contact?.email || undefined}
             />
 
@@ -656,7 +714,7 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
                 aria-label="Súhlasím s obchodnými podmienkami a zásadami ochrany osobných údajov"
                 className="mt-0.5 size-5 shrink-0"
               />
-              <span className="text-[14px] leading-snug text-muted-foreground">
+              <span className="text-[15px] leading-snug text-muted-foreground">
                 Súhlasím s{" "}
                 <Link
                   href="/vop"

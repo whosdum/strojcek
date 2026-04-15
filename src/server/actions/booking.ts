@@ -53,14 +53,14 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
       where: { phone },
       update: {
         firstName: data.firstName,
-        ...(data.lastName && { lastName: data.lastName }),
-        ...(data.email && { email: data.email }),
+        lastName: data.lastName,
+        email: data.email,
       },
       create: {
         firstName: data.firstName,
-        lastName: data.lastName || null,
+        lastName: data.lastName,
         phone,
-        email: data.email || null,
+        email: data.email,
         visitCount: 0,
       },
     });

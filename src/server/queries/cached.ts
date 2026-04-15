@@ -26,7 +26,13 @@ export const getCachedActiveBarbersWithServices = unstable_cache(
       where: { isActive: true },
       orderBy: { sortOrder: "asc" },
       include: {
-        services: { select: { serviceId: true } },
+        services: {
+          select: {
+            serviceId: true,
+            customPrice: true,
+            customDuration: true,
+          },
+        },
       },
     });
     return barbers.map((b) => ({
@@ -36,6 +42,17 @@ export const getCachedActiveBarbersWithServices = unstable_cache(
       bio: b.bio,
       avatarUrl: b.avatarUrl,
       serviceIds: b.services.map((s) => s.serviceId),
+      serviceOverrides: Object.fromEntries(
+        b.services
+          .filter((s) => s.customPrice !== null || s.customDuration !== null)
+          .map((s) => [
+            s.serviceId,
+            {
+              ...(s.customPrice !== null && { price: s.customPrice.toString() }),
+              ...(s.customDuration !== null && { duration: s.customDuration }),
+            },
+          ])
+      ),
     }));
   },
   ["active-barbers-with-services"],

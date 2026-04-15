@@ -6,9 +6,12 @@ export const bookingInputSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   time: z.string().regex(/^\d{2}:\d{2}$/),
   firstName: z.string().min(1, "Meno je povinné"),
-  lastName: z.string().optional().default(""),
-  phone: z.string().min(1, "Telefón je povinný").regex(/^(\+421)?9\d{8}$/, "Neplatné telefónne číslo"),
-  email: z.string().email("Zadajte platný email"),
+  lastName: z.string().min(1, "Priezvisko je povinné"),
+  phone: z
+    .string()
+    .min(1, "Telefón je povinný")
+    .regex(/^\+4(20|21)\d{9}$/, "Neplatné telefónne číslo"),
+  email: z.string().min(1, "Email je povinný").email("Zadajte platný email"),
   note: z.string().optional().default(""),
 });
 
@@ -74,7 +77,7 @@ export type BreakInput = z.infer<typeof breakInputSchema>;
 export const customerInputSchema = z.object({
   firstName: z.string().min(1, "Meno je povinné"),
   lastName: z.string().optional().default(""),
-  phone: z.string().min(1, "Telefón je povinný").regex(/^(\+421)?9\d{8}$/, "Neplatné SK telefónne číslo"),
+  phone: z.string().min(1, "Telefón je povinný").regex(/^\+4(20|21)\d{9}$/, "Neplatné telefónne číslo"),
   email: z.string().email().optional().or(z.literal("")),
   notes: z.string().optional().default(""),
 });
