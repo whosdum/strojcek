@@ -20,9 +20,26 @@ interface SendEmailOptions {
   to: string;
   subject: string;
   html: string;
+  text?: string;
 }
 
-export async function sendEmail({ to, subject, html }: SendEmailOptions) {
+function htmlToPlainText(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<\/tr>/gi, "\n")
+    .replace(/<\/td>/gi, " ")
+    .replace(/<a[^>]+href="([^"]*)"[^>]*>([^<]*)<\/a>/gi, "$2 ($1)")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
   if (!transporter) {
     console.log("[EMAIL STUB]", { to, subject, html: html.substring(0, 200) + "..." });
     return { success: true, stub: true };
@@ -31,9 +48,15 @@ export async function sendEmail({ to, subject, html }: SendEmailOptions) {
   try {
     await transporter.sendMail({
       from: EMAIL_FROM,
+      replyTo: EMAIL_FROM,
       to,
       subject,
       html,
+      text: text || htmlToPlainText(html),
+      headers: {
+        "X-Mailer": "Strojcek Booking",
+        "List-Unsubscribe": `<mailto:${process.env.SMTP_USER || "barbershopstrojcek@gmail.com"}?subject=unsubscribe>`,
+      },
     });
     return { success: true };
   } catch (err) {
