@@ -21,6 +21,7 @@ export function bookingConfirmationHtml({
   startTimeUtc,
   endTimeUtc,
 }: BookingConfirmationProps): string {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://strojcekbarbershop.sk";
   const toCalFormat = (iso: string) => iso.replace(/[-:]/g, "").replace(/\.\d{3}/, "");
   const calStart = toCalFormat(startTimeUtc);
   const calEnd = toCalFormat(endTimeUtc);
@@ -30,20 +31,7 @@ export function bookingConfirmationHtml({
 
   const googleCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${calTitle}&dates=${calStart}/${calEnd}&details=${calDetails}&location=${calLocation}`;
 
-  // ICS data URI for Apple Calendar / Outlook
-  const icsContent = [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "BEGIN:VEVENT",
-    `DTSTART:${calStart}`,
-    `DTEND:${calEnd}`,
-    `SUMMARY:Strojček — ${serviceName}`,
-    `DESCRIPTION:Barber: ${barberName}\\nSlužba: ${serviceName}\\nCena: ${price} €`,
-    `LOCATION:Moyzesova 379/2\\, 014 01 Bytča`,
-    "END:VEVENT",
-    "END:VCALENDAR",
-  ].join("\r\n");
-  const icsDataUri = `data:text/calendar;charset=utf-8,${encodeURIComponent(icsContent)}`;
+  const icsUrl = `${appUrl}/api/calendar?start=${encodeURIComponent(startTimeUtc)}&end=${encodeURIComponent(endTimeUtc)}&title=${calTitle}&description=${calDetails}&location=${calLocation}`;
 
   return `
 <!DOCTYPE html>
@@ -89,7 +77,7 @@ export function bookingConfirmationHtml({
         <p style="color: #666; margin: 24px 0 12px; font-size: 13px;">Pridať do kalendára:</p>
         <div style="text-align: center; margin-bottom: 24px;">
           <a href="${googleCalUrl}" target="_blank" style="display: inline-block; padding: 10px 20px; background-color: #1a73e8; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 13px; margin: 0 4px;">Google Kalendár</a>
-          <a href="${icsDataUri}" download="strojcek-rezervacia.ics" style="display: inline-block; padding: 10px 20px; background-color: #333; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 13px; margin: 0 4px;">Apple / Outlook</a>
+          <a href="${icsUrl}" style="display: inline-block; padding: 10px 20px; background-color: #333; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 13px; margin: 0 4px;">Apple / Outlook</a>
         </div>
         <p style="color: #666; margin: 0 0 16px; font-size: 13px;">Ak potrebujete rezerváciu zrušiť (najneskôr 2 hodiny pred termínom):</p>
         <div style="text-align: center;">
