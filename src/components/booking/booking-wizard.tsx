@@ -32,7 +32,7 @@ import { TimeSlots } from "./time-slots";
 import { ContactForm } from "./contact-form";
 import { BookingSummary } from "./booking-summary";
 
-import { fetchSlots, fetchWorkingDays } from "@/server/actions/slots";
+import { fetchSlots, fetchWorkingDays, fetchScheduleEndTimes } from "@/server/actions/slots";
 import { createBooking } from "@/server/actions/booking";
 
 // ---------------------------------------------------------------------------
@@ -84,6 +84,7 @@ interface WizardState {
   contact: ContactData | null;
   slots: string[] | null;
   workingDays: number[] | null;
+  scheduleEndTimes: Record<number, string> | null;
   loadingSlots: boolean;
   submitting: boolean;
   result: {
@@ -102,6 +103,7 @@ const initialState: WizardState = {
   contact: null,
   slots: null,
   workingDays: null,
+  scheduleEndTimes: null,
   loadingSlots: false,
   submitting: false,
   result: null,
@@ -119,6 +121,7 @@ type WizardAction =
   | { type: "SET_CONTACT"; contact: ContactData }
   | { type: "SET_SLOTS"; slots: string[] }
   | { type: "SET_WORKING_DAYS"; workingDays: number[] }
+  | { type: "SET_SCHEDULE_END_TIMES"; endTimes: Record<number, string> }
   | { type: "SET_LOADING_SLOTS"; loading: boolean }
   | { type: "SUBMIT_START" }
   | {
@@ -137,9 +140,9 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
         barberId: null,
         date: null,
         time: null,
-        contact: null,
         slots: null,
         workingDays: null,
+        scheduleEndTimes: null,
         result: null,
       };
 
@@ -150,7 +153,6 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
         barberId: action.barberId,
         date: null,
         time: null,
-        contact: null,
         slots: null,
         result: null,
       };
@@ -187,6 +189,9 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
     case "SET_WORKING_DAYS":
       return { ...state, workingDays: action.workingDays };
 
+    case "SET_SCHEDULE_END_TIMES":
+      return { ...state, scheduleEndTimes: action.endTimes };
+
     case "SET_LOADING_SLOTS":
       return { ...state, loadingSlots: action.loading };
 
@@ -207,17 +212,17 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
           barberId: null,
           date: null,
           time: null,
-          contact: null,
           slots: null,
           workingDays: null,
+          scheduleEndTimes: null,
         }),
         ...(s === 2 && {
           barberId: null,
           date: null,
           time: null,
-          contact: null,
           slots: null,
           workingDays: null,
+          scheduleEndTimes: null,
         }),
         ...(s === 3 && {
           date: null,
@@ -275,6 +280,11 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
     }
   }, [state.step]);
 
+  // Reset terms checkbox when service/barber changes (price may differ)
+  useEffect(() => {
+    setTermsAccepted(false);
+  }, [state.serviceId, state.barberId]);
+
   // Force re-render at midnight so calendar disabled dates stay fresh
   const [, forceRender] = useState(0);
   useEffect(() => {
@@ -289,7 +299,8 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
     }, msUntilMidnight + 500); // 500ms buffer after midnight
 
     return () => clearTimeout(timer);
-  });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ---------------------------------------------------------------------------
   // Derived
@@ -324,8 +335,12 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
         const barberId = available[0].id;
         dispatch({ type: "SELECT_BARBER", barberId });
         startTransition(async () => {
-          const days = await fetchWorkingDays(barberId);
+          const [days, endTimes] = await Promise.all([
+            fetchWorkingDays(barberId),
+            fetchScheduleEndTimes(barberId),
+          ]);
           dispatch({ type: "SET_WORKING_DAYS", workingDays: days });
+          dispatch({ type: "SET_SCHEDULE_END_TIMES", endTimes });
         });
       }
     },
@@ -335,8 +350,12 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
   const handleSelectBarber = useCallback((barberId: string) => {
     dispatch({ type: "SELECT_BARBER", barberId });
     startTransition(async () => {
-      const days = await fetchWorkingDays(barberId);
+      const [days, endTimes] = await Promise.all([
+        fetchWorkingDays(barberId),
+        fetchScheduleEndTimes(barberId),
+      ]);
       dispatch({ type: "SET_WORKING_DAYS", workingDays: days });
+      dispatch({ type: "SET_SCHEDULE_END_TIMES", endTimes });
     });
   }, []);
 
@@ -420,50 +439,64 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
       : "";
 
     return (
-      <div className="mx-auto max-w-md py-8 text-center">
-        <div className="rounded-2xl border border-border/60 bg-card p-8">
-          <div className="mx-auto flex size-20 items-center justify-center rounded-full bg-green-500/15">
-            <CalendarCheckIcon className="size-10 text-green-400" />
+      <div className="space-y-3">
+        {/* Completed progress bar */}
+        <div className="flex items-center gap-3 px-1">
+          <div className="flex flex-1 items-center gap-1.5">
+            {Array.from({ length: TOTAL_STEPS }, (_, i) => (
+              <div key={i} className="h-1 flex-1 rounded-full bg-primary" />
+            ))}
           </div>
-          <h2 className="mt-5 text-2xl font-bold text-foreground">
-            Rezervácia potvrdená!
-          </h2>
-          <p className="mt-2 text-[15px] text-muted-foreground">
-            Potvrdenie sme odoslali na váš email.
-          </p>
+          <span className="text-[13px] tabular-nums text-muted-foreground">
+            {TOTAL_STEPS}/{TOTAL_STEPS}
+          </span>
+        </div>
 
-          <div className="mt-6 space-y-3 rounded-xl bg-muted/50 p-4 text-left text-[15px]">
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">Služba</span>
-              <span className="font-medium text-foreground">
-                {selectedService?.name}
-              </span>
+        <div className="mx-auto max-w-md py-4 text-center">
+          <div className="rounded-2xl border border-border/60 bg-card p-8">
+            <div className="mx-auto flex size-20 items-center justify-center rounded-full bg-green-500/15">
+              <CalendarCheckIcon className="size-10 text-green-400" />
             </div>
-            <div className="h-px bg-border/50" />
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">Barber</span>
-              <span className="font-medium text-foreground">
-                {selectedBarber
-                  ? `${selectedBarber.firstName} ${selectedBarber.lastName}`
-                  : ""}
-              </span>
+            <h2 className="mt-5 text-2xl font-bold text-foreground">
+              Rezervácia potvrdená!
+            </h2>
+            <p className="mt-2 text-[15px] text-muted-foreground">
+              Potvrdenie sme odoslali na váš email.
+            </p>
+
+            <div className="mt-6 space-y-3 rounded-xl bg-muted/50 p-4 text-left text-[15px]">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">Služba</span>
+                <span className="font-medium text-foreground">
+                  {selectedService?.name}
+                </span>
+              </div>
+              <div className="h-px bg-border/50" />
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">Barber</span>
+                <span className="font-medium text-foreground">
+                  {selectedBarber
+                    ? `${selectedBarber.firstName} ${selectedBarber.lastName}`
+                    : ""}
+                </span>
+              </div>
+              <div className="h-px bg-border/50" />
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">Termín</span>
+                <span className="text-right font-medium text-foreground">
+                  {formattedDate}, {state.time}
+                </span>
+              </div>
             </div>
-            <div className="h-px bg-border/50" />
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">Termín</span>
-              <span className="text-right font-medium text-foreground">
-                {formattedDate}, {state.time}
-              </span>
-            </div>
+
+            <Button
+              className="mt-6 w-full"
+              size="lg"
+              onClick={() => window.location.reload()}
+            >
+              Nová rezervácia
+            </Button>
           </div>
-
-          <Button
-            className="mt-6 w-full"
-            size="lg"
-            onClick={() => window.location.reload()}
-          >
-            Nová rezervácia
-          </Button>
         </div>
       </div>
     );
@@ -498,20 +531,32 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
   // ---------------------------------------------------------------------------
 
   const calendarDisabledMatcher = (date: Date) => {
-    const today = new Date();
+    const now = new Date();
+    const today = new Date(now);
     today.setHours(0, 0, 0, 0);
     if (date < today) return true;
     if (state.workingDays) {
       const dayOfWeek = date.getDay();
-      return !state.workingDays.includes(dayOfWeek);
+      if (!state.workingDays.includes(dayOfWeek)) return true;
+      // Disable today if current time is past the barber's schedule end
+      if (
+        date.getTime() === today.getTime() &&
+        state.scheduleEndTimes?.[dayOfWeek]
+      ) {
+        const [endH, endM] = state.scheduleEndTimes[dayOfWeek]
+          .split(":")
+          .map(Number);
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        const endMinutes = endH * 60 + endM;
+        if (currentMinutes >= endMinutes) return true;
+      }
     }
     return false;
   };
 
   const calendarAvailableMatcher = (date: Date) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (date < today) return false;
+    // Reuse the disabled matcher — available = working day and not disabled
+    if (calendarDisabledMatcher(date)) return false;
     if (state.workingDays) {
       return state.workingDays.includes(date.getDay());
     }

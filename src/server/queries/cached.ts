@@ -87,6 +87,28 @@ export function getCachedWorkingDays(barberId: string) {
   )();
 }
 
+// ─── Schedule End Times per Barber ───────────────────────────────────
+export function getCachedScheduleEndTimes(barberId: string) {
+  return unstable_cache(
+    async () => {
+      const schedules = await prisma.schedule.findMany({
+        where: { barberId, isActive: true },
+        select: { dayOfWeek: true, endTime: true },
+      });
+      const endTimes: Record<number, string> = {};
+      for (const s of schedules) {
+        // Keep the latest end time if multiple schedules exist for the same day
+        if (!endTimes[s.dayOfWeek] || s.endTime > endTimes[s.dayOfWeek]) {
+          endTimes[s.dayOfWeek] = s.endTime;
+        }
+      }
+      return endTimes;
+    },
+    [`schedule-end-times-${barberId}`],
+    { tags: ["schedules"], revalidate: 3600 }
+  )();
+}
+
 // ─── Schedule for a Barber + Day ─────────────────────────────────────
 export function getCachedSchedule(barberId: string, dayOfWeek: number) {
   return unstable_cache(
