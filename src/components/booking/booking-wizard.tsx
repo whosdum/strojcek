@@ -304,8 +304,19 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
   const handleSelectService = useCallback(
     (serviceId: string) => {
       dispatch({ type: "SELECT_SERVICE", serviceId });
+
+      // Auto-select barber if only one is available for this service
+      const available = barbers.filter((b) => b.serviceIds.includes(serviceId));
+      if (available.length === 1) {
+        const barberId = available[0].id;
+        dispatch({ type: "SELECT_BARBER", barberId });
+        startTransition(async () => {
+          const days = await fetchWorkingDays(barberId);
+          dispatch({ type: "SET_WORKING_DAYS", workingDays: days });
+        });
+      }
     },
-    []
+    [barbers]
   );
 
   const handleSelectBarber = useCallback((barberId: string) => {
