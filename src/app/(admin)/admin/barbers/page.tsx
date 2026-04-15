@@ -17,6 +17,11 @@ export default async function BarbersPage() {
 
   return (
     <div>
+      <nav className="mb-2 text-sm text-muted-foreground" aria-label="Breadcrumb">
+        <Link href="/admin" className="hover:text-foreground">Dashboard</Link>
+        <span className="mx-1.5">/</span>
+        <span className="text-foreground">Barberi</span>
+      </nav>
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold sm:text-3xl">Barberi</h1>
         <Link href="/admin/barbers/new">
@@ -27,7 +32,13 @@ export default async function BarbersPage() {
         </Link>
       </div>
 
-      <div className="space-y-3 md:hidden">
+      {barbers.length === 0 && (
+        <p className="py-12 text-center text-muted-foreground">
+          Žiadni barberi. Pridajte prvého barbera.
+        </p>
+      )}
+
+      <div className={barbers.length === 0 ? "hidden" : "space-y-3 md:hidden"}>
         {barbers.map((barber) => (
           <div key={barber.id} className="rounded-xl border bg-card p-4">
             <div className="flex items-start justify-between gap-3">
@@ -62,7 +73,7 @@ export default async function BarbersPage() {
         ))}
       </div>
 
-      <div className="hidden md:block">
+      <div className={barbers.length === 0 ? "hidden" : "hidden md:block"}>
         <Table className="table-fixed">
           <TableHeader>
             <TableRow>

@@ -12,6 +12,7 @@ import { Loader2Icon } from "lucide-react";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createService, updateService } from "@/server/actions/services";
+import { toast } from "sonner";
 
 interface ServiceFormProps {
   service?: {
@@ -54,12 +55,19 @@ export function ServiceForm({ service, onClose }: ServiceFormProps) {
 
   const onSubmit = (data: ServiceInput) => {
     startTransition(async () => {
-      const result = isEdit
-        ? await updateService(service.id, data)
-        : await createService(data);
-      if (result.success) {
-        router.refresh();
-        onClose?.();
+      try {
+        const result = isEdit
+          ? await updateService(service.id, data)
+          : await createService(data);
+        if (result.success) {
+          toast.success("Služba bola uložená");
+          router.refresh();
+          onClose?.();
+        } else {
+          toast.error("Nepodarilo sa uložiť službu");
+        }
+      } catch {
+        toast.error("Nepodarilo sa uložiť službu");
       }
     });
   };
@@ -68,9 +76,15 @@ export function ServiceForm({ service, onClose }: ServiceFormProps) {
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="space-y-1.5">
         <Label htmlFor="name">Názov *</Label>
-        <Input id="name" {...register("name")} />
+        <Input
+          id="name"
+          aria-required
+          aria-invalid={!!errors.name}
+          aria-describedby={errors.name ? "name-error" : undefined}
+          {...register("name")}
+        />
         {errors.name && (
-          <p className="text-xs text-destructive">{errors.name.message}</p>
+          <p id="name-error" className="text-xs text-destructive">{errors.name.message}</p>
         )}
       </div>
 
@@ -85,10 +99,12 @@ export function ServiceForm({ service, onClose }: ServiceFormProps) {
           <Input
             id="durationMinutes"
             type="number"
+            aria-invalid={!!errors.durationMinutes}
+            aria-describedby={errors.durationMinutes ? "durationMinutes-error" : undefined}
             {...register("durationMinutes")}
           />
           {errors.durationMinutes && (
-            <p className="text-xs text-destructive">{errors.durationMinutes.message}</p>
+            <p id="durationMinutes-error" className="text-xs text-destructive">{errors.durationMinutes.message}</p>
           )}
         </div>
         <div className="space-y-1.5">

@@ -27,6 +27,16 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const NAV_ITEMS = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboardIcon },
@@ -42,6 +52,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -95,7 +106,7 @@ export function Sidebar() {
       </nav>
       <div className="border-t p-2">
         <button
-          onClick={handleLogout}
+          onClick={() => setShowLogoutConfirm(true)}
           className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           <LogOutIcon className="size-4" />
@@ -144,6 +155,23 @@ export function Sidebar() {
       <aside className="hidden h-screen w-60 shrink-0 flex-col border-r bg-card md:flex">
         {navContent}
       </aside>
+
+      <AlertDialog open={showLogoutConfirm} onOpenChange={(open) => !open && setShowLogoutConfirm(false)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Odhlásiť sa?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Naozaj sa chcete odhlásiť z administrácie?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zrušiť</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setShowLogoutConfirm(false); handleLogout(); }}>
+              Odhlásiť sa
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

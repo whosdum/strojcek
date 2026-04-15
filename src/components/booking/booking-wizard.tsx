@@ -245,6 +245,8 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
 // ---------------------------------------------------------------------------
 
 const TOTAL_STEPS = 6;
+const DRAFT_KEY = "strojcek-draft";
+const DRAFT_MAX_AGE_MS = 30 * 60 * 1000; // 30 minutes
 
 /** Format phone for display: "+421 903123456" → "+421 903 123 456" */
 function formatPhoneDisplay(prefix: string, phone: string): string {
@@ -256,10 +258,33 @@ function formatPhoneDisplay(prefix: string, phone: string): string {
 // Component
 // ---------------------------------------------------------------------------
 
+function getRestoredState(): Partial<Pick<WizardState, "serviceId" | "barberId" | "date" | "step">> | null {
+  try {
+    const raw = sessionStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    const draft = JSON.parse(raw) as {
+      serviceId?: string;
+      barberId?: string;
+      date?: string;
+      step?: number;
+      savedAt?: number;
+    };
+    if (!draft.savedAt || Date.now() - draft.savedAt > DRAFT_MAX_AGE_MS) {
+      sessionStorage.removeItem(DRAFT_KEY);
+      return null;
+    }
+    return draft;
+  } catch {
+    return null;
+  }
+}
+
 export function BookingWizard({ services, barbers }: BookingWizardProps) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [isPending, startTransition] = useTransition();
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [showTermsHint, setShowTermsHint] = useState(false);
+  const draftRestored = useRef(false);
 
   const sectionRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const sectionRefCallbacks = useRef<Record<number, (el: HTMLDivElement | null) => void>>({});
@@ -273,20 +298,73 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
     return sectionRefCallbacks.current[step];
   }, []);
 
+  // Restore draft from sessionStorage on mount
+  useEffect(() => {
+    if (draftRestored.current) return;
+    draftRestored.current = true;
+    const draft = getRestoredState();
+    if (!draft) return;
+    if (draft.serviceId && services.some((s) => s.id === draft.serviceId)) {
+      dispatch({ type: "SELECT_SERVICE", serviceId: draft.serviceId });
+      if (draft.barberId && barbers.some((b) => b.id === draft.barberId)) {
+        dispatch({ type: "SELECT_BARBER", barberId: draft.barberId });
+      }
+    }
+  }, [services, barbers]);
+
+  // Save draft to sessionStorage on relevant state changes
+  useEffect(() => {
+    if (!state.serviceId) return;
+    try {
+      sessionStorage.setItem(
+        DRAFT_KEY,
+        JSON.stringify({
+          serviceId: state.serviceId,
+          barberId: state.barberId,
+          date: state.date,
+          step: state.step,
+          savedAt: Date.now(),
+        })
+      );
+    } catch {
+      // sessionStorage may be unavailable
+    }
+  }, [state.serviceId, state.barberId, state.date, state.step]);
+
   useEffect(() => {
     const el = sectionRefs.current[state.step];
-    if (el) {
-      const timer = setTimeout(() => {
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 100);
-      return () => clearTimeout(timer);
-    }
+    if (!el) return;
+
+    // Wait one frame for DOM to settle after section collapse/expand,
+    // then jump instantly — smooth scroll fights layout shifts and feels janky.
+    const raf = requestAnimationFrame(() => {
+      const rect = el.getBoundingClientRect();
+      const margin = 24;
+      // Only scroll if section is out of comfortable viewport range
+      if (rect.top < 0 || rect.top > window.innerHeight * 0.4) {
+        window.scrollTo({ top: window.scrollY + rect.top - margin });
+      }
+    });
+
+    return () => cancelAnimationFrame(raf);
   }, [state.step]);
 
   // Reset terms checkbox when service/barber changes (price may differ)
   useEffect(() => {
     setTermsAccepted(false);
+    setShowTermsHint(false);
   }, [state.serviceId, state.barberId]);
+
+  // Show terms hint after a short delay once user reaches the confirm step
+  useEffect(() => {
+    if (state.step === TOTAL_STEPS) {
+      const timer = setTimeout(() => {
+        setShowTermsHint(true);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+    setShowTermsHint(false);
+  }, [state.step]);
 
   // Force re-render at midnight so calendar disabled dates stay fresh
   const [, forceRender] = useState(0);
@@ -429,10 +507,15 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
   // Success screen
   // ---------------------------------------------------------------------------
 
-  // Scroll to top on success
+  // Scroll to top on success + clear draft
   useEffect(() => {
     if (state.result?.success) {
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      window.scrollTo({ top: 0 });
+      try {
+        sessionStorage.removeItem(DRAFT_KEY);
+      } catch {
+        // sessionStorage may be unavailable
+      }
     }
   }, [state.result?.success]);
 
@@ -442,10 +525,10 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
       : "";
 
     return (
-      <div className="space-y-3">
+      <div aria-live="polite" className="space-y-3">
         {/* Completed progress bar */}
         <div className="flex items-center gap-3 px-1">
-          <div className="size-8" />
+          <div className="size-11" />
           <div className="flex flex-1 items-center gap-1.5">
             {Array.from({ length: TOTAL_STEPS }, (_, i) => (
               <div key={i} className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
@@ -520,7 +603,7 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
   // ---------------------------------------------------------------------------
 
   const errorBlock = state.result && !state.result.success && (
-    <div className="mt-4 flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm">
+    <div role="alert" className="mt-4 flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm">
       <AlertCircleIcon className="mt-0.5 size-5 shrink-0 text-destructive" />
       <div className="min-w-0 flex-1">
         <p className="font-medium text-destructive">
@@ -589,16 +672,23 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
           onClick={() => handleEdit(state.step - 1)}
           disabled={state.step <= 1}
           className={cn(
-            "flex size-8 items-center justify-center rounded-lg transition-colors active:scale-95",
+            "flex size-11 items-center justify-center rounded-lg transition-colors active:scale-95",
             state.step > 1
               ? "text-muted-foreground hover:bg-muted hover:text-foreground"
               : "pointer-events-none opacity-0"
           )}
           aria-label="Späť"
         >
-          <ChevronLeftIcon className="size-5" />
+          <ChevronLeftIcon className="size-6" />
         </button>
-        <div className="flex flex-1 items-center gap-1.5">
+        <div
+          className="flex flex-1 items-center gap-1.5"
+          role="progressbar"
+          aria-valuenow={state.step}
+          aria-valuemin={1}
+          aria-valuemax={TOTAL_STEPS}
+          aria-label="Postup rezervácie"
+        >
           {Array.from({ length: TOTAL_STEPS }, (_, i) => {
             const filled = i + 1 <= state.step;
             return (
@@ -636,17 +726,21 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
         onEdit={() => handleEdit(1)}
       >
         <div className="space-y-2">
-          {services.map((service) => (
-            <ServiceCardWizard
-              key={service.id}
-              name={service.name}
-              description={service.description}
-              durationMinutes={service.durationMinutes}
-              price={service.price}
-              isSelected={state.serviceId === service.id}
-              onClick={() => handleSelectService(service.id)}
-            />
-          ))}
+          {services.length === 0 ? (
+            <p className="py-8 text-center text-muted-foreground">Momentálne nie sú dostupné žiadne služby.</p>
+          ) : (
+            services.map((service) => (
+              <ServiceCardWizard
+                key={service.id}
+                name={service.name}
+                description={service.description}
+                durationMinutes={service.durationMinutes}
+                price={service.price}
+                isSelected={state.serviceId === service.id}
+                onClick={() => handleSelectService(service.id)}
+              />
+            ))
+          )}
         </div>
       </SectionWrapper>
 
@@ -665,17 +759,21 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
         onEdit={() => handleEdit(2)}
       >
         <div className="grid gap-2 sm:grid-cols-2">
-          {availableBarbers.map((barber) => (
-            <BarberCardWizard
-              key={barber.id}
-              firstName={barber.firstName}
-              lastName={barber.lastName}
-              bio={barber.bio}
-              avatarUrl={barber.avatarUrl}
-              isSelected={state.barberId === barber.id}
-              onClick={() => handleSelectBarber(barber.id)}
-            />
-          ))}
+          {availableBarbers.length === 0 ? (
+            <p className="py-8 text-center text-muted-foreground sm:col-span-2">Pre túto službu nie sú dostupní žiadni barberi.</p>
+          ) : (
+            availableBarbers.map((barber) => (
+              <BarberCardWizard
+                key={barber.id}
+                firstName={barber.firstName}
+                lastName={barber.lastName}
+                bio={barber.bio}
+                avatarUrl={barber.avatarUrl}
+                isSelected={state.barberId === barber.id}
+                onClick={() => handleSelectBarber(barber.id)}
+              />
+            ))
+          )}
         </div>
       </SectionWrapper>
 
@@ -717,7 +815,7 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
         onEdit={() => handleEdit(4)}
       >
         {state.loadingSlots ? (
-          <div className="flex items-center justify-center gap-2 py-10 text-[15px] text-muted-foreground">
+          <div role="status" aria-live="polite" className="flex items-center justify-center gap-2 py-10 text-[15px] text-muted-foreground">
             <Loader2Icon className="size-5 animate-spin text-primary" />
             <span>Načítavam voľné termíny...</span>
           </div>
@@ -803,6 +901,9 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
                 .
               </span>
             </label>
+            {showTermsHint && !termsAccepted && state.step === TOTAL_STEPS && (
+              <p className="text-xs text-destructive mt-1">Pre pokračovanie musíte súhlasiť s podmienkami.</p>
+            )}
 
             {errorBlock}
 
@@ -888,7 +989,7 @@ function ServiceCardWizard({
           </p>
         )}
         <div className="mt-1.5 flex items-center gap-1 text-[13px] text-muted-foreground">
-          <ClockIcon className="size-3.5" />
+          <ClockIcon className="size-4" />
           {durationMinutes} min
         </div>
       </div>

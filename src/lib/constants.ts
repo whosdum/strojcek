@@ -20,3 +20,29 @@ export const VALID_STATUS_TRANSITIONS: Record<string, string[]> = {
 };
 
 export const CANCELLABLE_STATUSES = ["PENDING", "CONFIRMED", "IN_PROGRESS"];
+
+export const STATUS_LABELS: Record<string, string> = {
+  PENDING: "Čakajúca",
+  CONFIRMED: "Potvrdená",
+  IN_PROGRESS: "Prebieha",
+  COMPLETED: "Dokončená",
+  CANCELLED: "Zrušená",
+  NO_SHOW: "Neprišiel",
+};
+
+export const STATUS_VARIANTS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  PENDING: "outline",
+  CONFIRMED: "default",
+  IN_PROGRESS: "secondary",
+  COMPLETED: "default",
+  CANCELLED: "destructive",
+  NO_SHOW: "destructive",
+};
+
+export function formatCurrency(amount: number | string | { toString(): string }): string {
+  const num = typeof amount === "number" ? amount : parseFloat(String(amount));
+  return new Intl.NumberFormat("sk-SK", {
+    style: "currency",
+    currency: "EUR",
+  }).format(num);
+}

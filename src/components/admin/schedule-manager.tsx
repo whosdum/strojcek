@@ -9,12 +9,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   upsertSchedule,
   createBreak,
   deleteBreak,
 } from "@/server/actions/schedules";
 import { Loader2Icon, PlusIcon, TrashIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 const DAYS = [
   "Nedeľa",
@@ -54,40 +65,61 @@ export function ScheduleManager({ barbers }: ScheduleManagerProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [selectedBarber, setSelectedBarber] = useState(barbers[0]?.id ?? "");
+  const [breakToDelete, setBreakToDelete] = useState<string | null>(null);
 
   const barber = barbers.find((b) => b.id === selectedBarber);
 
   const handleSaveSchedule = (dayOfWeek: number, startTime: string, endTime: string, isActive: boolean) => {
     startTransition(async () => {
-      await upsertSchedule({
-        barberId: selectedBarber,
-        dayOfWeek,
-        startTime,
-        endTime,
-        isActive,
-      });
-      router.refresh();
+      try {
+        await upsertSchedule({
+          barberId: selectedBarber,
+          dayOfWeek,
+          startTime,
+          endTime,
+          isActive,
+        });
+        toast.success("Rozvrh bol uložený");
+        router.refresh();
+      } catch {
+        toast.error("Nepodarilo sa uložiť rozvrh");
+      }
     });
   };
 
   const handleDeleteBreak = (breakId: string) => {
-    if (!confirm("Naozaj chcete zmazať túto prestávku?")) return;
+    setBreakToDelete(breakId);
+  };
+
+  const confirmDeleteBreak = () => {
+    if (!breakToDelete) return;
+    const id = breakToDelete;
+    setBreakToDelete(null);
     startTransition(async () => {
-      await deleteBreak(breakId);
-      router.refresh();
+      try {
+        await deleteBreak(id);
+        router.refresh();
+      } catch {
+        toast.error("Nepodarilo sa zmazať prestávku");
+      }
     });
   };
 
   const handleAddBreak = (dayOfWeek: number, startTime: string, endTime: string) => {
     startTransition(async () => {
-      await createBreak({
-        barberId: selectedBarber,
-        dayOfWeek,
-        startTime,
-        endTime,
-        label: "Prestávka",
-      });
-      router.refresh();
+      try {
+        await createBreak({
+          barberId: selectedBarber,
+          dayOfWeek,
+          startTime,
+          endTime,
+          label: "Prestávka",
+        });
+        toast.success("Rozvrh bol uložený");
+        router.refresh();
+      } catch {
+        toast.error("Nepodarilo sa uložiť rozvrh");
+      }
     });
   };
 
@@ -112,10 +144,12 @@ export function ScheduleManager({ barbers }: ScheduleManagerProps) {
 
       {barber && (
         <Tabs defaultValue="schedule">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="schedule">Pracovné hodiny</TabsTrigger>
-            <TabsTrigger value="breaks">Prestávky</TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-1 px-1">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="schedule">Pracovné hodiny</TabsTrigger>
+              <TabsTrigger value="breaks">Prestávky</TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="schedule" className="mt-4">
             <div className="space-y-3">
@@ -183,6 +217,23 @@ export function ScheduleManager({ barbers }: ScheduleManagerProps) {
           </TabsContent>
         </Tabs>
       )}
+
+      <AlertDialog open={!!breakToDelete} onOpenChange={(open) => !open && setBreakToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Zmazať prestávku?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Naozaj chcete zmazať túto prestávku? Táto akcia sa nedá vrátiť späť.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zrušiť</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={confirmDeleteBreak}>
+              Zmazať
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -220,7 +271,7 @@ function DayScheduleRow({
           />
         </div>
       </div>
-      <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
         <div className="flex items-center gap-2">
           <Input
             type="time"
@@ -243,7 +294,7 @@ function DayScheduleRow({
           variant="outline"
           disabled={isPending}
           onClick={() => onSave(dayOfWeek, startTime, endTime, isActive)}
-          className="w-full sm:w-auto"
+          className="min-h-[44px] w-full sm:min-h-0 sm:w-auto"
         >
           {isPending ? <Loader2Icon className="size-3 animate-spin" /> : "Uložiť"}
         </Button>
@@ -286,7 +337,7 @@ function AddBreakRow({
         variant="outline"
         disabled={isPending}
         onClick={() => onAdd(dayOfWeek, startTime, endTime)}
-        className="w-full sm:w-auto"
+        className="min-h-[44px] w-full sm:min-h-0 sm:w-auto"
       >
         <PlusIcon className="mr-1 size-3" />
         Pridať

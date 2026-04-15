@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ChevronDownIcon } from "lucide-react";
+import { ChevronDownIcon, Loader2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,7 +36,7 @@ export function ContactForm(props: ContactFormProps) {
     register,
     handleSubmit,
     watch,
-    formState: { errors, touchedFields },
+    formState: { errors, touchedFields, isSubmitting },
   } = useForm<ContactFormValues>({
     resolver: zodResolver(contactSchema),
     mode: "onTouched",
@@ -72,10 +72,14 @@ export function ContactForm(props: ContactFormProps) {
             id="firstName"
             className="h-11 bg-muted/30 text-foreground placeholder:text-muted-foreground/60"
             placeholder="Ján"
+            autoComplete="given-name"
+            aria-required
+            aria-invalid={!!errors.firstName}
+            aria-describedby={errors.firstName ? "firstName-error" : undefined}
             {...register("firstName")}
           />
           {touchedFields.firstName && errors.firstName && (
-            <p className="text-[13px] font-medium text-destructive">
+            <p id="firstName-error" className="text-[13px] font-medium text-destructive">
               {errors.firstName.message}
             </p>
           )}
@@ -88,10 +92,14 @@ export function ContactForm(props: ContactFormProps) {
             id="lastName"
             className="h-11 bg-muted/30 text-foreground placeholder:text-muted-foreground/60"
             placeholder="Novák"
+            autoComplete="family-name"
+            aria-required
+            aria-invalid={!!errors.lastName}
+            aria-describedby={errors.lastName ? "lastName-error" : undefined}
             {...register("lastName")}
           />
           {touchedFields.lastName && errors.lastName && (
-            <p className="text-[13px] font-medium text-destructive">
+            <p id="lastName-error" className="text-[13px] font-medium text-destructive">
               {errors.lastName.message}
             </p>
           )}
@@ -120,6 +128,10 @@ export function ContactForm(props: ContactFormProps) {
             maxLength={9}
             placeholder="9XX XXX XXX"
             className="h-11 bg-muted/30 text-foreground placeholder:text-muted-foreground/60"
+            autoComplete="tel-local"
+            aria-required
+            aria-invalid={!!errors.phone}
+            aria-describedby={errors.phone ? "phone-error" : undefined}
             {...register("phone", {
               onChange: (e) => {
                 let val = e.target.value.replace(/\D/g, "");
@@ -141,7 +153,7 @@ export function ContactForm(props: ContactFormProps) {
           </p>
         )}
         {!phoneZeroHint && touchedFields.phone && errors.phone && (
-          <p className="text-[13px] font-medium text-destructive">
+          <p id="phone-error" className="text-[13px] font-medium text-destructive">
             {errors.phone.message}
           </p>
         )}
@@ -156,10 +168,14 @@ export function ContactForm(props: ContactFormProps) {
           type="email"
           placeholder="jan.novak@email.sk"
           className="h-11 bg-muted/30 text-foreground placeholder:text-muted-foreground/60"
+          autoComplete="email"
+          aria-required
+          aria-invalid={!!errors.email}
+          aria-describedby={errors.email ? "email-error" : undefined}
           {...register("email")}
         />
         {touchedFields.email && errors.email && (
-          <p className="text-[13px] font-medium text-destructive">
+          <p id="email-error" className="text-[13px] font-medium text-destructive">
             {errors.email.message}
           </p>
         )}
@@ -175,11 +191,13 @@ export function ContactForm(props: ContactFormProps) {
           maxLength={NOTE_MAX_LENGTH}
           placeholder="Špeciálne požiadavky..."
           className="bg-muted/30 text-foreground placeholder:text-muted-foreground/60"
+          aria-invalid={!!errors.note}
+          aria-describedby={errors.note ? "note-error" : undefined}
           {...register("note")}
         />
         <div className="flex items-center justify-between">
           {errors.note ? (
-            <p className="text-[13px] font-medium text-destructive">
+            <p id="note-error" className="text-[13px] font-medium text-destructive">
               {errors.note.message}
             </p>
           ) : (
@@ -195,9 +213,16 @@ export function ContactForm(props: ContactFormProps) {
         type="submit"
         className="h-12 w-full text-base font-semibold"
         size="lg"
-        disabled={!canSubmit}
+        disabled={!canSubmit || isSubmitting}
       >
-        Ďalej
+        {isSubmitting ? (
+          <>
+            <Loader2Icon className="size-5 animate-spin" />
+            Odosielam...
+          </>
+        ) : (
+          "Ďalej"
+        )}
       </Button>
     </form>
   );

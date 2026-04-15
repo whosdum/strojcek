@@ -6,17 +6,8 @@ import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { sk } from "date-fns/locale";
 import Link from "next/link";
-import { ArrowLeftIcon } from "lucide-react";
 import { CustomerActions } from "@/components/admin/customer-actions";
-
-const STATUS_LABELS: Record<string, string> = {
-  PENDING: "Čaká",
-  CONFIRMED: "Potvrdená",
-  IN_PROGRESS: "Prebieha",
-  COMPLETED: "Dokončená",
-  CANCELLED: "Zrušená",
-  NO_SHOW: "Neprišiel",
-};
+import { STATUS_LABELS } from "@/lib/constants";
 
 export default async function CustomerDetailPage({
   params,
@@ -30,13 +21,13 @@ export default async function CustomerDetailPage({
 
   return (
     <div>
-      <Link
-        href="/admin/customers"
-        className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeftIcon className="size-4" />
-        Späť na zoznam
-      </Link>
+      <nav className="mb-4 text-sm text-muted-foreground" aria-label="Breadcrumb">
+        <Link href="/admin" className="hover:text-foreground">Dashboard</Link>
+        <span className="mx-1.5">/</span>
+        <Link href="/admin/customers" className="hover:text-foreground">Zákazníci</Link>
+        <span className="mx-1.5">/</span>
+        <span className="text-foreground">{customer.firstName} {customer.lastName}</span>
+      </nav>
 
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold">

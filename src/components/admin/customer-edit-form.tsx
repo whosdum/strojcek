@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Loader2Icon } from "lucide-react";
+import { toast } from "sonner";
 
 interface CustomerEditFormProps {
   customer: {
@@ -46,12 +47,19 @@ export function CustomerEditForm({ customer, onClose }: CustomerEditFormProps) {
 
   const onSubmit = async (data: CustomerInput) => {
     setError(null);
-    const result = await updateCustomer(customer.id, data);
-    if (result.success) {
-      router.refresh();
-      onClose();
-    } else {
-      setError(result.error || "Nastala chyba.");
+    try {
+      const result = await updateCustomer(customer.id, data);
+      if (result.success) {
+        toast.success("Zákazník bol aktualizovaný");
+        router.refresh();
+        onClose();
+      } else {
+        toast.error("Nepodarilo sa aktualizovať zákazníka");
+        setError(result.error || "Nastala chyba.");
+      }
+    } catch {
+      toast.error("Nepodarilo sa aktualizovať zákazníka");
+      setError("Nastala chyba.");
     }
   };
 
@@ -63,9 +71,15 @@ export function CustomerEditForm({ customer, onClose }: CustomerEditFormProps) {
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label htmlFor="firstName">Meno *</Label>
-          <Input id="firstName" {...register("firstName")} />
+          <Input
+            id="firstName"
+            aria-required
+            aria-invalid={!!errors.firstName}
+            aria-describedby={errors.firstName ? "firstName-error" : undefined}
+            {...register("firstName")}
+          />
           {errors.firstName && (
-            <p className="text-xs text-destructive">{errors.firstName.message}</p>
+            <p id="firstName-error" className="text-xs text-destructive">{errors.firstName.message}</p>
           )}
         </div>
         <div className="space-y-1.5">
@@ -76,9 +90,15 @@ export function CustomerEditForm({ customer, onClose }: CustomerEditFormProps) {
 
       <div className="space-y-1.5">
         <Label htmlFor="phone">Telefón *</Label>
-        <Input id="phone" {...register("phone")} />
+        <Input
+          id="phone"
+          aria-required
+          aria-invalid={!!errors.phone}
+          aria-describedby={errors.phone ? "phone-error" : undefined}
+          {...register("phone")}
+        />
         {errors.phone && (
-          <p className="text-xs text-destructive">{errors.phone.message}</p>
+          <p id="phone-error" className="text-xs text-destructive">{errors.phone.message}</p>
         )}
       </div>
 

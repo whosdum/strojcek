@@ -1,10 +1,10 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateAppointmentStatus } from "@/server/actions/appointments";
 import { AppointmentStatus } from "@/generated/prisma/client";
-import { VALID_STATUS_TRANSITIONS } from "@/lib/constants";
+import { VALID_STATUS_TRANSITIONS, STATUS_LABELS } from "@/lib/constants";
 import { Loader2Icon } from "lucide-react";
 import {
   Select,
@@ -13,15 +13,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-const STATUS_LABELS: Record<string, string> = {
-  PENDING: "Čakajúca",
-  CONFIRMED: "Potvrdená",
-  IN_PROGRESS: "Prebieha",
-  COMPLETED: "Dokončená",
-  CANCELLED: "Zrušená",
-  NO_SHOW: "Neprišiel",
-};
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 interface StatusActionsProps {
   appointmentId: string;
@@ -31,6 +33,7 @@ interface StatusActionsProps {
 export function StatusActions({ appointmentId, currentStatus }: StatusActionsProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [pendingStatus, setPendingStatus] = useState<string | null>(null);
 
   // Only show valid next statuses + current status
   const validNextStatuses = VALID_STATUS_TRANSITIONS[currentStatus] ?? [];
@@ -38,9 +41,21 @@ export function StatusActions({ appointmentId, currentStatus }: StatusActionsPro
 
   const handleChange = (newStatus: string | null) => {
     if (!newStatus || newStatus === currentStatus) return;
+    setPendingStatus(newStatus);
+  };
+
+  const confirmStatusChange = () => {
+    if (!pendingStatus) return;
+    const newStatus = pendingStatus;
+    setPendingStatus(null);
     startTransition(async () => {
-      await updateAppointmentStatus(appointmentId, newStatus as AppointmentStatus);
-      router.refresh();
+      try {
+        await updateAppointmentStatus(appointmentId, newStatus as AppointmentStatus);
+        toast.success("Stav bol zmenený");
+        router.refresh();
+      } catch {
+        toast.error("Nepodarilo sa zmeniť stav");
+      }
     });
   };
 
@@ -61,6 +76,23 @@ export function StatusActions({ appointmentId, currentStatus }: StatusActionsPro
           ))}
         </SelectContent>
       </Select>
+
+      <AlertDialog open={!!pendingStatus} onOpenChange={(open) => !open && setPendingStatus(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Zmeniť stav?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Zmeniť stav na {pendingStatus ? STATUS_LABELS[pendingStatus] : ""}?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zrušiť</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmStatusChange}>
+              Potvrdiť
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

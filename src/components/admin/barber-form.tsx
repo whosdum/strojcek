@@ -13,6 +13,7 @@ import { Loader2Icon } from "lucide-react";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createBarber, updateBarber, updateBarberServices } from "@/server/actions/barbers";
+import { toast } from "sonner";
 
 interface Service {
   id: string;
@@ -66,18 +67,25 @@ export function BarberForm({ barber, allServices }: BarberFormProps) {
 
   const onSubmit = (data: BarberInput) => {
     startTransition(async () => {
-      let result;
-      if (isEdit) {
-        result = await updateBarber(barber.id, data);
-        if (result.success) {
-          await updateBarberServices(barber.id, serviceIds);
+      try {
+        let result;
+        if (isEdit) {
+          result = await updateBarber(barber.id, data);
+          if (result.success) {
+            await updateBarberServices(barber.id, serviceIds);
+          }
+        } else {
+          result = await createBarber(data);
         }
-      } else {
-        result = await createBarber(data);
-      }
-      if (result.success) {
-        router.push("/admin/barbers");
-        router.refresh();
+        if (result.success) {
+          toast.success("Barber bol uložený");
+          router.push("/admin/barbers");
+          router.refresh();
+        } else {
+          toast.error("Nepodarilo sa uložiť barbera");
+        }
+      } catch {
+        toast.error("Nepodarilo sa uložiť barbera");
       }
     });
   };
@@ -93,16 +101,28 @@ export function BarberForm({ barber, allServices }: BarberFormProps) {
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label htmlFor="firstName">Meno *</Label>
-          <Input id="firstName" {...register("firstName")} />
+          <Input
+            id="firstName"
+            aria-required
+            aria-invalid={!!errors.firstName}
+            aria-describedby={errors.firstName ? "firstName-error" : undefined}
+            {...register("firstName")}
+          />
           {errors.firstName && (
-            <p className="text-xs text-destructive">{errors.firstName.message}</p>
+            <p id="firstName-error" className="text-xs text-destructive">{errors.firstName.message}</p>
           )}
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="lastName">Priezvisko *</Label>
-          <Input id="lastName" {...register("lastName")} />
+          <Input
+            id="lastName"
+            aria-required
+            aria-invalid={!!errors.lastName}
+            aria-describedby={errors.lastName ? "lastName-error" : undefined}
+            {...register("lastName")}
+          />
           {errors.lastName && (
-            <p className="text-xs text-destructive">{errors.lastName.message}</p>
+            <p id="lastName-error" className="text-xs text-destructive">{errors.lastName.message}</p>
           )}
         </div>
       </div>

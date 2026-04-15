@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ChevronRightIcon, EyeIcon, SearchIcon } from "lucide-react";
+import { ChevronLeftIcon, ChevronRightIcon, EyeIcon, SearchIcon } from "lucide-react";
 
 export default async function CustomersPage({
   searchParams,
@@ -25,6 +25,11 @@ export default async function CustomersPage({
 
   return (
     <div>
+      <nav className="mb-2 text-sm text-muted-foreground" aria-label="Breadcrumb">
+        <Link href="/admin" className="hover:text-foreground">Dashboard</Link>
+        <span className="mx-1.5">/</span>
+        <span className="text-foreground">Zákazníci</span>
+      </nav>
       <h1 className="mb-6 text-2xl font-bold sm:text-3xl">Zákazníci</h1>
 
       {/* Search */}
@@ -43,7 +48,13 @@ export default async function CustomersPage({
         </Button>
       </form>
 
-      <div className="space-y-3 md:hidden">
+      {items.length === 0 && (
+        <p className="py-12 text-center text-muted-foreground">
+          {search ? "Žiadne výsledky pre dané vyhľadávanie." : "Žiadni zákazníci."}
+        </p>
+      )}
+
+      <div className={items.length === 0 ? "hidden" : "space-y-3 md:hidden"}>
         {items.map((customer) => (
           <Link
             key={customer.id}
@@ -71,7 +82,7 @@ export default async function CustomersPage({
         ))}
       </div>
 
-      <div className="hidden md:block">
+      <div className={items.length === 0 ? "hidden" : "hidden md:block"}>
         <Table>
           <TableHeader>
             <TableRow>
@@ -111,6 +122,15 @@ export default async function CustomersPage({
 
       {pages > 1 && (
         <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+          <Link
+            href={`/admin/customers?page=${Math.max(1, page - 1)}${search ? `&search=${search}` : ""}`}
+            aria-disabled={page <= 1}
+            className={page <= 1 ? "pointer-events-none opacity-50" : ""}
+          >
+            <Button variant="outline" size="sm">
+              <ChevronLeftIcon className="size-4" />
+            </Button>
+          </Link>
           {Array.from({ length: pages }, (_, i) => i + 1).map((p) => (
             <Link
               key={p}
@@ -121,6 +141,18 @@ export default async function CustomersPage({
               </Button>
             </Link>
           ))}
+          <Link
+            href={`/admin/customers?page=${Math.min(pages, page + 1)}${search ? `&search=${search}` : ""}`}
+            aria-disabled={page >= pages}
+            className={page >= pages ? "pointer-events-none opacity-50" : ""}
+          >
+            <Button variant="outline" size="sm">
+              <ChevronRightIcon className="size-4" />
+            </Button>
+          </Link>
+          <span className="ml-2 text-xs text-muted-foreground">
+            Strana {page} z {pages}
+          </span>
         </div>
       )}
     </div>

@@ -35,7 +35,7 @@ function CancelPageFrame({ children }: { children: React.ReactNode }) {
         </p>
       </header>
 
-      <div className="mx-auto max-w-md">{children}</div>
+      <main className="mx-auto max-w-md">{children}</main>
 
       <footer className="mt-10 border-t border-border/40 pt-6 text-center text-[13px] text-muted-foreground">
         <div className="flex items-center justify-center gap-3">

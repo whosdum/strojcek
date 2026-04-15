@@ -39,7 +39,14 @@ export default async function HomePage() {
         </p>
       </header>
 
-      <BookingWizard services={serializedServices} barbers={barbers} />
+      <main>
+        <BookingWizard services={serializedServices} barbers={barbers} />
+      </main>
+      <noscript>
+        <p className="p-8 text-center text-muted-foreground">
+          Pre použitie rezervačného systému je potrebný JavaScript.
+        </p>
+      </noscript>
 
       <footer className="mt-10 border-t border-border/40 pt-6 text-center text-[13px] text-muted-foreground">
         <div className="flex items-center justify-center gap-3">

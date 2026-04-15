@@ -5,24 +5,7 @@ import { format } from "date-fns";
 import { sk } from "date-fns/locale";
 import { CalendarDaysIcon, ClockIcon, UsersIcon, TrendingUpIcon, BarChart3Icon } from "lucide-react";
 import Link from "next/link";
-
-const STATUS_LABELS: Record<string, string> = {
-  PENDING: "Čaká",
-  CONFIRMED: "Potvrdená",
-  IN_PROGRESS: "Prebieha",
-  COMPLETED: "Dokončená",
-  CANCELLED: "Zrušená",
-  NO_SHOW: "Neprišiel",
-};
-
-const STATUS_VARIANTS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  PENDING: "outline",
-  CONFIRMED: "default",
-  IN_PROGRESS: "secondary",
-  COMPLETED: "default",
-  CANCELLED: "destructive",
-  NO_SHOW: "destructive",
-};
+import { STATUS_LABELS, STATUS_VARIANTS, formatCurrency } from "@/lib/constants";
 
 export default async function AdminDashboardPage() {
   const [todayAppointments, upcoming, stats, popularity] = await Promise.all([
@@ -168,7 +151,7 @@ export default async function AdminDashboardPage() {
                   </div>
                   <div className="flex items-center gap-4 text-muted-foreground">
                     <span>{item.count}× rezervácií</span>
-                    <span className="font-medium text-foreground">{item.revenue} €</span>
+                    <span className="font-medium text-foreground">{formatCurrency(item.revenue)}</span>
                   </div>
                 </div>
               ))}

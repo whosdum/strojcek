@@ -7,17 +7,8 @@ import { format } from "date-fns";
 import { sk } from "date-fns/locale";
 import { StatusActions } from "@/components/admin/status-actions";
 import Link from "next/link";
-import { ArrowLeftIcon } from "lucide-react";
 import { AppointmentDeleteButton } from "@/components/admin/appointment-delete-button";
-
-const STATUS_LABELS: Record<string, string> = {
-  PENDING: "Čaká",
-  CONFIRMED: "Potvrdená",
-  IN_PROGRESS: "Prebieha",
-  COMPLETED: "Dokončená",
-  CANCELLED: "Zrušená",
-  NO_SHOW: "Neprišiel",
-};
+import { STATUS_LABELS, formatCurrency } from "@/lib/constants";
 
 export default async function ReservationDetailPage({
   params,
@@ -31,10 +22,13 @@ export default async function ReservationDetailPage({
 
   return (
     <div>
-      <Link href="/admin/reservations" className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-        <ArrowLeftIcon className="size-4" />
-        Späť na zoznam
-      </Link>
+      <nav className="mb-4 text-sm text-muted-foreground" aria-label="Breadcrumb">
+        <Link href="/admin" className="hover:text-foreground">Dashboard</Link>
+        <span className="mx-1.5">/</span>
+        <Link href="/admin/reservations" className="hover:text-foreground">Rezervácie</Link>
+        <span className="mx-1.5">/</span>
+        <span className="text-foreground">Detail</span>
+      </nav>
 
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold">Detail rezervácie</h1>
@@ -111,7 +105,7 @@ export default async function ReservationDetailPage({
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
               <span className="text-muted-foreground">Cena</span>
               <span className="font-medium">
-                {appointment.priceExpected.toString()} €
+                {formatCurrency(appointment.priceExpected)}
               </span>
             </div>
             <Separator />

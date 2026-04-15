@@ -20,6 +20,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PlusIcon, PencilIcon, Loader2Icon } from "lucide-react";
+import Link from "next/link";
+import { formatCurrency } from "@/lib/constants";
 
 // This needs to be a server component but we need dialog state.
 // Using a hybrid approach: server data + client dialog.
@@ -78,6 +80,11 @@ function ServicesContent() {
 
   return (
     <div>
+      <nav className="mb-2 text-sm text-muted-foreground" aria-label="Breadcrumb">
+        <Link href="/admin" className="hover:text-foreground">Dashboard</Link>
+        <span className="mx-1.5">/</span>
+        <span className="text-foreground">Služby</span>
+      </nav>
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold sm:text-3xl">Služby</h1>
         <Button size="sm" onClick={handleNew}>
@@ -141,7 +148,7 @@ function ServicesContent() {
             <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
               <Badge variant="outline">{service.durationMinutes} min</Badge>
               <Badge variant="outline">
-                {parseFloat(service.price.toString()).toFixed(2)} €
+                {formatCurrency(service.price)}
               </Badge>
               <Badge variant="outline">{service.bufferMinutes} min buffer</Badge>
               <Badge variant={service.isActive ? "default" : "secondary"}>
@@ -179,7 +186,7 @@ function ServicesContent() {
                 </TableCell>
                 <TableCell>{service.durationMinutes} min</TableCell>
                 <TableCell>
-                  {parseFloat(service.price.toString()).toFixed(2)} €
+                  {formatCurrency(service.price)}
                 </TableCell>
                 <TableCell>{service.bufferMinutes} min</TableCell>
                 <TableCell>

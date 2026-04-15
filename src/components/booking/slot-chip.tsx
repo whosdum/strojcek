@@ -13,6 +13,8 @@ export function SlotChip({ time, isSelected, onClick }: SlotChipProps) {
     <button
       type="button"
       onClick={onClick}
+      aria-label={`Vybrať termín o ${time}`}
+      aria-pressed={isSelected}
       className={cn(
         "inline-flex min-h-[48px] w-full items-center justify-center rounded-xl border px-3 py-2.5 text-[15px] font-semibold tabular-nums transition-all active:scale-95 sm:min-w-[80px] sm:w-auto",
         isSelected

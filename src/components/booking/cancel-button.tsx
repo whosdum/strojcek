@@ -5,8 +5,21 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { cancelBooking } from "@/server/actions/booking";
 import { CheckCircle2Icon, Loader2Icon, XCircleIcon } from "lucide-react";
+
+const REASON_MAX_LENGTH = 500;
 
 export function CancelButton({ token }: { token: string }) {
   const [isPending, startTransition] = useTransition();
@@ -54,16 +67,21 @@ export function CancelButton({ token }: { token: string }) {
           <Textarea
             id="cancellationReason"
             rows={4}
-            maxLength={500}
+            maxLength={REASON_MAX_LENGTH}
             value={reason}
             onChange={(event) => setReason(event.target.value)}
             disabled={isPending}
             placeholder="Voliteľné. Napr. zmena plánov, choroba alebo presun termínu."
             className="bg-muted/30 text-foreground placeholder:text-muted-foreground/60"
           />
-          <p className="text-xs text-muted-foreground">
-            Voliteľné. Ak ho vyplníte, uloží sa k zrušenej rezervácii.
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">
+              Voliteľné. Ak ho vyplníte, uloží sa k zrušenej rezervácii.
+            </p>
+            <p className="text-xs text-muted-foreground text-right">
+              {reason.length}/{REASON_MAX_LENGTH}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -74,22 +92,41 @@ export function CancelButton({ token }: { token: string }) {
         </div>
       )}
 
-      <Button
-        onClick={handleCancel}
-        disabled={isPending}
-        variant="destructive"
-        className="w-full"
-        size="lg"
-      >
-        {isPending ? (
-          <>
-            <Loader2Icon className="mr-2 size-4 animate-spin" />
-            Ruším...
-          </>
-        ) : (
-          "Zrušiť rezerváciu"
-        )}
-      </Button>
+      <AlertDialog>
+        <AlertDialogTrigger
+          render={
+            <Button
+              disabled={isPending}
+              variant="destructive"
+              className="w-full"
+              size="lg"
+            />
+          }
+        >
+          {isPending ? (
+            <>
+              <Loader2Icon className="mr-2 size-4 animate-spin" />
+              Ruším...
+            </>
+          ) : (
+            "Zrušiť rezerváciu"
+          )}
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Zrušiť rezerváciu?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Naozaj chcete zrušiť túto rezerváciu? Táto akcia sa nedá vrátiť späť.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Nie, ponechať</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={handleCancel}>
+              Áno, zrušiť
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

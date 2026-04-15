@@ -12,26 +12,9 @@ import {
 } from "@/components/ui/table";
 import { format } from "date-fns";
 import { sk } from "date-fns/locale";
-import { EyeIcon } from "lucide-react";
+import { EyeIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { AppointmentStatus } from "@/generated/prisma/client";
-
-const STATUS_LABELS: Record<string, string> = {
-  PENDING: "Čaká",
-  CONFIRMED: "Potvrdená",
-  IN_PROGRESS: "Prebieha",
-  COMPLETED: "Dokončená",
-  CANCELLED: "Zrušená",
-  NO_SHOW: "Neprišiel",
-};
-
-const STATUS_VARIANTS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  PENDING: "outline",
-  CONFIRMED: "default",
-  IN_PROGRESS: "secondary",
-  COMPLETED: "default",
-  CANCELLED: "destructive",
-  NO_SHOW: "destructive",
-};
+import { STATUS_LABELS, STATUS_VARIANTS, PAGE_SIZE } from "@/lib/constants";
 
 export default async function ReservationsPage({
   searchParams,
@@ -51,6 +34,11 @@ export default async function ReservationsPage({
 
   return (
     <div>
+      <nav className="mb-2 text-sm text-muted-foreground" aria-label="Breadcrumb">
+        <Link href="/admin" className="hover:text-foreground">Dashboard</Link>
+        <span className="mx-1.5">/</span>
+        <span className="text-foreground">Rezervácie</span>
+      </nav>
       <h1 className="mb-6 text-2xl font-bold sm:text-3xl">Rezervácie</h1>
 
       {/* Filters */}
@@ -145,6 +133,15 @@ export default async function ReservationsPage({
       {/* Pagination */}
       {pages > 1 && (
         <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+          <Link
+            href={`/admin/reservations?page=${Math.max(1, page - 1)}${status ? `&status=${status}` : ""}`}
+            aria-disabled={page <= 1}
+            className={page <= 1 ? "pointer-events-none opacity-50" : ""}
+          >
+            <Button variant="outline" size="sm">
+              <ChevronLeftIcon className="size-4" />
+            </Button>
+          </Link>
           {Array.from({ length: pages }, (_, i) => i + 1).map((p) => (
             <Link
               key={p}
@@ -158,6 +155,18 @@ export default async function ReservationsPage({
               </Button>
             </Link>
           ))}
+          <Link
+            href={`/admin/reservations?page=${Math.min(pages, page + 1)}${status ? `&status=${status}` : ""}`}
+            aria-disabled={page >= pages}
+            className={page >= pages ? "pointer-events-none opacity-50" : ""}
+          >
+            <Button variant="outline" size="sm">
+              <ChevronRightIcon className="size-4" />
+            </Button>
+          </Link>
+          <span className="ml-2 text-xs text-muted-foreground">
+            Strana {page} z {pages}
+          </span>
         </div>
       )}
     </div>

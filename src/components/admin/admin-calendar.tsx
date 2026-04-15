@@ -7,6 +7,8 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import type { EventClickArg, EventInput } from "@fullcalendar/core";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 // Barber color palette — vivid, high contrast
 const BARBER_COLORS = [
@@ -71,6 +73,7 @@ export function AdminCalendar() {
   const [barbers, setBarbers] = useState<BarberInfo[]>([]);
   const barberMapRef = useRef<Map<string, number>>(new Map());
   const [isMobile, setIsMobile] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 767px)");
@@ -106,6 +109,7 @@ export function AdminCalendar() {
       successCallback: (events: EventInput[]) => void,
       failureCallback: (error: Error) => void
     ) => {
+      setLoading(true);
       try {
         const params = new URLSearchParams({
           start: fetchInfo.startStr,
@@ -144,7 +148,10 @@ export function AdminCalendar() {
 
         successCallback(events);
       } catch (err) {
+        toast.error("Nepodarilo sa načítať kalendár");
         failureCallback(err as Error);
+      } finally {
+        setLoading(false);
       }
     },
     []
@@ -269,7 +276,12 @@ export function AdminCalendar() {
         ${statusStyles}
       `}</style>
 
-      <div className="overflow-hidden rounded-xl border bg-card p-2 sm:p-4">
+      <div className="relative overflow-hidden rounded-xl border bg-card p-2 sm:p-4">
+        {loading && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60">
+            <Loader2 className="size-6 animate-spin text-muted-foreground" />
+          </div>
+        )}
         <FullCalendar
           key={isMobile ? "mobile" : "desktop"}
           ref={calendarRef}
