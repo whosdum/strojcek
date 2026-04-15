@@ -1,0 +1,34 @@
+name: Cron Jobs
+
+on:
+  schedule:
+    # Reminders — daily at 18:00 UTC (20:00 Bratislava summer / 19:00 winter)
+    - cron: "0 18 * * *"
+    # Cleanup — daily at 03:00 UTC
+    - cron: "0 3 * * *"
+  workflow_dispatch: # allow manual trigger
+
+jobs:
+  reminders:
+    if: github.event.schedule == '0 18 * * *' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send reminders
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl -s -f -X GET "${APP_URL}/api/cron/reminders" \
+            -H "Authorization: Bearer ${CRON_SECRET}"
+
+  cleanup:
+    if: github.event.schedule == '0 3 * * *' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run cleanup
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl -s -f -X GET "${APP_URL}/api/cron/cleanup" \
+            -H "Authorization: Bearer ${CRON_SECRET}"
