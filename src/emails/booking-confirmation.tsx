@@ -1,3 +1,5 @@
+import { escapeHtml } from "./utils";
+
 interface BookingConfirmationProps {
   customerName: string;
   serviceName: string;
@@ -21,6 +23,13 @@ export function bookingConfirmationHtml({
   startTimeUtc,
   endTimeUtc,
 }: BookingConfirmationProps): string {
+  const safeCustomerName = escapeHtml(customerName);
+  const safeServiceName = escapeHtml(serviceName);
+  const safeBarberName = escapeHtml(barberName);
+  const safeDate = escapeHtml(date);
+  const safeTime = escapeHtml(time);
+  const safePrice = escapeHtml(price);
+
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://strojcekbarbershop.sk";
   const toCalFormat = (iso: string) => iso.replace(/[-:]/g, "").replace(/\.\d{3}/, "");
   const calStart = toCalFormat(startTimeUtc);
@@ -50,28 +59,28 @@ export function bookingConfirmationHtml({
         <div style="background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 10px 16px; margin-bottom: 24px; text-align: center;">
           <span style="color: #059669; font-weight: bold; font-size: 14px;">✓ Potvrdená</span>
         </div>
-        <p style="color: #333; margin: 0 0 20px; font-size: 15px;">Dobrý deň, ${customerName},</p>
+        <p style="color: #333; margin: 0 0 20px; font-size: 15px;">Dobrý deň, ${safeCustomerName},</p>
         <p style="color: #333; margin: 0 0 24px; font-size: 15px;">Vaša rezervácia bola úspešne potvrdená.</p>
         <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
           <tr>
             <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; color: #888; font-size: 14px; width: 100px;">Služba</td>
-            <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; font-weight: bold; font-size: 14px; text-align: right;">${serviceName}</td>
+            <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; font-weight: bold; font-size: 14px; text-align: right;">${safeServiceName}</td>
           </tr>
           <tr>
             <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; color: #888; font-size: 14px;">Barber</td>
-            <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; font-weight: bold; font-size: 14px; text-align: right;">${barberName}</td>
+            <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; font-weight: bold; font-size: 14px; text-align: right;">${safeBarberName}</td>
           </tr>
           <tr>
             <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; color: #888; font-size: 14px;">Dátum</td>
-            <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; font-weight: bold; font-size: 14px; text-align: right;">${date}</td>
+            <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; font-weight: bold; font-size: 14px; text-align: right;">${safeDate}</td>
           </tr>
           <tr>
             <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; color: #888; font-size: 14px;">Čas</td>
-            <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; font-weight: bold; font-size: 14px; text-align: right;">${time}</td>
+            <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; font-weight: bold; font-size: 14px; text-align: right;">${safeTime}</td>
           </tr>
           <tr>
             <td style="padding: 12px 0; color: #888; font-size: 14px;">Cena</td>
-            <td style="padding: 12px 0; font-weight: bold; font-size: 16px; text-align: right; color: #ff703a;">${price} €</td>
+            <td style="padding: 12px 0; font-weight: bold; font-size: 16px; text-align: right; color: #ff703a;">${safePrice} €</td>
           </tr>
         </table>
         <p style="color: #666; margin: 24px 0 8px; font-size: 13px;">Pridať do kalendára:</p>

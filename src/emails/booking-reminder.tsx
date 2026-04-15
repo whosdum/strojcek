@@ -1,3 +1,5 @@
+import { escapeHtml } from "./utils";
+
 interface BookingReminderProps {
   customerName: string;
   serviceName: string;
@@ -15,6 +17,12 @@ export function bookingReminderHtml({
   time,
   cancelUrl,
 }: BookingReminderProps): string {
+  const safeCustomerName = escapeHtml(customerName);
+  const safeServiceName = escapeHtml(serviceName);
+  const safeBarberName = escapeHtml(barberName);
+  const safeDate = escapeHtml(date);
+  const safeTime = escapeHtml(time);
+
   return `
 <!DOCTYPE html>
 <html>
@@ -32,24 +40,24 @@ export function bookingReminderHtml({
         <div style="background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 10px 16px; margin-bottom: 24px; text-align: center;">
           <span style="color: #2563eb; font-weight: bold; font-size: 14px;">🔔 Pripomienka</span>
         </div>
-        <p style="color: #333; margin: 0 0 20px; font-size: 15px;">Dobrý deň, ${customerName},</p>
+        <p style="color: #333; margin: 0 0 20px; font-size: 15px;">Dobrý deň, ${safeCustomerName},</p>
         <p style="color: #333; margin: 0 0 24px; font-size: 15px;">Pripomíname vám zajtrajšiu rezerváciu:</p>
         <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
           <tr>
             <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; color: #888; font-size: 14px; width: 100px;">Služba</td>
-            <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; font-weight: bold; font-size: 14px; text-align: right;">${serviceName}</td>
+            <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; font-weight: bold; font-size: 14px; text-align: right;">${safeServiceName}</td>
           </tr>
           <tr>
             <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; color: #888; font-size: 14px;">Barber</td>
-            <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; font-weight: bold; font-size: 14px; text-align: right;">${barberName}</td>
+            <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; font-weight: bold; font-size: 14px; text-align: right;">${safeBarberName}</td>
           </tr>
           <tr>
             <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; color: #888; font-size: 14px;">Dátum</td>
-            <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; font-weight: bold; font-size: 14px; text-align: right;">${date}</td>
+            <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; font-weight: bold; font-size: 14px; text-align: right;">${safeDate}</td>
           </tr>
           <tr>
             <td style="padding: 12px 0; color: #888; font-size: 14px;">Čas</td>
-            <td style="padding: 12px 0; font-weight: bold; font-size: 14px; text-align: right;">${time}</td>
+            <td style="padding: 12px 0; font-weight: bold; font-size: 14px; text-align: right;">${safeTime}</td>
           </tr>
         </table>
         ${cancelUrl

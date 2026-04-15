@@ -61,9 +61,9 @@ export async function GET(request: NextRequest) {
         data: { reminderSentAt: new Date() },
       });
 
-      // Send SMS reminder (non-blocking)
+      // Send SMS reminder
       if (appt.customerPhone) {
-        sendSMS({
+        await sendSMS({
           phone: appt.customerPhone,
           message: `Pripomienka: zajtra ${format(toZonedTime(appt.startTime, TIMEZONE), "HH:mm")} máte rezerváciu v Strojčeku (${appt.service.name}). Ak potrebujete zrušiť, použite odkaz z potvrdzovacieho emailu.`,
         }).catch((err) =>

@@ -71,6 +71,7 @@ export function ScheduleManager({ barbers }: ScheduleManagerProps) {
   };
 
   const handleDeleteBreak = (breakId: string) => {
+    if (!confirm("Naozaj chcete zmazať túto prestávku?")) return;
     startTransition(async () => {
       await deleteBreak(breakId);
       router.refresh();

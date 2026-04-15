@@ -41,6 +41,7 @@ function CancelPageFrame({ children }: { children: React.ReactNode }) {
         <div className="flex items-center justify-center gap-3">
           <Link
             href="/vop"
+            prefetch={false}
             className="underline-offset-2 hover:text-foreground hover:underline"
           >
             Obchodné podmienky
@@ -48,6 +49,7 @@ function CancelPageFrame({ children }: { children: React.ReactNode }) {
           <span className="text-border">|</span>
           <Link
             href="/ochrana-udajov"
+            prefetch={false}
             className="underline-offset-2 hover:text-foreground hover:underline"
           >
             Ochrana osobných údajov
@@ -115,7 +117,7 @@ export default async function CancelPage({
   }
 
   const isCancellable = CANCELLABLE_STATUSES.includes(appointment.status);
-  const minCancelTime = addHours(toZonedTime(new Date(), TIMEZONE), MIN_CANCEL_HOURS);
+  const minCancelTime = addHours(new Date(), MIN_CANCEL_HOURS);
   const tooLate = isBefore(appointment.startTime, minCancelTime);
   const alreadyCancelled = appointment.status === "CANCELLED";
   const barberName = `${appointment.barber.firstName} ${appointment.barber.lastName}`;

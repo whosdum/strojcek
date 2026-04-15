@@ -1,10 +1,19 @@
 import { z } from "zod";
 
+/** HH:MM format, validates hours 00-23 and minutes 00-59 */
+const timeString = z
+  .string()
+  .regex(/^\d{2}:\d{2}$/, "Neplatný formát času (HH:MM)")
+  .refine((val) => {
+    const [h, m] = val.split(":").map(Number);
+    return h >= 0 && h <= 23 && m >= 0 && m <= 59;
+  }, "Neplatný čas");
+
 export const bookingInputSchema = z.object({
   serviceId: z.string().uuid(),
   barberId: z.string().uuid(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  time: z.string().regex(/^\d{2}:\d{2}$/),
+  time: timeString,
   firstName: z.string().min(1, "Meno je povinné"),
   lastName: z.string().min(1, "Priezvisko je povinné"),
   phone: z
@@ -54,23 +63,33 @@ export const barberInputSchema = z.object({
 
 export type BarberInput = z.infer<typeof barberInputSchema>;
 
-export const scheduleInputSchema = z.object({
-  barberId: z.string().uuid(),
-  dayOfWeek: z.coerce.number().min(0).max(6),
-  startTime: z.string().regex(/^\d{2}:\d{2}$/),
-  endTime: z.string().regex(/^\d{2}:\d{2}$/),
-  isActive: z.boolean().default(true),
-});
+export const scheduleInputSchema = z
+  .object({
+    barberId: z.string().uuid(),
+    dayOfWeek: z.coerce.number().min(0).max(6),
+    startTime: timeString,
+    endTime: timeString,
+    isActive: z.boolean().default(true),
+  })
+  .refine((data) => data.startTime < data.endTime, {
+    message: "Koniec musí byť po začiatku",
+    path: ["endTime"],
+  });
 
 export type ScheduleInput = z.infer<typeof scheduleInputSchema>;
 
-export const breakInputSchema = z.object({
-  barberId: z.string().uuid(),
-  dayOfWeek: z.coerce.number().min(0).max(6),
-  startTime: z.string().regex(/^\d{2}:\d{2}$/),
-  endTime: z.string().regex(/^\d{2}:\d{2}$/),
-  label: z.string().default("Prestávka"),
-});
+export const breakInputSchema = z
+  .object({
+    barberId: z.string().uuid(),
+    dayOfWeek: z.coerce.number().min(0).max(6),
+    startTime: timeString,
+    endTime: timeString,
+    label: z.string().default("Prestávka"),
+  })
+  .refine((data) => data.startTime < data.endTime, {
+    message: "Koniec musí byť po začiatku",
+    path: ["endTime"],
+  });
 
 export type BreakInput = z.infer<typeof breakInputSchema>;
 
