@@ -6,16 +6,8 @@ import {
   getCachedBarberService,
 } from "@/server/queries/cached";
 import { SLOT_INTERVAL_MINUTES, TIMEZONE } from "@/lib/constants";
-import { toZonedTime } from "date-fns-tz";
-import {
-  startOfDay,
-  addMinutes,
-  setHours,
-  setMinutes,
-  isBefore,
-  isAfter,
-  parseISO,
-} from "date-fns";
+import { fromZonedTime, toZonedTime } from "date-fns-tz";
+import { addMinutes, isBefore, isAfter } from "date-fns";
 
 interface TimeRange {
   start: Date;
@@ -26,8 +18,10 @@ interface TimeRange {
  * Get available booking slots for a specific barber, service, and date.
  * Slots are computed dynamically — never stored in the database.
  *
- * Uses cached queries for schedule/breaks/barberService (rarely change).
- * Only appointments are fetched live (must be realtime).
+ * All schedule times (workStart, workEnd, breaks) are interpreted as
+ * Europe/Bratislava local times and converted to UTC for comparison
+ * with appointment times stored in the database.
+ *
  * @param slotInterval - optional interval in minutes (from ShopSettings); falls back to constant
  */
 export async function getAvailableSlots(
@@ -37,11 +31,17 @@ export async function getAvailableSlots(
   slotInterval?: number
 ): Promise<string[]> {
   const intervalMinutes = slotInterval ?? SLOT_INTERVAL_MINUTES;
-  const date = parseISO(dateStr);
-  const dayOfWeek = date.getDay(); // 0=Sunday..6=Saturday
+
+  // Parse date as Bratislava midnight → UTC
+  const dayStartUtc = fromZonedTime(`${dateStr}T00:00:00`, TIMEZONE);
+  const dayEndUtc = addMinutes(dayStartUtc, 24 * 60);
+
+  // getDay() on the Bratislava-local date
+  const localDate = toZonedTime(dayStartUtc, TIMEZONE);
+  const dayOfWeek = localDate.getDay(); // 0=Sunday..6=Saturday
 
   // 1. Check schedule overrides (cached)
-  const override = await getCachedScheduleOverride(barberId, startOfDay(date));
+  const override = await getCachedScheduleOverride(barberId, dayStartUtc);
 
   let workStart: string;
   let workEnd: string;
@@ -66,20 +66,17 @@ export async function getAvailableSlots(
   if (!isOverrideDay) {
     const scheduleBreaks = await getCachedScheduleBreaks(barberId, dayOfWeek);
     breaks = scheduleBreaks.map((b) => ({
-      start: timeStringToDate(date, b.startTime),
-      end: timeStringToDate(date, b.endTime),
+      start: timeStringToUtc(dateStr, b.startTime),
+      end: timeStringToUtc(dateStr, b.endTime),
     }));
   }
 
   // 4. Load active appointments — LIVE query (must be realtime)
-  const dayStart = startOfDay(date);
-  const dayEnd = addMinutes(dayStart, 24 * 60);
-
   const appointments = await prisma.appointment.findMany({
     where: {
       barberId,
-      startTime: { gte: dayStart },
-      endTime: { lte: dayEnd },
+      startTime: { gte: dayStartUtc },
+      endTime: { lte: dayEndUtc },
       status: { notIn: ["CANCELLED", "NO_SHOW"] },
     },
     include: {
@@ -102,20 +99,20 @@ export async function getAvailableSlots(
   const buffer = service.bufferMinutes;
 
   // 6. Generate candidates in SLOT_INTERVAL_MINUTES intervals
-  const workingStart = timeStringToDate(date, workStart);
-  const workingEnd = timeStringToDate(date, workEnd);
-  const now = toZonedTime(new Date(), TIMEZONE);
+  const workingStartUtc = timeStringToUtc(dateStr, workStart);
+  const workingEndUtc = timeStringToUtc(dateStr, workEnd);
+  const nowUtc = new Date();
 
   const slots: string[] = [];
-  let candidate = workingStart;
+  let candidate = workingStartUtc;
 
-  while (isBefore(candidate, workingEnd)) {
+  while (isBefore(candidate, workingEndUtc)) {
     const slotEnd = addMinutes(candidate, duration);
     const blockEnd = addMinutes(candidate, duration + buffer);
 
     // 7. Check all conditions
-    const fitsInWorkingHours = !isAfter(slotEnd, workingEnd);
-    const notInPast = isAfter(candidate, now);
+    const fitsInWorkingHours = !isAfter(slotEnd, workingEndUtc);
+    const notInPast = isAfter(candidate, nowUtc);
     const noBreakOverlap = !breaks.some(
       (b) => isBefore(candidate, b.end) && isAfter(slotEnd, b.start)
     );
@@ -124,8 +121,10 @@ export async function getAvailableSlots(
     );
 
     if (fitsInWorkingHours && notInPast && noBreakOverlap && noAppointmentOverlap) {
-      const hours = candidate.getHours().toString().padStart(2, "0");
-      const mins = candidate.getMinutes().toString().padStart(2, "0");
+      // Convert candidate UTC back to Bratislava local for display
+      const local = toZonedTime(candidate, TIMEZONE);
+      const hours = local.getHours().toString().padStart(2, "0");
+      const mins = local.getMinutes().toString().padStart(2, "0");
       slots.push(`${hours}:${mins}`);
     }
 
@@ -135,7 +134,7 @@ export async function getAvailableSlots(
   return slots;
 }
 
-function timeStringToDate(date: Date, timeStr: string): Date {
-  const [hours, minutes] = timeStr.split(":").map(Number);
-  return setMinutes(setHours(startOfDay(date), hours), minutes);
+/** Convert a "HH:mm" time string on a given date to a UTC Date */
+function timeStringToUtc(dateStr: string, timeStr: string): Date {
+  return fromZonedTime(`${dateStr}T${timeStr}:00`, TIMEZONE);
 }
