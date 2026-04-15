@@ -98,7 +98,7 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
             priceExpected: price,
             customerName: `${data.firstName} ${data.lastName}`.trim(),
             customerPhone: phone,
-            customerEmail: data.email || null,
+            customerEmail: data.email,
             cancellationToken: hashedToken,
             notes: data.note || null,
             source: "online",
@@ -147,25 +147,23 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
     const notifications: Promise<unknown>[] = [];
 
     // Email confirmation
-    if (data.email) {
-      notifications.push(
-        sendEmail({
-          to: data.email,
-          subject: "Potvrdenie rezervácie - Strojček",
-          html: bookingConfirmationHtml({
-            customerName: data.firstName,
-            serviceName: service.name,
-            barberName,
-            date: formattedDate,
-            time: formattedTime,
-            price: price.toString(),
-            cancelUrl,
-            startTimeUtc: startTime.toISOString(),
-            endTimeUtc: endTime.toISOString(),
-          }),
-        }).catch((err) => console.error("[EMAIL]", err))
-      );
-    }
+    notifications.push(
+      sendEmail({
+        to: data.email,
+        subject: "Potvrdenie rezervácie - Strojček",
+        html: bookingConfirmationHtml({
+          customerName: data.firstName,
+          serviceName: service.name,
+          barberName,
+          date: formattedDate,
+          time: formattedTime,
+          price: price.toString(),
+          cancelUrl,
+          startTimeUtc: startTime.toISOString(),
+          endTimeUtc: endTime.toISOString(),
+        }),
+      }).catch((err) => console.error("[EMAIL]", err))
+    );
 
     // SMS confirmation
     notifications.push(
@@ -183,11 +181,11 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
           chatId,
           message:
             `<b>Nová rezervácia</b>\n` +
-            `Zákazník: ${escapeTelegramHtml(`${data.firstName} ${data.lastName || ""}`.trim())}\n` +
+            `Zákazník: ${escapeTelegramHtml(`${data.firstName} ${data.lastName}`)}\n` +
             `Služba: ${escapeTelegramHtml(service.name)}\n` +
             `Dátum: ${escapeTelegramHtml(formattedDate)} o ${escapeTelegramHtml(formattedTime)}\n` +
-            `Tel: ${escapeTelegramHtml(phone)}` +
-            `${data.email ? `\nEmail: ${escapeTelegramHtml(data.email)}` : ""}`,
+            `Tel: ${escapeTelegramHtml(phone)}\n` +
+            `Email: ${escapeTelegramHtml(data.email)}`,
         }).catch((err) => console.error("[TELEGRAM]", err))
       );
     }

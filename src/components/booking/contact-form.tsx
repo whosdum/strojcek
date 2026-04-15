@@ -36,9 +36,10 @@ export function ContactForm(props: ContactFormProps) {
     register,
     handleSubmit,
     watch,
-    formState: { errors },
+    formState: { errors, isValid },
   } = useForm<ContactFormValues>({
     resolver: zodResolver(contactSchema),
+    mode: "onChange",
     defaultValues: {
       firstName: "",
       lastName: "",
@@ -183,7 +184,12 @@ export function ContactForm(props: ContactFormProps) {
         </div>
       </div>
 
-      <Button type="submit" className="h-12 w-full text-base font-semibold" size="lg">
+      <Button
+        type="submit"
+        className="h-12 w-full text-base font-semibold"
+        size="lg"
+        disabled={!isValid}
+      >
         Ďalej
       </Button>
     </form>

@@ -262,13 +262,16 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
   const [termsAccepted, setTermsAccepted] = useState(false);
 
   const sectionRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const sectionRefCallbacks = useRef<Record<number, (el: HTMLDivElement | null) => void>>({});
 
-  const setSectionRef = useCallback(
-    (step: number) => (el: HTMLDivElement | null) => {
-      sectionRefs.current[step] = el;
-    },
-    []
-  );
+  const setSectionRef = useCallback((step: number) => {
+    if (!sectionRefCallbacks.current[step]) {
+      sectionRefCallbacks.current[step] = (el: HTMLDivElement | null) => {
+        sectionRefs.current[step] = el;
+      };
+    }
+    return sectionRefCallbacks.current[step];
+  }, []);
 
   useEffect(() => {
     const el = sectionRefs.current[state.step];
@@ -442,9 +445,12 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
       <div className="space-y-3">
         {/* Completed progress bar */}
         <div className="flex items-center gap-3 px-1">
+          <div className="size-8" />
           <div className="flex flex-1 items-center gap-1.5">
             {Array.from({ length: TOTAL_STEPS }, (_, i) => (
-              <div key={i} className="h-1 flex-1 rounded-full bg-primary" />
+              <div key={i} className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                <div className="absolute inset-0 rounded-full bg-primary" />
+              </div>
             ))}
           </div>
           <span className="text-[13px] tabular-nums text-muted-foreground">
@@ -485,6 +491,13 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
                 <span className="text-muted-foreground">Termín</span>
                 <span className="text-right font-medium text-foreground">
                   {formattedDate}, {state.time}
+                </span>
+              </div>
+              <div className="h-px bg-border/50" />
+              <div className="flex items-center justify-between gap-3">
+                <span className="font-semibold text-foreground">Cena</span>
+                <span className="text-lg font-bold text-primary tabular-nums">
+                  {parseFloat(effectivePrice ?? selectedService?.price ?? "0").toFixed(0)} €
                 </span>
               </div>
             </div>
@@ -530,32 +543,32 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
   // Calendar helpers
   // ---------------------------------------------------------------------------
 
+  // Pre-compute once per render instead of per-day-cell
+  const now = new Date();
+  const todayStart = new Date(now);
+  todayStart.setHours(0, 0, 0, 0);
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
   const calendarDisabledMatcher = (date: Date) => {
-    const now = new Date();
-    const today = new Date(now);
-    today.setHours(0, 0, 0, 0);
-    if (date < today) return true;
+    if (date < todayStart) return true;
     if (state.workingDays) {
       const dayOfWeek = date.getDay();
       if (!state.workingDays.includes(dayOfWeek)) return true;
       // Disable today if current time is past the barber's schedule end
       if (
-        date.getTime() === today.getTime() &&
+        date.getTime() === todayStart.getTime() &&
         state.scheduleEndTimes?.[dayOfWeek]
       ) {
         const [endH, endM] = state.scheduleEndTimes[dayOfWeek]
           .split(":")
           .map(Number);
-        const currentMinutes = now.getHours() * 60 + now.getMinutes();
-        const endMinutes = endH * 60 + endM;
-        if (currentMinutes >= endMinutes) return true;
+        if (currentMinutes >= endH * 60 + endM) return true;
       }
     }
     return false;
   };
 
   const calendarAvailableMatcher = (date: Date) => {
-    // Reuse the disabled matcher — available = working day and not disabled
     if (calendarDisabledMatcher(date)) return false;
     if (state.workingDays) {
       return state.workingDays.includes(date.getDay());
@@ -571,26 +584,37 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
     <div className="space-y-3">
       {/* Progress indicator */}
       <div className="flex items-center gap-3 px-1">
-        {state.step > 1 && (
-          <button
-            type="button"
-            onClick={() => handleEdit(state.step - 1)}
-            className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95"
-            aria-label="Späť"
-          >
-            <ChevronLeftIcon className="size-5" />
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => handleEdit(state.step - 1)}
+          disabled={state.step <= 1}
+          className={cn(
+            "flex size-8 items-center justify-center rounded-lg transition-colors active:scale-95",
+            state.step > 1
+              ? "text-muted-foreground hover:bg-muted hover:text-foreground"
+              : "pointer-events-none opacity-0"
+          )}
+          aria-label="Späť"
+        >
+          <ChevronLeftIcon className="size-5" />
+        </button>
         <div className="flex flex-1 items-center gap-1.5">
-          {Array.from({ length: TOTAL_STEPS }, (_, i) => (
-            <div
-              key={i}
-              className={cn(
-                "h-1 flex-1 rounded-full transition-colors",
-                i + 1 <= state.step ? "bg-primary" : "bg-muted"
-              )}
-            />
-          ))}
+          {Array.from({ length: TOTAL_STEPS }, (_, i) => {
+            const filled = i + 1 <= state.step;
+            return (
+              <div
+                key={i}
+                className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-muted"
+              >
+                <div
+                  className={cn(
+                    "absolute inset-0 rounded-full bg-primary transition-all duration-500",
+                    filled ? "w-full" : "w-0"
+                  )}
+                />
+              </div>
+            );
+          })}
         </div>
         <span className="text-[13px] tabular-nums text-muted-foreground">
           {state.step}/{TOTAL_STEPS}
