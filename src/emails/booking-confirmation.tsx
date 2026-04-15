@@ -74,15 +74,16 @@ export function bookingConfirmationHtml({
             <td style="padding: 12px 0; font-weight: bold; font-size: 16px; text-align: right; color: #ff703a;">${price} €</td>
           </tr>
         </table>
-        <p style="color: #666; margin: 24px 0 12px; font-size: 13px;">Pridať do kalendára:</p>
-        <div style="text-align: center; margin-bottom: 24px;">
-          <a href="${googleCalUrl}" target="_blank" style="display: inline-block; padding: 10px 20px; background-color: #1a73e8; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 13px; margin: 0 4px;">Google Kalendár</a>
-          <a href="${icsUrl}" style="display: inline-block; padding: 10px 20px; background-color: #333; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 13px; margin: 0 4px;">Apple / Outlook</a>
-        </div>
-        <p style="color: #666; margin: 0 0 16px; font-size: 13px;">Ak potrebujete rezerváciu zrušiť (najneskôr 2 hodiny pred termínom):</p>
-        <div style="text-align: center;">
-          <a href="${cancelUrl}" style="display: inline-block; padding: 12px 32px; background-color: #ff703a; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px;">Zrušiť rezerváciu</a>
-        </div>
+        <p style="color: #666; margin: 24px 0 8px; font-size: 13px;">Pridať do kalendára:</p>
+        <p style="margin: 0 0 24px; font-size: 13px;">
+          <a href="${googleCalUrl}" target="_blank" style="color: #1a73e8; text-decoration: underline;">Google Kalendár</a>
+          &nbsp;·&nbsp;
+          <a href="${icsUrl}" style="color: #1a73e8; text-decoration: underline;">Apple / Outlook (.ics)</a>
+        </p>
+        <p style="color: #999; margin: 0; font-size: 12px; text-align: center;">
+          Ak potrebujete rezerváciu zrušiť (najneskôr 2h pred termínom), môžete tak urobiť
+          <a href="${cancelUrl}" style="color: #999; text-decoration: underline;">na tejto stránke</a>.
+        </p>
       </td>
     </tr>
     <tr>

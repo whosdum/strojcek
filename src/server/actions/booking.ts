@@ -171,7 +171,7 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
     notifications.push(
       sendSMS({
         phone,
-        message: `Rezervácia potvrdená: ${service.name} u ${barberName}, ${formattedDate} o ${formattedTime}. Zrušiť: ${cancelUrl}`,
+        message: `Rezervácia potvrdená: ${service.name} u ${barberName}, ${formattedDate} o ${formattedTime}. Pre zrusenie zavolajte 0944 932 871 alebo pouzite odkaz v potvrdzujucom emaili.`,
       }).catch((err) => console.error("[SMS]", err))
     );
 
