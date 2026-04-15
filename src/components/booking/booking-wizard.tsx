@@ -643,6 +643,9 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
               time={state.time}
               duration={selectedService.durationMinutes}
               price={parseFloat(selectedService.price).toFixed(2)}
+              contactName={state.contact ? `${state.contact.firstName} ${state.contact.lastName}`.trim() : undefined}
+              contactPhone={state.contact ? `${state.contact.prefix} ${state.contact.phone}` : undefined}
+              contactEmail={state.contact?.email || undefined}
             />
 
             {/* Terms checkbox */}

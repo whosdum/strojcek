@@ -15,7 +15,7 @@ const contactSchema = z.object({
   phone: z
     .string()
     .min(1, "Telefón je povinný")
-    .regex(/^\d{9}$/, "Zadajte 9-miestne číslo (napr. 903 123 456)"),
+    .regex(/^[1-9]\d{8}$/, "Číslo bez predvoľby, bez úvodnej nuly (napr. 903123456)"),
   email: z.string().email("Zadajte platný email").or(z.literal("")),
   note: z.string(),
 });
@@ -98,7 +98,10 @@ export function ContactForm(props: ContactFormProps) {
             className="h-11 bg-muted/30 text-foreground placeholder:text-muted-foreground/60"
             {...register("phone", {
               onChange: (e) => {
-                e.target.value = e.target.value.replace(/\D/g, "").slice(0, 9);
+                let val = e.target.value.replace(/\D/g, "");
+                // Strip leading 0 — prefix is already selected
+                if (val.startsWith("0")) val = val.slice(1);
+                e.target.value = val.slice(0, 9);
               },
             })}
           />

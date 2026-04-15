@@ -5,6 +5,8 @@ import {
   ClockIcon,
   TimerIcon,
   BanknoteIcon,
+  PhoneIcon,
+  MailIcon,
 } from "lucide-react";
 
 interface BookingSummaryProps {
@@ -14,6 +16,9 @@ interface BookingSummaryProps {
   time: string;
   duration: number;
   price: string;
+  contactName?: string;
+  contactPhone?: string;
+  contactEmail?: string;
 }
 
 export function BookingSummary({
@@ -23,6 +28,9 @@ export function BookingSummary({
   time,
   duration,
   price,
+  contactName,
+  contactPhone,
+  contactEmail,
 }: BookingSummaryProps) {
   const rows = [
     { icon: ScissorsIcon, label: "Služba", value: serviceName },
@@ -30,6 +38,9 @@ export function BookingSummary({
     { icon: CalendarIcon, label: "Dátum", value: date },
     { icon: ClockIcon, label: "Čas", value: time },
     { icon: TimerIcon, label: "Trvanie", value: `${duration} min` },
+    ...(contactName ? [{ icon: UserIcon, label: "Meno", value: contactName }] : []),
+    ...(contactPhone ? [{ icon: PhoneIcon, label: "Telefón", value: contactPhone }] : []),
+    ...(contactEmail ? [{ icon: MailIcon, label: "Email", value: contactEmail }] : []),
   ];
 
   return (
