@@ -8,9 +8,10 @@ interface TimeSlotsProps {
   slots: string[];
   selectedTime: string | null;
   onSelect: (time: string) => void;
+  onChangeDate?: () => void;
 }
 
-export function TimeSlots({ slots, selectedTime, onSelect }: TimeSlotsProps) {
+export function TimeSlots({ slots, selectedTime, onSelect, onChangeDate }: TimeSlotsProps) {
   if (slots.length === 0) {
     return (
       <div className="flex flex-col items-center gap-2 py-10 text-center">
@@ -18,6 +19,15 @@ export function TimeSlots({ slots, selectedTime, onSelect }: TimeSlotsProps) {
         <p className="text-[15px] text-muted-foreground">
           Na vybraný deň nie sú dostupné žiadne termíny.
         </p>
+        {onChangeDate && (
+          <button
+            type="button"
+            onClick={onChangeDate}
+            className="mt-2 text-[14px] font-medium text-primary hover:underline"
+          >
+            Vybrať iný deň
+          </button>
+        )}
       </div>
     );
   }

@@ -11,11 +11,12 @@ import { Textarea } from "@/components/ui/textarea";
 const contactSchema = z.object({
   firstName: z.string().min(1, "Meno je povinné"),
   lastName: z.string(),
+  prefix: z.enum(["+421", "+420"]),
   phone: z
     .string()
     .min(1, "Telefón je povinný")
-    .regex(/^9\d{8}$/, "Zadajte platné SK číslo (napr. 903 123 456)"),
-  email: z.string().email("Zadajte platný email"),
+    .regex(/^\d{9}$/, "Zadajte 9-miestne číslo (napr. 903 123 456)"),
+  email: z.string().email("Zadajte platný email").or(z.literal("")),
   note: z.string(),
 });
 
@@ -36,6 +37,7 @@ export function ContactForm(props: ContactFormProps) {
     defaultValues: {
       firstName: "",
       lastName: "",
+      prefix: "+421",
       phone: "",
       email: "",
       note: "",
@@ -80,9 +82,13 @@ export function ContactForm(props: ContactFormProps) {
           Telefón <span className="text-primary">*</span>
         </Label>
         <div className="flex gap-2">
-          <span className="flex h-11 items-center rounded-lg border border-border/40 bg-muted/30 px-3 text-sm font-medium text-muted-foreground">
-            +421
-          </span>
+          <select
+            {...register("prefix")}
+            className="flex h-11 items-center rounded-lg border border-border/40 bg-muted/30 px-2 text-sm font-medium text-foreground"
+          >
+            <option value="+421">+421</option>
+            <option value="+420">+420</option>
+          </select>
           <Input
             id="phone"
             type="tel"
@@ -106,7 +112,7 @@ export function ContactForm(props: ContactFormProps) {
 
       <div className="space-y-1.5">
         <Label htmlFor="email" className="text-[15px] font-medium text-foreground">
-          Email <span className="text-primary">*</span>
+          Email
         </Label>
         <Input
           id="email"

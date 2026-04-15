@@ -231,6 +231,18 @@
   opacity: 0.25;
 }
 
+/* Green dot under available (working) days */
+.booking-calendar .calendar-day-available:not([data-disabled]):not([data-selected]) button::after {
+  content: "";
+  display: block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--primary);
+  margin: 2px auto 0;
+  opacity: 0.7;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

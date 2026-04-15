@@ -67,6 +67,7 @@ interface BookingWizardProps {
 interface ContactData {
   firstName: string;
   lastName: string;
+  prefix: "+421" | "+420";
   phone: string;
   email: string;
   note: string;
@@ -158,7 +159,6 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
         step: 4,
         date: action.date,
         time: null,
-        contact: null,
         slots: null,
         result: null,
       };
@@ -168,7 +168,6 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
         ...state,
         step: 5,
         time: action.time,
-        contact: null,
         result: null,
       };
 
@@ -200,6 +199,7 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
       return {
         ...state,
         step: s,
+        result: null,
         ...(s <= 1 && {
           serviceId: null,
           barberId: null,
@@ -208,7 +208,6 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
           contact: null,
           slots: null,
           workingDays: null,
-          result: null,
         }),
         ...(s === 2 && {
           barberId: null,
@@ -217,23 +216,14 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
           contact: null,
           slots: null,
           workingDays: null,
-          result: null,
         }),
         ...(s === 3 && {
           date: null,
           time: null,
-          contact: null,
           slots: null,
-          result: null,
         }),
         ...(s === 4 && {
           time: null,
-          contact: null,
-          result: null,
-        }),
-        ...(s === 5 && {
-          contact: null,
-          result: null,
         }),
       };
     }
@@ -372,7 +362,7 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
         time: state.time,
         firstName: state.contact!.firstName,
         lastName: state.contact!.lastName,
-        phone: state.contact!.phone,
+        phone: `${state.contact!.prefix}${state.contact!.phone}`,
         email: state.contact!.email,
         note: state.contact!.note,
       });
@@ -488,6 +478,16 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
     return false;
   };
 
+  const calendarAvailableMatcher = (date: Date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (date < today) return false;
+    if (state.workingDays) {
+      return state.workingDays.includes(date.getDay());
+    }
+    return false;
+  };
+
   // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
@@ -573,6 +573,8 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
             selected={state.date ? parseISO(state.date) : undefined}
             onSelect={handleSelectDate}
             disabled={calendarDisabledMatcher}
+            modifiers={{ available: calendarAvailableMatcher }}
+            modifiersClassNames={{ available: "calendar-day-available" }}
           />
         </div>
       </SectionWrapper>
@@ -597,6 +599,7 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
             slots={state.slots}
             selectedTime={state.time}
             onSelect={handleSelectTime}
+            onChangeDate={() => handleEdit(3)}
           />
         ) : null}
       </SectionWrapper>
