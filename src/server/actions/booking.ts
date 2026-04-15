@@ -136,7 +136,7 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
       throw e;
     }
 
-    // Send notifications (non-blocking)
+    // Send notifications (awaited so they complete before serverless function exits)
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const cancelUrl = `${appUrl}/cancel?token=${rawToken}`;
     const localStart = toZonedTime(startTime, TIMEZONE);
@@ -144,42 +144,52 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
     const formattedTime = format(localStart, "HH:mm");
     const barberName = `${barber.firstName} ${barber.lastName}`;
 
+    const notifications: Promise<unknown>[] = [];
+
     // Email confirmation
     if (data.email) {
-      sendEmail({
-        to: data.email,
-        subject: "Potvrdenie rezervácie - Strojček",
-        html: bookingConfirmationHtml({
-          customerName: data.firstName,
-          serviceName: service.name,
-          barberName,
-          date: formattedDate,
-          time: formattedTime,
-          price: price.toString(),
-          cancelUrl,
-        }),
-      }).catch(console.error);
+      notifications.push(
+        sendEmail({
+          to: data.email,
+          subject: "Potvrdenie rezervácie - Strojček",
+          html: bookingConfirmationHtml({
+            customerName: data.firstName,
+            serviceName: service.name,
+            barberName,
+            date: formattedDate,
+            time: formattedTime,
+            price: price.toString(),
+            cancelUrl,
+          }),
+        }).catch((err) => console.error("[EMAIL]", err))
+      );
     }
 
     // SMS confirmation
-    sendSMS({
-      phone,
-      message: `Rezervácia potvrdená: ${service.name} u ${barberName}, ${formattedDate} o ${formattedTime}. Zrušiť: ${cancelUrl}`,
-    }).catch(console.error);
+    notifications.push(
+      sendSMS({
+        phone,
+        message: `Rezervácia potvrdená: ${service.name} u ${barberName}, ${formattedDate} o ${formattedTime}. Zrušiť: ${cancelUrl}`,
+      }).catch((err) => console.error("[SMS]", err))
+    );
 
     // Telegram notification to barber
     const chatId = process.env.TELEGRAM_CHAT_ID;
     if (chatId) {
-      sendTelegramNotification({
-        chatId,
-        message:
-          `<b>Nová rezervácia</b>\n` +
-          `Zákazník: ${escapeTelegramHtml(`${data.firstName} ${data.lastName || ""}`.trim())}\n` +
-          `Služba: ${escapeTelegramHtml(service.name)}\n` +
-          `Dátum: ${escapeTelegramHtml(formattedDate)} o ${escapeTelegramHtml(formattedTime)}\n` +
-          `Tel: ${escapeTelegramHtml(phone)}`,
-      }).catch(console.error);
+      notifications.push(
+        sendTelegramNotification({
+          chatId,
+          message:
+            `<b>Nová rezervácia</b>\n` +
+            `Zákazník: ${escapeTelegramHtml(`${data.firstName} ${data.lastName || ""}`.trim())}\n` +
+            `Služba: ${escapeTelegramHtml(service.name)}\n` +
+            `Dátum: ${escapeTelegramHtml(formattedDate)} o ${escapeTelegramHtml(formattedTime)}\n` +
+            `Tel: ${escapeTelegramHtml(phone)}`,
+        }).catch((err) => console.error("[TELEGRAM]", err))
+      );
     }
+
+    await Promise.all(notifications);
 
     return { success: true, appointmentId };
   } catch (e) {
@@ -254,23 +264,27 @@ export async function cancelBooking(input: unknown): Promise<ActionResult> {
       });
     });
 
-    // Send cancellation email
+    // Send cancellation notifications (awaited for serverless)
     const localCancelStart = toZonedTime(appointment.startTime, TIMEZONE);
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const cancelBarberName = `${appointment.barber.firstName} ${appointment.barber.lastName}`;
+    const cancelNotifications: Promise<unknown>[] = [];
+
     if (appointment.customerEmail) {
-      sendEmail({
-        to: appointment.customerEmail,
-        subject: "Rezervácia zrušená - Strojček",
-        html: bookingCancellationHtml({
-          customerName: appointment.customerName || "zákazník",
-          serviceName: appointment.service.name,
-          barberName: cancelBarberName,
-          date: format(localCancelStart, "d.M.yyyy"),
-          time: format(localCancelStart, "HH:mm"),
-          bookUrl: `${appUrl}/book`,
-        }),
-      }).catch(console.error);
+      cancelNotifications.push(
+        sendEmail({
+          to: appointment.customerEmail,
+          subject: "Rezervácia zrušená - Strojček",
+          html: bookingCancellationHtml({
+            customerName: appointment.customerName || "zákazník",
+            serviceName: appointment.service.name,
+            barberName: cancelBarberName,
+            date: format(localCancelStart, "d.M.yyyy"),
+            time: format(localCancelStart, "HH:mm"),
+            bookUrl: `${appUrl}/book`,
+          }),
+        }).catch((err) => console.error("[EMAIL]", err))
+      );
     }
 
     // Telegram notification to barber
@@ -287,17 +301,21 @@ export async function cancelBooking(input: unknown): Promise<ActionResult> {
         ? escapeTelegramHtml(cancellationReason)
         : null;
 
-      sendTelegramNotification({
-        chatId,
-        message:
-          `<b>Zrušená rezervácia</b>\n` +
-          `Zákazník: ${safeCustomerName}\n` +
-          `Služba: ${safeServiceName}\n` +
-          `Dátum: ${escapeTelegramHtml(formattedDate)} o ${escapeTelegramHtml(formattedTime)}` +
-          `${safePhone ? `\nTel: ${safePhone}` : ""}` +
-          `${safeReason ? `\nDôvod: ${safeReason}` : ""}`,
-      }).catch(console.error);
+      cancelNotifications.push(
+        sendTelegramNotification({
+          chatId,
+          message:
+            `<b>Zrušená rezervácia</b>\n` +
+            `Zákazník: ${safeCustomerName}\n` +
+            `Služba: ${safeServiceName}\n` +
+            `Dátum: ${escapeTelegramHtml(formattedDate)} o ${escapeTelegramHtml(formattedTime)}` +
+            `${safePhone ? `\nTel: ${safePhone}` : ""}` +
+            `${safeReason ? `\nDôvod: ${safeReason}` : ""}`,
+        }).catch((err) => console.error("[TELEGRAM]", err))
+      );
     }
+
+    await Promise.all(cancelNotifications);
 
     return { success: true };
   } catch (e) {
