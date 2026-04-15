@@ -248,8 +248,7 @@ export async function cancelBooking(input: unknown): Promise<ActionResult> {
       return { success: false, error: "Táto rezervácia už bola zrušená." };
     }
 
-    const now = toZonedTime(new Date(), TIMEZONE);
-    const minCancelTime = addHours(now, MIN_CANCEL_HOURS);
+    const minCancelTime = addHours(new Date(), MIN_CANCEL_HOURS);
     if (isBefore(appointment.startTime, minCancelTime)) {
       return {
         success: false,
