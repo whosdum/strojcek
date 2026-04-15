@@ -335,18 +335,26 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
     const el = sectionRefs.current[state.step];
     if (!el) return;
 
-    // Wait one frame for DOM to settle after section collapse/expand,
-    // then jump instantly — smooth scroll fights layout shifts and feels janky.
-    const raf = requestAnimationFrame(() => {
-      const rect = el.getBoundingClientRect();
-      const margin = 24;
-      // Only scroll if section is out of comfortable viewport range
-      if (rect.top < 0 || rect.top > window.innerHeight * 0.4) {
-        window.scrollTo({ top: window.scrollY + rect.top - margin });
-      }
-    });
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      if (cancelled) return;
+      requestAnimationFrame(() => {
+        if (cancelled) return;
+        const rect = el.getBoundingClientRect();
+        const margin = 24;
+        if (rect.top < 0 || rect.top > window.innerHeight * 0.4) {
+          window.scrollTo({
+            top: window.scrollY + rect.top - margin,
+            behavior: "smooth",
+          });
+        }
+      });
+    }, 120);
 
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [state.step]);
 
   // Reset terms checkbox when service/barber changes (price may differ)
