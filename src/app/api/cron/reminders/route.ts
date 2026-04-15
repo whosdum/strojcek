@@ -51,8 +51,8 @@ export async function GET(request: NextRequest) {
           customerName: appt.customerName || "zákazník",
           serviceName: appt.service.name,
           barberName: `${appt.barber.firstName} ${appt.barber.lastName}`,
-          date: format(appt.startTime, "d.M.yyyy"),
-          time: format(appt.startTime, "HH:mm"),
+          date: format(toZonedTime(appt.startTime, TIMEZONE), "d.M.yyyy"),
+          time: format(toZonedTime(appt.startTime, TIMEZONE), "HH:mm"),
         }),
       });
 
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
       if (appt.customerPhone) {
         sendSMS({
           phone: appt.customerPhone,
-          message: `Pripomienka: zajtra ${format(appt.startTime, "HH:mm")} máte rezerváciu v Strojčeku (${appt.service.name}). Ak potrebujete zrušiť, použite odkaz z potvrdzovacieho emailu.`,
+          message: `Pripomienka: zajtra ${format(toZonedTime(appt.startTime, TIMEZONE), "HH:mm")} máte rezerváciu v Strojčeku (${appt.service.name}). Ak potrebujete zrušiť, použite odkaz z potvrdzovacieho emailu.`,
         }).catch((err) =>
           console.error(`[cron/reminders] SMS failed for ${appt.id}:`, err)
         );

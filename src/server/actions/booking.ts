@@ -139,8 +139,9 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
     // Send notifications (non-blocking)
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const cancelUrl = `${appUrl}/cancel?token=${rawToken}`;
-    const formattedDate = format(startTime, "d.M.yyyy");
-    const formattedTime = format(startTime, "HH:mm");
+    const localStart = toZonedTime(startTime, TIMEZONE);
+    const formattedDate = format(localStart, "d.M.yyyy");
+    const formattedTime = format(localStart, "HH:mm");
     const barberName = `${barber.firstName} ${barber.lastName}`;
 
     // Email confirmation
@@ -254,6 +255,7 @@ export async function cancelBooking(input: unknown): Promise<ActionResult> {
     });
 
     // Send cancellation email
+    const localCancelStart = toZonedTime(appointment.startTime, TIMEZONE);
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const cancelBarberName = `${appointment.barber.firstName} ${appointment.barber.lastName}`;
     if (appointment.customerEmail) {
@@ -264,8 +266,8 @@ export async function cancelBooking(input: unknown): Promise<ActionResult> {
           customerName: appointment.customerName || "zákazník",
           serviceName: appointment.service.name,
           barberName: cancelBarberName,
-          date: format(appointment.startTime, "d.M.yyyy"),
-          time: format(appointment.startTime, "HH:mm"),
+          date: format(localCancelStart, "d.M.yyyy"),
+          time: format(localCancelStart, "HH:mm"),
           bookUrl: `${appUrl}/book`,
         }),
       }).catch(console.error);
@@ -274,8 +276,8 @@ export async function cancelBooking(input: unknown): Promise<ActionResult> {
     // Telegram notification to barber
     const chatId = process.env.TELEGRAM_CHAT_ID;
     if (chatId) {
-      const formattedDate = format(appointment.startTime, "d.M.yyyy");
-      const formattedTime = format(appointment.startTime, "HH:mm");
+      const formattedDate = format(localCancelStart, "d.M.yyyy");
+      const formattedTime = format(localCancelStart, "HH:mm");
       const safeCustomerName = escapeTelegramHtml(appointment.customerName || "neznámy");
       const safeServiceName = escapeTelegramHtml(appointment.service.name);
       const safePhone = appointment.customerPhone
