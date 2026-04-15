@@ -59,7 +59,7 @@ export function ContactForm(props: ContactFormProps) {
   const lastName = watch("lastName");
   const phone = watch("phone");
   const email = watch("email");
-  const canSubmit = !!firstName && !!lastName && phone.length === 9 && email.includes("@");
+  const canSubmit = !!firstName && !!lastName && phone.length === 9 && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
 
   return (
     <form onSubmit={handleSubmit(props.onSubmit)} className="space-y-4">
