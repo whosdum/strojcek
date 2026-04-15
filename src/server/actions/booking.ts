@@ -10,7 +10,7 @@ import { escapeTelegramHtml, sendTelegramNotification } from "@/server/lib/teleg
 import { bookingConfirmationHtml } from "@/emails/booking-confirmation";
 import { bookingCancellationHtml } from "@/emails/booking-cancellation";
 import { MIN_CANCEL_HOURS, CANCELLABLE_STATUSES, TIMEZONE } from "@/lib/constants";
-import { addMinutes, format, addHours, isBefore } from "date-fns";
+import { addMinutes, format, addHours, isBefore, subHours } from "date-fns";
 import { fromZonedTime, toZonedTime } from "date-fns-tz";
 
 type ActionResult = {
@@ -19,10 +19,24 @@ type ActionResult = {
   appointmentId?: string;
 };
 
+const GLOBAL_BOOKING_LIMIT = 30;
+
 export async function createBooking(input: unknown): Promise<ActionResult> {
   try {
     const data = bookingInputSchema.parse(input);
     const phone = normalizePhone(data.phone);
+
+    // Global rate limit: max 30 bookings per hour
+    const oneHourAgo = subHours(new Date(), 1);
+    const recentCount = await prisma.appointment.count({
+      where: { createdAt: { gte: oneHourAgo }, source: "online" },
+    });
+    if (recentCount >= GLOBAL_BOOKING_LIMIT) {
+      return {
+        success: false,
+        error: "Príliš veľa rezervácií v krátkom čase. Skúste to o chvíľu.",
+      };
+    }
 
     // Get effective price and duration
     const barberService = await prisma.barberService.findUnique({
