@@ -36,10 +36,10 @@ export function ContactForm(props: ContactFormProps) {
     register,
     handleSubmit,
     watch,
-    formState: { errors, isValid },
+    formState: { errors, touchedFields },
   } = useForm<ContactFormValues>({
     resolver: zodResolver(contactSchema),
-    mode: "onChange",
+    mode: "onTouched",
     defaultValues: {
       firstName: "",
       lastName: "",
@@ -54,6 +54,13 @@ export function ContactForm(props: ContactFormProps) {
   const noteLength = watch("note")?.length ?? 0;
   const [phoneZeroHint, setPhoneZeroHint] = useState(false);
 
+  // Lightweight check for button — required fields have content
+  const firstName = watch("firstName");
+  const lastName = watch("lastName");
+  const phone = watch("phone");
+  const email = watch("email");
+  const canSubmit = !!firstName && !!lastName && phone.length === 9 && email.includes("@");
+
   return (
     <form onSubmit={handleSubmit(props.onSubmit)} className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
@@ -67,7 +74,7 @@ export function ContactForm(props: ContactFormProps) {
             placeholder="Ján"
             {...register("firstName")}
           />
-          {errors.firstName && (
+          {touchedFields.firstName && errors.firstName && (
             <p className="text-[13px] font-medium text-destructive">
               {errors.firstName.message}
             </p>
@@ -83,7 +90,7 @@ export function ContactForm(props: ContactFormProps) {
             placeholder="Novák"
             {...register("lastName")}
           />
-          {errors.lastName && (
+          {touchedFields.lastName && errors.lastName && (
             <p className="text-[13px] font-medium text-destructive">
               {errors.lastName.message}
             </p>
@@ -128,12 +135,12 @@ export function ContactForm(props: ContactFormProps) {
             })}
           />
         </div>
-        {phoneZeroHint && !errors.phone && (
+        {phoneZeroHint && (
           <p className="text-[13px] font-medium text-primary">
             Číslo bez predvoľby, bez úvodnej nuly (napr. 903123456)
           </p>
         )}
-        {errors.phone && (
+        {!phoneZeroHint && touchedFields.phone && errors.phone && (
           <p className="text-[13px] font-medium text-destructive">
             {errors.phone.message}
           </p>
@@ -151,7 +158,7 @@ export function ContactForm(props: ContactFormProps) {
           className="h-11 bg-muted/30 text-foreground placeholder:text-muted-foreground/60"
           {...register("email")}
         />
-        {errors.email && (
+        {touchedFields.email && errors.email && (
           <p className="text-[13px] font-medium text-destructive">
             {errors.email.message}
           </p>
@@ -188,7 +195,7 @@ export function ContactForm(props: ContactFormProps) {
         type="submit"
         className="h-12 w-full text-base font-semibold"
         size="lg"
-        disabled={!isValid}
+        disabled={!canSubmit}
       >
         Ďalej
       </Button>
