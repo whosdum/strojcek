@@ -12,7 +12,7 @@ import { addHours, isBefore } from "date-fns";
 
 function CancelPageFrame({ children }: { children: React.ReactNode }) {
   return (
-    <BookingShell showInfoLink={false}>
+    <BookingShell>
       <header className="mb-8 flex flex-col items-center text-center sm:mb-10">
         <Link href="/" className="inline-flex">
           <Image
