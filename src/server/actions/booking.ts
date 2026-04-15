@@ -160,6 +160,8 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
             time: formattedTime,
             price: price.toString(),
             cancelUrl,
+            startTimeUtc: startTime.toISOString(),
+            endTimeUtc: endTime.toISOString(),
           }),
         }).catch((err) => console.error("[EMAIL]", err))
       );
@@ -184,7 +186,8 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
             `Zákazník: ${escapeTelegramHtml(`${data.firstName} ${data.lastName || ""}`.trim())}\n` +
             `Služba: ${escapeTelegramHtml(service.name)}\n` +
             `Dátum: ${escapeTelegramHtml(formattedDate)} o ${escapeTelegramHtml(formattedTime)}\n` +
-            `Tel: ${escapeTelegramHtml(phone)}`,
+            `Tel: ${escapeTelegramHtml(phone)}` +
+            `${data.email ? `\nEmail: ${escapeTelegramHtml(data.email)}` : ""}`,
         }).catch((err) => console.error("[TELEGRAM]", err))
       );
     }
@@ -281,7 +284,7 @@ export async function cancelBooking(input: unknown): Promise<ActionResult> {
             barberName: cancelBarberName,
             date: format(localCancelStart, "d.M.yyyy"),
             time: format(localCancelStart, "HH:mm"),
-            bookUrl: `${appUrl}/book`,
+            bookUrl: appUrl,
           }),
         }).catch((err) => console.error("[EMAIL]", err))
       );

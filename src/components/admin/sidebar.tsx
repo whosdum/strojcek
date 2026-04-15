@@ -32,7 +32,7 @@ const NAV_ITEMS = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboardIcon },
   { href: "/admin/calendar", label: "Kalendár", icon: CalendarDaysIcon },
   { href: "/admin/reservations", label: "Rezervácie", icon: ClipboardListIcon },
-  { href: "/admin/barbers", label: "Barbieri", icon: ScissorsIcon },
+  { href: "/admin/barbers", label: "Barberi", icon: ScissorsIcon },
   { href: "/admin/services", label: "Služby", icon: SparklesIcon },
   { href: "/admin/schedule", label: "Rozvrh", icon: ClockIcon },
   { href: "/admin/customers", label: "Zákazníci", icon: UsersIcon },

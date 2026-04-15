@@ -9,7 +9,7 @@ type ActionResult = { success: boolean; error?: string };
 function invalidateServiceCaches() {
   revalidateTag("services", "max");
   revalidatePath("/");
-  revalidatePath("/book");
+  revalidatePath("/");
 }
 
 export async function createService(input: unknown): Promise<ActionResult> {

@@ -79,7 +79,7 @@ export default async function CancelPage({
           <p className="mt-2 text-sm text-muted-foreground">
             Odkaz na zrušenie rezervácie je neplatný alebo chýba.
           </p>
-          <Link href="/book" className="mt-6 block">
+          <Link href="/" className="mt-6 block">
             <Button variant="outline" className="w-full">
               Späť na rezerváciu
             </Button>
@@ -104,7 +104,7 @@ export default async function CancelPage({
           <p className="mt-2 text-sm text-muted-foreground">
             Neplatný alebo expirovaný odkaz na zrušenie.
           </p>
-          <Link href="/book" className="mt-6 block">
+          <Link href="/" className="mt-6 block">
             <Button variant="outline" className="w-full">
               Nová rezervácia
             </Button>
@@ -149,7 +149,7 @@ export default async function CancelPage({
             </div>
             <div className="h-px bg-border/40" />
             <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">Barbier</span>
+              <span className="text-muted-foreground">Barber</span>
               <span className="text-right font-medium text-foreground">
                 {barberName}
               </span>
@@ -177,7 +177,7 @@ export default async function CancelPage({
             <p className="mt-2 text-sm text-muted-foreground">
               Táto rezervácia už bola zrušená.
             </p>
-            <Link href="/book" className="mt-4 block">
+            <Link href="/" className="mt-4 block">
               <Button variant="outline" className="w-full">
                 Nová rezervácia
               </Button>

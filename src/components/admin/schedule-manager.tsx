@@ -94,7 +94,7 @@ export function ScheduleManager({ barbers }: ScheduleManagerProps) {
     <div>
       {barbers.length > 1 && (
         <div className="mb-4">
-          <Label>Barbier</Label>
+          <Label>Barber</Label>
           <select
             className="mt-1 block w-full rounded-lg border px-3 py-2 text-sm sm:w-64"
             value={selectedBarber}

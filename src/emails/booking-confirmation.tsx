@@ -6,6 +6,8 @@ interface BookingConfirmationProps {
   time: string;
   price: string;
   cancelUrl: string;
+  startTimeUtc: string;
+  endTimeUtc: string;
 }
 
 export function bookingConfirmationHtml({
@@ -16,7 +18,33 @@ export function bookingConfirmationHtml({
   time,
   price,
   cancelUrl,
+  startTimeUtc,
+  endTimeUtc,
 }: BookingConfirmationProps): string {
+  const toCalFormat = (iso: string) => iso.replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const calStart = toCalFormat(startTimeUtc);
+  const calEnd = toCalFormat(endTimeUtc);
+  const calTitle = encodeURIComponent(`Strojček — ${serviceName}`);
+  const calDetails = encodeURIComponent(`Barber: ${barberName}\nSlužba: ${serviceName}\nCena: ${price} €`);
+  const calLocation = encodeURIComponent("Moyzesova 379/2, 014 01 Bytča");
+
+  const googleCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${calTitle}&dates=${calStart}/${calEnd}&details=${calDetails}&location=${calLocation}`;
+
+  // ICS data URI for Apple Calendar / Outlook
+  const icsContent = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "BEGIN:VEVENT",
+    `DTSTART:${calStart}`,
+    `DTEND:${calEnd}`,
+    `SUMMARY:Strojček — ${serviceName}`,
+    `DESCRIPTION:Barber: ${barberName}\\nSlužba: ${serviceName}\\nCena: ${price} €`,
+    `LOCATION:Moyzesova 379/2\\, 014 01 Bytča`,
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].join("\r\n");
+  const icsDataUri = `data:text/calendar;charset=utf-8,${encodeURIComponent(icsContent)}`;
+
   return `
 <!DOCTYPE html>
 <html>
@@ -42,7 +70,7 @@ export function bookingConfirmationHtml({
             <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; font-weight: bold; font-size: 14px; text-align: right;">${serviceName}</td>
           </tr>
           <tr>
-            <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; color: #888; font-size: 14px;">Barbier</td>
+            <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; color: #888; font-size: 14px;">Barber</td>
             <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; font-weight: bold; font-size: 14px; text-align: right;">${barberName}</td>
           </tr>
           <tr>
@@ -58,7 +86,12 @@ export function bookingConfirmationHtml({
             <td style="padding: 12px 0; font-weight: bold; font-size: 16px; text-align: right; color: #ff703a;">${price} €</td>
           </tr>
         </table>
-        <p style="color: #666; margin: 24px 0 16px; font-size: 13px;">Ak potrebujete rezerváciu zrušiť (najneskôr 2 hodiny pred termínom):</p>
+        <p style="color: #666; margin: 24px 0 12px; font-size: 13px;">Pridať do kalendára:</p>
+        <div style="text-align: center; margin-bottom: 24px;">
+          <a href="${googleCalUrl}" target="_blank" style="display: inline-block; padding: 10px 20px; background-color: #1a73e8; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 13px; margin: 0 4px;">Google Kalendár</a>
+          <a href="${icsDataUri}" download="strojcek-rezervacia.ics" style="display: inline-block; padding: 10px 20px; background-color: #333; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 13px; margin: 0 4px;">Apple / Outlook</a>
+        </div>
+        <p style="color: #666; margin: 0 0 16px; font-size: 13px;">Ak potrebujete rezerváciu zrušiť (najneskôr 2 hodiny pred termínom):</p>
         <div style="text-align: center;">
           <a href="${cancelUrl}" style="display: inline-block; padding: 12px 32px; background-color: #ff703a; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px;">Zrušiť rezerváciu</a>
         </div>

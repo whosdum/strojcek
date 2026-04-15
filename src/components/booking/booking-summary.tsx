@@ -26,7 +26,7 @@ export function BookingSummary({
 }: BookingSummaryProps) {
   const rows = [
     { icon: ScissorsIcon, label: "Služba", value: serviceName },
-    { icon: UserIcon, label: "Barbier", value: barberName },
+    { icon: UserIcon, label: "Barber", value: barberName },
     { icon: CalendarIcon, label: "Dátum", value: date },
     { icon: ClockIcon, label: "Čas", value: time },
     { icon: TimerIcon, label: "Trvanie", value: `${duration} min` },

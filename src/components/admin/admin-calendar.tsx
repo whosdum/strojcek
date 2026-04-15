@@ -165,7 +165,7 @@ export function AdminCalendar() {
       <div className="mb-4 space-y-3">
         {barbers.length > 0 && (
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <span className="text-sm font-medium text-muted-foreground">Barbieri:</span>
+            <span className="text-sm font-medium text-muted-foreground">Barberi:</span>
             {barbers.map((b) => (
               <div key={b.id} className="flex items-center gap-1.5">
                 <span

@@ -22,8 +22,8 @@ npx tsx scripts/create-admin.ts  # Create default admin user (admin@strojcek.sk 
 
 ### Route Groups
 
-- `src/app/(public)/` — Public booking flow and cancellation
-  - `/book` — 5-step wizard: service → barber → datetime → details → confirm
+- `src/app/page.tsx` — Booking wizard (5-step: service → barber → datetime → details → confirm)
+- `src/app/(public)/` — Public pages
   - `/cancel` — Token-based appointment cancellation
 - `src/app/(admin)/` — Admin panel (auth-protected)
   - `/login` — Better Auth email/password login

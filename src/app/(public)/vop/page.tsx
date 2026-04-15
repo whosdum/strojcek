@@ -13,7 +13,7 @@ export default function VopPage() {
     <div className="min-h-dvh bg-background text-foreground">
       <div className="mx-auto max-w-2xl px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
         <Link
-          href="/book"
+          href="/"
           className="mb-8 inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
         >
           <ArrowLeftIcon className="size-4" />

@@ -85,7 +85,7 @@ export default async function ReservationDetailPage({
             </div>
             <Separator />
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-              <span className="text-muted-foreground">Barbier</span>
+              <span className="text-muted-foreground">Barber</span>
               <span className="break-words sm:text-right">
                 {appointment.barber.firstName} {appointment.barber.lastName}
               </span>

@@ -31,7 +31,7 @@ export function CancelButton({ token }: { token: string }) {
         <p className="mt-1 text-sm text-muted-foreground">
           Ak ste zadali email, potvrdenie sme vám odoslali.
         </p>
-        <Link href="/book" className="mt-4">
+        <Link href="/" className="mt-4">
           <Button variant="outline">Nová rezervácia</Button>
         </Link>
       </div>

@@ -9,7 +9,7 @@ type ActionResult = { success: boolean; error?: string };
 function invalidateBarberCaches() {
   revalidateTag("barbers", "max");
   revalidatePath("/");
-  revalidatePath("/book");
+  revalidatePath("/");
 }
 
 export async function createBarber(input: unknown): Promise<ActionResult> {

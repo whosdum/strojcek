@@ -87,7 +87,7 @@ export default async function ReservationsPage({
             </div>
             <div className="mt-3 space-y-1 text-sm text-muted-foreground">
               <p>
-                Barbier: {appt.barber.firstName} {appt.barber.lastName}
+                Barber: {appt.barber.firstName} {appt.barber.lastName}
               </p>
               <p>Služba: {appt.service.name}</p>
             </div>
@@ -102,7 +102,7 @@ export default async function ReservationsPage({
               <TableHead>Dátum</TableHead>
               <TableHead>Čas</TableHead>
               <TableHead>Zákazník</TableHead>
-              <TableHead>Barbier</TableHead>
+              <TableHead>Barber</TableHead>
               <TableHead>Služba</TableHead>
               <TableHead>Stav</TableHead>
               <TableHead className="w-12" />

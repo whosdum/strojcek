@@ -410,7 +410,7 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
             </div>
             <div className="h-px bg-border/50" />
             <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">Barbier</span>
+              <span className="text-muted-foreground">Barber</span>
               <span className="font-medium text-foreground">
                 {selectedBarber
                   ? `${selectedBarber.firstName} ${selectedBarber.lastName}`
@@ -512,11 +512,11 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
         </div>
       </SectionWrapper>
 
-      {/* 2 — Barbier */}
+      {/* 2 — Barber */}
       <SectionWrapper
         ref={setSectionRef(2)}
         stepNumber={2}
-        title="Barbier"
+        title="Barber"
         isActive={state.step === 2}
         isCompleted={state.step > 2}
         completedSummary={

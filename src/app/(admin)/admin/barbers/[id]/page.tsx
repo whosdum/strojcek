@@ -15,7 +15,7 @@ export default async function BarberDetailPage({
     const services = await getAllServices();
     return (
       <div>
-        <h1 className="mb-6 text-2xl font-bold">Nový barbier</h1>
+        <h1 className="mb-6 text-2xl font-bold">Nový barber</h1>
         <BarberForm
           allServices={services.map((s) => ({ id: s.id, name: s.name }))}
         />
