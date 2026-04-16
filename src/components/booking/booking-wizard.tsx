@@ -308,6 +308,15 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
       dispatch({ type: "SELECT_SERVICE", serviceId: draft.serviceId });
       if (draft.barberId && barbers.some((b) => b.id === draft.barberId)) {
         dispatch({ type: "SELECT_BARBER", barberId: draft.barberId });
+        // Fetch working days so the calendar isn't stuck loading
+        startTransition(async () => {
+          const [days, endTimes] = await Promise.all([
+            fetchWorkingDays(draft.barberId!),
+            fetchScheduleEndTimes(draft.barberId!),
+          ]);
+          dispatch({ type: "SET_WORKING_DAYS", workingDays: days });
+          dispatch({ type: "SET_SCHEDULE_END_TIMES", endTimes });
+        });
       }
     }
   }, [services, barbers]);
