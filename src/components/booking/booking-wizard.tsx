@@ -642,19 +642,19 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
 
   const calendarDisabledMatcher = (date: Date) => {
     if (date < todayStart) return true;
-    if (state.workingDays) {
-      const dayOfWeek = date.getDay();
-      if (!state.workingDays.includes(dayOfWeek)) return true;
-      // Disable today if current time is past the barber's schedule end
-      if (
-        date.getTime() === todayStart.getTime() &&
-        state.scheduleEndTimes?.[dayOfWeek]
-      ) {
-        const [endH, endM] = state.scheduleEndTimes[dayOfWeek]
-          .split(":")
-          .map(Number);
-        if (currentMinutes >= endH * 60 + endM) return true;
-      }
+    // Block ALL days until working days are loaded from the server
+    if (!state.workingDays) return true;
+    const dayOfWeek = date.getDay();
+    if (!state.workingDays.includes(dayOfWeek)) return true;
+    // Disable today if current time is past the barber's schedule end
+    if (
+      date.getTime() === todayStart.getTime() &&
+      state.scheduleEndTimes?.[dayOfWeek]
+    ) {
+      const [endH, endM] = state.scheduleEndTimes[dayOfWeek]
+        .split(":")
+        .map(Number);
+      if (currentMinutes >= endH * 60 + endM) return true;
     }
     return false;
   };
@@ -799,17 +799,24 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
         }
         onEdit={() => handleEdit(3)}
       >
-        <div className="booking-calendar">
-          <Calendar
-            mode="single"
-            locale={sk}
-            selected={state.date ? parseISO(state.date) : undefined}
-            onSelect={handleSelectDate}
-            disabled={calendarDisabledMatcher}
-            modifiers={{ available: calendarAvailableMatcher }}
-            modifiersClassNames={{ available: "calendar-day-available" }}
-          />
-        </div>
+        {!state.workingDays ? (
+          <div role="status" aria-live="polite" className="flex items-center justify-center gap-2 py-10 text-[15px] text-muted-foreground">
+            <Loader2Icon className="size-5 animate-spin text-primary" />
+            <span>Načítavam rozvrh...</span>
+          </div>
+        ) : (
+          <div className="booking-calendar">
+            <Calendar
+              mode="single"
+              locale={sk}
+              selected={state.date ? parseISO(state.date) : undefined}
+              onSelect={handleSelectDate}
+              disabled={calendarDisabledMatcher}
+              modifiers={{ available: calendarAvailableMatcher }}
+              modifiersClassNames={{ available: "calendar-day-available" }}
+            />
+          </div>
+        )}
       </SectionWrapper>
 
       {/* 4 — Čas */}
