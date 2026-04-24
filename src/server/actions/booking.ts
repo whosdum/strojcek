@@ -5,7 +5,6 @@ import { bookingInputSchema, cancelBookingInputSchema } from "@/lib/validators";
 import { normalizePhone } from "@/server/lib/phone";
 import { generateToken, getTokenLookupValues, hashToken } from "@/server/lib/tokens";
 import { sendEmail } from "@/server/lib/email";
-import { sendSMS } from "@/server/lib/sms";
 import { escapeTelegramHtml, sendTelegramNotification } from "@/server/lib/telegram";
 import { bookingConfirmationHtml } from "@/emails/booking-confirmation";
 import { bookingCancellationHtml } from "@/emails/booking-cancellation";
@@ -199,14 +198,6 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
           endTimeUtc: endTime.toISOString(),
         }),
       }).catch((err) => console.error("[EMAIL]", err))
-    );
-
-    // SMS confirmation
-    notifications.push(
-      sendSMS({
-        phone,
-        message: `Rezervácia potvrdená: ${service.name} u ${barberName}, ${formattedDate} o ${formattedTime}. Pre zrusenie zavolajte 0944 932 871 alebo pouzite odkaz v potvrdzujucom emaili.`,
-      }).catch((err) => console.error("[SMS]", err))
     );
 
     // Telegram notification to barber
