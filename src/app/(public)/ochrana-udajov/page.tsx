@@ -112,8 +112,8 @@ export default function OchranaUdajovPage() {
                   spracovanie a evidencia rezervácií termínov služieb,
                 </li>
                 <li>
-                  zasielanie potvrdení o vytvorení, zmene alebo zrušení
-                  rezervácie (e-mail, SMS),
+                  zasielanie e-mailových potvrdení o vytvorení, zmene alebo
+                  zrušení rezervácie,
                 </li>
                 <li>
                   zasielanie pripomienok pred blížiacim sa termínom rezervácie,
@@ -187,7 +187,7 @@ export default function OchranaUdajovPage() {
                 </li>
                 <li>
                   <strong>Poskytovateľ SMS služieb</strong> — na zasielanie SMS
-                  potvrdení a pripomienok o rezerváciách.
+                  pripomienok pred blížiacim sa termínom rezervácie.
                 </li>
               </ul>
               <p>
