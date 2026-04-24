@@ -2,15 +2,15 @@ name: Cron Jobs
 
 on:
   schedule:
-    # Reminders — daily at 18:00 UTC (20:00 Bratislava summer / 19:00 winter)
-    - cron: "0 18 * * *"
+    # Reminders — daily at 16:00 UTC (18:00 Bratislava summer / 17:00 winter)
+    - cron: "0 16 * * *"
     # Cleanup — daily at 03:00 UTC
     - cron: "0 3 * * *"
   workflow_dispatch: # allow manual trigger
 
 jobs:
   reminders:
-    if: github.event.schedule == '0 18 * * *' || github.event_name == 'workflow_dispatch'
+    if: github.event.schedule == '0 16 * * *' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - name: Send reminders

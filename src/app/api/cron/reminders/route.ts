@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/server/lib/prisma";
 import { sendEmail } from "@/server/lib/email";
 import { sendSMS } from "@/server/lib/sms";
+import { stripDiacritics } from "@/server/lib/strings";
 import { bookingReminderHtml } from "@/emails/booking-reminder";
 import { startOfDay, endOfDay, addDays, format } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
@@ -65,7 +66,7 @@ export async function GET(request: NextRequest) {
       if (appt.customerPhone) {
         await sendSMS({
           phone: appt.customerPhone,
-          message: `Pripomienka: zajtra ${format(toZonedTime(appt.startTime, TIMEZONE), "HH:mm")} máte rezerváciu v Strojčeku (${appt.service.name}). Ak potrebujete zrušiť, použite odkaz z potvrdzovacieho emailu.`,
+          message: `Strojcek: zajtra o ${format(toZonedTime(appt.startTime, TIMEZONE), "HH:mm")} mate rezervaciu na ${stripDiacritics(appt.service.name)}. Pre zrusenie zavolajte 0944 932 871.`,
         }).catch((err) =>
           console.error(`[cron/reminders] SMS failed for ${appt.id}:`, err)
         );

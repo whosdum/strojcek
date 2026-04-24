@@ -5,11 +5,16 @@ import { bookingInputSchema, cancelBookingInputSchema } from "@/lib/validators";
 import { normalizePhone } from "@/server/lib/phone";
 import { generateToken, getTokenLookupValues, hashToken } from "@/server/lib/tokens";
 import { sendEmail } from "@/server/lib/email";
-import { sendSMS } from "@/server/lib/sms";
 import { escapeTelegramHtml, sendTelegramNotification } from "@/server/lib/telegram";
 import { bookingConfirmationHtml } from "@/emails/booking-confirmation";
 import { bookingCancellationHtml } from "@/emails/booking-cancellation";
-import { MIN_CANCEL_HOURS, CANCELLABLE_STATUSES, TIMEZONE } from "@/lib/constants";
+import {
+  MIN_CANCEL_HOURS,
+  CANCELLABLE_STATUSES,
+  TIMEZONE,
+  GLOBAL_BOOKING_LIMIT,
+  PHONE_BOOKING_LIMIT_24H,
+} from "@/lib/constants";
 import { addMinutes, format, addHours, isBefore, subHours } from "date-fns";
 import { fromZonedTime, toZonedTime } from "date-fns-tz";
 
@@ -19,12 +24,28 @@ type ActionResult = {
   appointmentId?: string;
 };
 
-const GLOBAL_BOOKING_LIMIT = 30;
-
 export async function createBooking(input: unknown): Promise<ActionResult> {
   try {
     const data = bookingInputSchema.parse(input);
     const phone = normalizePhone(data.phone);
+
+    // Per-phone rate limit: max 3 online bookings per rolling 24h window.
+    // All statuses count (incl. CANCELLED/NO_SHOW) to prevent book→cancel→rebook abuse.
+    const twentyFourHoursAgo = subHours(new Date(), 24);
+    const phoneCount = await prisma.appointment.count({
+      where: {
+        customerPhone: phone,
+        source: "online",
+        createdAt: { gte: twentyFourHoursAgo },
+      },
+    });
+    if (phoneCount >= PHONE_BOOKING_LIMIT_24H) {
+      return {
+        success: false,
+        error:
+          "Dosiahli ste maximálny počet rezervácií za 24 hodín. Pre ďalšiu rezerváciu zavolajte na 0944 932 871.",
+      };
+    }
 
     // Global rate limit: max 30 bookings per hour
     const oneHourAgo = subHours(new Date(), 1);
@@ -177,14 +198,6 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
           endTimeUtc: endTime.toISOString(),
         }),
       }).catch((err) => console.error("[EMAIL]", err))
-    );
-
-    // SMS confirmation
-    notifications.push(
-      sendSMS({
-        phone,
-        message: `Rezervácia potvrdená: ${service.name} u ${barberName}, ${formattedDate} o ${formattedTime}. Pre zrusenie zavolajte 0944 932 871 alebo pouzite odkaz v potvrdzujucom emaili.`,
-      }).catch((err) => console.error("[SMS]", err))
     );
 
     // Telegram notification to barber

@@ -108,7 +108,7 @@ export default function VopPage() {
               </p>
               <p>
                 <strong>3.2.</strong> Zmluva vzniká okamihom potvrdenia
-                rezervácie Prevádzkovateľom (e-mail, SMS, notifikácia).
+                rezervácie Prevádzkovateľom prostredníctvom e-mailu.
               </p>
               <p>
                 <strong>3.3.</strong> Odoslaním rezervácie Zákazník potvrdzuje,
@@ -280,8 +280,9 @@ export default function VopPage() {
               <p>
                 <strong>8.2.</strong> Zákazník súhlasí s tým, že mu všetky
                 informácie, potvrdenia a dokumenty súvisiace s vytvorenou
-                Rezerváciou budú doručované elektronicky, a to prostredníctvom
-                e-mailu alebo SMS.
+                Rezerváciou budú doručované elektronicky prostredníctvom
+                e-mailu; SMS sa používa na pripomienku pred blížiacim sa
+                termínom.
               </p>
               <p>
                 <strong>8.3.</strong> Podrobné Zásady spracúvania osobných

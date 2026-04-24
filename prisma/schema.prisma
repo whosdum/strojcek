@@ -221,6 +221,7 @@ model Appointment {
   @@index([status, startTime])
   @@index([barberId, status, startTime])
   @@index([customerId])
+  @@index([customerPhone, createdAt])
   @@map("appointments")
 }
 
