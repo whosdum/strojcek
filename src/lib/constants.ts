@@ -1,6 +1,8 @@
 export const MIN_CANCEL_HOURS = 2;
 export const SLOT_INTERVAL_MINUTES = 60; // Default fallback — actual value from DB (ShopSettings)
 export const PAGE_SIZE = 25;
+export const GLOBAL_BOOKING_LIMIT = 30;
+export const PHONE_BOOKING_LIMIT_24H = 3;
 
 export const SLOT_GROUP_BOUNDARIES = {
   morning: { label: "Dopoludnia", start: 7, end: 12 },

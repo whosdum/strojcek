@@ -9,7 +9,13 @@ import { sendSMS } from "@/server/lib/sms";
 import { escapeTelegramHtml, sendTelegramNotification } from "@/server/lib/telegram";
 import { bookingConfirmationHtml } from "@/emails/booking-confirmation";
 import { bookingCancellationHtml } from "@/emails/booking-cancellation";
-import { MIN_CANCEL_HOURS, CANCELLABLE_STATUSES, TIMEZONE } from "@/lib/constants";
+import {
+  MIN_CANCEL_HOURS,
+  CANCELLABLE_STATUSES,
+  TIMEZONE,
+  GLOBAL_BOOKING_LIMIT,
+  PHONE_BOOKING_LIMIT_24H,
+} from "@/lib/constants";
 import { addMinutes, format, addHours, isBefore, subHours } from "date-fns";
 import { fromZonedTime, toZonedTime } from "date-fns-tz";
 
@@ -18,8 +24,6 @@ type ActionResult = {
   error?: string;
   appointmentId?: string;
 };
-
-const GLOBAL_BOOKING_LIMIT = 30;
 
 export async function createBooking(input: unknown): Promise<ActionResult> {
   try {
