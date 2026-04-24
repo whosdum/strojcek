@@ -30,6 +30,24 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
     const data = bookingInputSchema.parse(input);
     const phone = normalizePhone(data.phone);
 
+    // Per-phone rate limit: max 3 online bookings per rolling 24h window.
+    // All statuses count (incl. CANCELLED/NO_SHOW) to prevent book→cancel→rebook abuse.
+    const twentyFourHoursAgo = subHours(new Date(), 24);
+    const phoneCount = await prisma.appointment.count({
+      where: {
+        customerPhone: phone,
+        source: "online",
+        createdAt: { gte: twentyFourHoursAgo },
+      },
+    });
+    if (phoneCount >= PHONE_BOOKING_LIMIT_24H) {
+      return {
+        success: false,
+        error:
+          "Dosiahli ste maximálny počet rezervácií za 24 hodín. Pre ďalšiu rezerváciu zavolajte na 0944 932 871.",
+      };
+    }
+
     // Global rate limit: max 30 bookings per hour
     const oneHourAgo = subHours(new Date(), 1);
     const recentCount = await prisma.appointment.count({
