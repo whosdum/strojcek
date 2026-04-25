@@ -19,7 +19,10 @@ function getConnectionString() {
 /** Shared pg.Pool — reused by Better Auth to avoid duplicate connections */
 export function getPool() {
   if (!globalForDb.pool) {
-    globalForDb.pool = new Pool({ connectionString: getConnectionString() });
+    globalForDb.pool = new Pool({
+      connectionString: getConnectionString(),
+      max: 1,
+    });
   }
   return globalForDb.pool;
 }
