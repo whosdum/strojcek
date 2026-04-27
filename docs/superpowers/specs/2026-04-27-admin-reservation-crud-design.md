@@ -16,8 +16,8 @@ Primary device: phone. UI must be mobile-first.
    - `IN_PROGRESS` / `COMPLETED`: only `notes` and `priceFinal` are editable.
    - `CANCELLED` / `NO_SHOW`: edit blocked. The edit page redirects to the detail. To "fix" one of these, the admin deletes and creates a new one.
 3. **Separate pages, not modals.** `/admin/reservations/new` and `/admin/reservations/[id]/edit`. Modals are unusable on phone with 6+ fields and a soft keyboard.
-4. **Customer entry is always a plain form.** Admin types first name, last name, phone, email (optional), notes (optional). Backend `upsert`s the `Customer` record by normalized phone — same logic as `createBooking`. No autocomplete or "pick existing customer" UI in v1.
-5. **No emails, SMS, Telegram, or cancellation token** for admin-created appointments. `source: "admin"`. Status starts at `CONFIRMED`.
+4. **Customer entry is always a plain form.** Admin types first name, last name, phone (prefix select +421/+420 + 9-digit input), email (required for create, optional for edit), notes. Backend `upsert`s the `Customer` record by normalized phone — same logic as `createBooking`. No autocomplete or "pick existing customer" UI in v1.
+5. **Confirmation email + reminder are sent** to admin-created appointments — same flow as the public booking. A `cancellationToken` is generated so the customer can cancel via the email link. `source: "admin"`, status starts at `CONFIRMED`. The reminder cron is source-agnostic (filters only by status + date), so it picks up admin-created appointments automatically. Telegram notifications to the admin are skipped (admin is the one creating the booking). No SMS confirmation.
 
 ## Backend
 
@@ -34,14 +34,15 @@ export const adminAppointmentInputSchema = z.object({
   firstName: z.string().min(1),
   lastName: z.string().optional().default(""),
   phone: z.string().regex(/^\+4(20|21)\d{9}$/),
-  email: z.string().email().optional().or(z.literal("")),
+  email: z.string().min(1, "Email je povinný").email("Zadajte platný email"),
   notes: z.string().optional().default(""),
   ignoreSchedule: z.boolean().default(false),
 });
 
-export const adminAppointmentEditSchema = z.object({
-  // same shape as adminAppointmentInputSchema, plus:
-  priceFinal: z.coerce.number().min(0).optional().nullable(),
+export const adminAppointmentEditSchema = adminAppointmentInputSchema.extend({
+  // Email may be empty for legacy reservations that pre-date the required-email rule.
+  email: z.string().email().optional().or(z.literal("")),
+  priceFinal: z.union([z.coerce.number().min(0), z.literal(""), z.null()]).optional(),
 });
 ```
 
@@ -56,11 +57,13 @@ Add two actions alongside existing `updateAppointmentStatus` and `deleteAppointm
 - Looks up `BarberService` to derive duration and price (custom > service default). Returns `BARBER_SERVICE_NOT_OFFERED` error if missing.
 - Computes `startTime` / `endTime` in `Europe/Bratislava` (same as `createBooking`).
 - `upsert`s `Customer` by normalized phone.
+- Generates a `cancellationToken` (raw token sent in email, hashed token stored).
 - Inside a transaction:
   - If `!ignoreSchedule` → overlap check (same query as `createBooking`).
-  - Insert appointment with `source: "admin"`, `status: "CONFIRMED"`, no cancellation token.
+  - Insert appointment with `source: "admin"`, `status: "CONFIRMED"`, hashed `cancellationToken`.
   - Insert `AppointmentStatusHistory` row (oldStatus null → CONFIRMED, changedBy "admin").
-- `revalidatePath("/admin/reservations")` and `/admin/calendar`.
+- After transaction: send confirmation email via `sendEmail()` with `bookingConfirmationHtml` (cancel link + ICS attachment). Email send is fire-and-forget with `.catch()` so a mailer failure doesn't fail the action.
+- `revalidatePath("/admin/reservations")`, `/admin/calendar`, `/admin`.
 
 **`updateAppointment(id, input)`**
 - Loads the appointment.
@@ -130,5 +133,5 @@ State:
 
 - Calendar drag-to-create (could come later).
 - Customer search/autocomplete (we always type or paste; reuse from `/admin/customers` later if needed).
-- Sending notifications when admin creates/edits (intentional — admin is on the phone with the customer).
+- Sending notifications on **edit** (only create sends a confirmation email).
 - Bulk operations.
