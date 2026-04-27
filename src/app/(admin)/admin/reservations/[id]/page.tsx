@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getAppointmentById } from "@/server/queries/appointments";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
@@ -9,6 +10,7 @@ import { StatusActions } from "@/components/admin/status-actions";
 import Link from "next/link";
 import { AppointmentDeleteButton } from "@/components/admin/appointment-delete-button";
 import { STATUS_LABELS, formatCurrency } from "@/lib/constants";
+import { PencilIcon } from "lucide-react";
 
 export default async function ReservationDetailPage({
   params,
@@ -32,7 +34,17 @@ export default async function ReservationDetailPage({
 
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold">Detail rezervácie</h1>
-        <AppointmentDeleteButton appointmentId={appointment.id} />
+        <div className="flex flex-col gap-2 sm:flex-row">
+          {appointment.status !== "CANCELLED" && appointment.status !== "NO_SHOW" && (
+            <Link href={`/admin/reservations/${appointment.id}/edit`}>
+              <Button variant="outline" size="sm" className="w-full sm:w-auto">
+                <PencilIcon className="mr-1 size-4" />
+                Upraviť
+              </Button>
+            </Link>
+          )}
+          <AppointmentDeleteButton appointmentId={appointment.id} />
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -103,11 +115,22 @@ export default async function ReservationDetailPage({
             </div>
             <Separator />
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-              <span className="text-muted-foreground">Cena</span>
+              <span className="text-muted-foreground">Cena (očakávaná)</span>
               <span className="font-medium">
                 {formatCurrency(appointment.priceExpected)}
               </span>
             </div>
+            {appointment.priceFinal != null && (
+              <>
+                <Separator />
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                  <span className="text-muted-foreground">Cena (finálna)</span>
+                  <span className="font-medium">
+                    {formatCurrency(appointment.priceFinal)}
+                  </span>
+                </div>
+              </>
+            )}
             <Separator />
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
               <span className="text-muted-foreground">Zdroj</span>

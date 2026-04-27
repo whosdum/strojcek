@@ -102,3 +102,27 @@ export const customerInputSchema = z.object({
 });
 
 export type CustomerInput = z.infer<typeof customerInputSchema>;
+
+export const adminAppointmentInputSchema = z.object({
+  serviceId: z.string().uuid(),
+  barberId: z.string().uuid(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Neplatný dátum"),
+  time: timeString,
+  firstName: z.string().min(1, "Meno je povinné"),
+  lastName: z.string().optional().default(""),
+  phone: z
+    .string()
+    .min(1, "Telefón je povinný")
+    .regex(/^\+4(20|21)\d{9}$/, "Neplatné telefónne číslo"),
+  email: z.string().email("Neplatný email").optional().or(z.literal("")),
+  notes: z.string().optional().default(""),
+  ignoreSchedule: z.boolean().default(false),
+});
+
+export type AdminAppointmentInput = z.infer<typeof adminAppointmentInputSchema>;
+
+export const adminAppointmentEditSchema = adminAppointmentInputSchema.extend({
+  priceFinal: z.union([z.coerce.number().min(0), z.literal(""), z.null()]).optional(),
+});
+
+export type AdminAppointmentEditInput = z.infer<typeof adminAppointmentEditSchema>;
