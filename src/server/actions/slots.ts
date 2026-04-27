@@ -10,10 +10,17 @@ import {
 export async function fetchSlots(
   barberId: string,
   serviceId: string,
-  dateStr: string
+  dateStr: string,
+  excludeAppointmentId?: string
 ): Promise<string[]> {
   const settings = await getCachedShopSettings();
-  return getAvailableSlots(barberId, serviceId, dateStr, settings.slotIntervalMinutes);
+  return getAvailableSlots(
+    barberId,
+    serviceId,
+    dateStr,
+    settings.slotIntervalMinutes,
+    excludeAppointmentId
+  );
 }
 
 export async function fetchWorkingDays(

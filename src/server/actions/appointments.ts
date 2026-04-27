@@ -8,8 +8,11 @@ import {
   adminAppointmentEditSchema,
 } from "@/lib/validators";
 import { normalizePhone } from "@/server/lib/phone";
-import { addMinutes } from "date-fns";
-import { fromZonedTime } from "date-fns-tz";
+import { generateToken, hashToken } from "@/server/lib/tokens";
+import { sendEmail } from "@/server/lib/email";
+import { bookingConfirmationHtml } from "@/emails/booking-confirmation";
+import { addMinutes, format } from "date-fns";
+import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import { revalidatePath } from "next/cache";
 
 type ActionResult = { success: boolean; error?: string; appointmentId?: string };
@@ -92,15 +95,17 @@ export async function createAppointmentAdmin(input: unknown): Promise<ActionResu
           serviceId: data.serviceId,
         },
       },
-      include: { service: true },
+      include: { service: true, barber: true },
     });
 
     if (!barberService) {
       return { success: false, error: "Barber neponúka túto službu." };
     }
 
-    const duration = barberService.customDuration ?? barberService.service.durationMinutes;
-    const price = barberService.customPrice ?? barberService.service.price;
+    const service = barberService.service;
+    const barber = barberService.barber;
+    const duration = barberService.customDuration ?? service.durationMinutes;
+    const price = barberService.customPrice ?? service.price;
 
     const startTime = fromZonedTime(`${data.date}T${data.time}:00`, TIMEZONE);
     const endTime = addMinutes(startTime, duration);
@@ -110,16 +115,19 @@ export async function createAppointmentAdmin(input: unknown): Promise<ActionResu
       update: {
         firstName: data.firstName,
         lastName: data.lastName || null,
-        email: data.email || null,
+        email: data.email,
       },
       create: {
         firstName: data.firstName,
         lastName: data.lastName || null,
         phone,
-        email: data.email || null,
+        email: data.email,
         visitCount: 0,
       },
     });
+
+    const rawToken = generateToken();
+    const hashedToken = hashToken(rawToken);
 
     let appointmentId: string;
     try {
@@ -149,7 +157,8 @@ export async function createAppointmentAdmin(input: unknown): Promise<ActionResu
             priceExpected: price,
             customerName: `${data.firstName} ${data.lastName || ""}`.trim(),
             customerPhone: phone,
-            customerEmail: data.email || null,
+            customerEmail: data.email,
+            cancellationToken: hashedToken,
             notes: data.notes || null,
             source: "admin",
           },
@@ -183,6 +192,26 @@ export async function createAppointmentAdmin(input: unknown): Promise<ActionResu
       }
       throw e;
     }
+
+    // Send confirmation email (non-blocking — log on failure but don't fail the action)
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const cancelUrl = `${appUrl}/cancel?token=${rawToken}`;
+    const localStart = toZonedTime(startTime, TIMEZONE);
+    sendEmail({
+      to: data.email,
+      subject: "Potvrdenie rezervácie - Strojček",
+      html: bookingConfirmationHtml({
+        customerName: data.firstName,
+        serviceName: service.name,
+        barberName: `${barber.firstName} ${barber.lastName}`,
+        date: format(localStart, "d.M.yyyy"),
+        time: format(localStart, "HH:mm"),
+        price: price.toString(),
+        cancelUrl,
+        startTimeUtc: startTime.toISOString(),
+        endTimeUtc: endTime.toISOString(),
+      }),
+    }).catch((err) => console.error("[createAppointmentAdmin][email]", err));
 
     revalidatePath("/admin/reservations");
     revalidatePath("/admin/calendar");

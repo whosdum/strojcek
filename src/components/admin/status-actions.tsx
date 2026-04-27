@@ -61,7 +61,14 @@ export function StatusActions({ appointmentId, currentStatus }: StatusActionsPro
 
   return (
     <div className="flex items-center gap-2">
-      <Select value={currentStatus} onValueChange={handleChange} disabled={isPending}>
+      <Select
+        items={Object.fromEntries(
+          selectableStatuses.map((s) => [s, STATUS_LABELS[s]])
+        )}
+        value={currentStatus}
+        onValueChange={handleChange}
+        disabled={isPending}
+      >
         <SelectTrigger className="w-full sm:w-[180px]">
           {isPending ? (
             <Loader2Icon className="mr-2 size-4 animate-spin" />

@@ -28,7 +28,8 @@ export async function getAvailableSlots(
   barberId: string,
   serviceId: string,
   dateStr: string, // YYYY-MM-DD
-  slotInterval?: number
+  slotInterval?: number,
+  excludeAppointmentId?: string
 ): Promise<string[]> {
   const intervalMinutes = slotInterval ?? SLOT_INTERVAL_MINUTES;
 
@@ -78,6 +79,7 @@ export async function getAvailableSlots(
       startTime: { gte: dayStartUtc },
       endTime: { lte: dayEndUtc },
       status: { notIn: ["CANCELLED", "NO_SHOW"] },
+      ...(excludeAppointmentId && { id: { not: excludeAppointmentId } }),
     },
     include: {
       service: { select: { bufferMinutes: true } },

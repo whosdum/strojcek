@@ -75,7 +75,8 @@ interface FormState {
   time: string;
   firstName: string;
   lastName: string;
-  phone: string;
+  phonePrefix: "+421" | "+420";
+  phoneDigits: string;
   email: string;
   notes: string;
   ignoreSchedule: boolean;
@@ -85,6 +86,16 @@ interface FormState {
 function todayIso() {
   const now = toZonedTime(new Date(), TIMEZONE);
   return format(now, "yyyy-MM-dd");
+}
+
+function splitPhone(phone: string): { prefix: "+421" | "+420"; digits: string } {
+  if (phone.startsWith("+420")) {
+    return { prefix: "+420", digits: phone.slice(4) };
+  }
+  if (phone.startsWith("+421")) {
+    return { prefix: "+421", digits: phone.slice(4) };
+  }
+  return { prefix: "+421", digits: "" };
 }
 
 export function AppointmentForm({
@@ -100,19 +111,23 @@ export function AppointmentForm({
 
   const limited = !!initial && (initial.status === "IN_PROGRESS" || initial.status === "COMPLETED");
 
-  const [form, setForm] = useState<FormState>(() => ({
-    serviceId: initial?.serviceId ?? services[0]?.id ?? "",
-    barberId: initial?.barberId ?? "",
-    date: initial?.date ?? todayIso(),
-    time: initial?.time ?? "",
-    firstName: initial?.firstName ?? "",
-    lastName: initial?.lastName ?? "",
-    phone: initial?.phone ?? "",
-    email: initial?.email ?? "",
-    notes: initial?.notes ?? "",
-    ignoreSchedule: false,
-    priceFinal: initial?.priceFinal != null ? String(initial.priceFinal) : "",
-  }));
+  const [form, setForm] = useState<FormState>(() => {
+    const phoneSplit = initial?.phone ? splitPhone(initial.phone) : { prefix: "+421" as const, digits: "" };
+    return {
+      serviceId: initial?.serviceId ?? services[0]?.id ?? "",
+      barberId: initial?.barberId ?? "",
+      date: initial?.date ?? todayIso(),
+      time: initial?.time ?? "",
+      firstName: initial?.firstName ?? "",
+      lastName: initial?.lastName ?? "",
+      phonePrefix: phoneSplit.prefix,
+      phoneDigits: phoneSplit.digits,
+      email: initial?.email ?? "",
+      notes: initial?.notes ?? "",
+      ignoreSchedule: false,
+      priceFinal: initial?.priceFinal != null ? String(initial.priceFinal) : "",
+    };
+  });
 
   // Filter barbers offering the selected service
   const eligibleBarbers = useMemo(
@@ -121,6 +136,19 @@ export function AppointmentForm({
         ? barbers.filter((b) => b.serviceIds.includes(form.serviceId))
         : barbers,
     [barbers, form.serviceId]
+  );
+
+  const serviceItems = useMemo(
+    () => Object.fromEntries(services.map((s) => [s.id, s.name])),
+    [services]
+  );
+
+  const barberItems = useMemo(
+    () =>
+      Object.fromEntries(
+        eligibleBarbers.map((b) => [b.id, `${b.firstName} ${b.lastName}`])
+      ),
+    [eligibleBarbers]
   );
 
   // Visible barberId — auto-falls back to "" when current barber doesn't offer
@@ -142,7 +170,7 @@ export function AppointmentForm({
   useEffect(() => {
     if (!fetchKey) return;
     let cancelled = false;
-    fetchSlots(effectiveBarberId, form.serviceId, form.date)
+    fetchSlots(effectiveBarberId, form.serviceId, form.date, initial?.id)
       .then((res) => {
         if (!cancelled) setSlotData({ key: fetchKey, slots: res });
       })
@@ -152,7 +180,7 @@ export function AppointmentForm({
     return () => {
       cancelled = true;
     };
-  }, [fetchKey, effectiveBarberId, form.serviceId, form.date]);
+  }, [fetchKey, effectiveBarberId, form.serviceId, form.date, initial?.id]);
 
   const slotsLoading = fetchKey !== null && slotData?.key !== fetchKey;
   const slots = fetchKey !== null && slotData?.key === fetchKey ? slotData.slots : null;
@@ -196,13 +224,20 @@ export function AppointmentForm({
         setError("Zadajte meno zákazníka.");
         return;
       }
-      if (!form.phone.trim()) {
-        setError("Zadajte telefón zákazníka.");
+      if (!/^[1-9]\d{8}$/.test(form.phoneDigits)) {
+        setError("Zadajte 9-miestne telefónne číslo bez úvodnej nuly (napr. 903123456).");
+        return;
+      }
+      // Email is required for create (so customer gets confirmation + reminder).
+      // For edit it stays optional — legacy reservations may not have one.
+      if (mode === "create" && !form.email.trim()) {
+        setError("Email je povinný — zákazník dostane potvrdenie a pripomienku.");
         return;
       }
     }
 
     startTransition(async () => {
+      const fullPhone = `${form.phonePrefix}${form.phoneDigits}`;
       const payload = {
         serviceId: form.serviceId,
         barberId: effectiveBarberId,
@@ -210,7 +245,7 @@ export function AppointmentForm({
         time: form.time,
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
-        phone: form.phone.trim(),
+        phone: fullPhone,
         email: form.email.trim(),
         notes: form.notes.trim(),
         ignoreSchedule: form.ignoreSchedule,
@@ -265,6 +300,7 @@ export function AppointmentForm({
         <div className="space-y-1.5">
           <Label htmlFor="serviceId">Služba *</Label>
           <Select
+            items={serviceItems}
             value={form.serviceId}
             onValueChange={(v) => updateField("serviceId", v ?? "")}
             disabled={limited}
@@ -285,6 +321,7 @@ export function AppointmentForm({
         <div className="space-y-1.5">
           <Label htmlFor="barberId">Barber *</Label>
           <Select
+            items={barberItems}
             value={effectiveBarberId}
             onValueChange={(v) => updateField("barberId", v ?? "")}
             disabled={limited || !form.serviceId}
@@ -431,32 +468,63 @@ export function AppointmentForm({
           </div>
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="phone">Telefón *</Label>
-          <Input
-            id="phone"
-            type="tel"
-            inputMode="tel"
-            placeholder="+421 ..."
-            value={form.phone}
-            onChange={(e) => updateField("phone", e.target.value)}
-            disabled={limited}
-            autoComplete="tel"
-          />
+          <Label htmlFor="phoneDigits">Telefón *</Label>
+          <div className="flex gap-2">
+            <Select
+              items={{ "+421": "+421 SK", "+420": "+420 CZ" }}
+              value={form.phonePrefix}
+              onValueChange={(v) =>
+                updateField("phonePrefix", (v ?? "+421") as "+421" | "+420")
+              }
+              disabled={limited}
+            >
+              <SelectTrigger className="w-[112px] shrink-0">
+                <SelectValue placeholder="+421" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="+421">+421 SK</SelectItem>
+                <SelectItem value="+420">+420 CZ</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input
+              id="phoneDigits"
+              type="tel"
+              inputMode="numeric"
+              maxLength={9}
+              placeholder="9XX XXX XXX"
+              value={form.phoneDigits}
+              onChange={(e) => {
+                const digits = e.target.value.replace(/\D/g, "").slice(0, 9);
+                // Strip leading zero — prefix is selected separately
+                const cleaned = digits.startsWith("0") ? digits.slice(1) : digits;
+                updateField("phoneDigits", cleaned);
+              }}
+              disabled={limited}
+              autoComplete="tel-national"
+              className="flex-1"
+            />
+          </div>
           <p className="text-xs text-muted-foreground">
-            Telefón identifikuje zákazníka. Existujúci zákazník sa automaticky
-            priradí.
+            9-miestne číslo bez úvodnej nuly (napr. 903123456). Telefón
+            identifikuje zákazníka — existujúci sa automaticky priradí.
           </p>
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">Email {mode === "create" && "*"}</Label>
           <Input
             id="email"
             type="email"
+            placeholder={mode === "create" ? "klient@email.sk" : "voliteľný"}
             value={form.email}
             onChange={(e) => updateField("email", e.target.value)}
             disabled={limited}
             autoComplete="email"
           />
+          <p className="text-xs text-muted-foreground">
+            {mode === "create"
+              ? "Klient dostane potvrdzujúci email a pripomienku deň pred termínom."
+              : "Email môže byť prázdny pri starších rezerváciách bez emailu."}
+          </p>
         </div>
       </div>
 

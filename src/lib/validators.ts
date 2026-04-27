@@ -114,7 +114,7 @@ export const adminAppointmentInputSchema = z.object({
     .string()
     .min(1, "Telefón je povinný")
     .regex(/^\+4(20|21)\d{9}$/, "Neplatné telefónne číslo"),
-  email: z.string().email("Neplatný email").optional().or(z.literal("")),
+  email: z.string().min(1, "Email je povinný").email("Zadajte platný email"),
   notes: z.string().optional().default(""),
   ignoreSchedule: z.boolean().default(false),
 });
@@ -122,6 +122,8 @@ export const adminAppointmentInputSchema = z.object({
 export type AdminAppointmentInput = z.infer<typeof adminAppointmentInputSchema>;
 
 export const adminAppointmentEditSchema = adminAppointmentInputSchema.extend({
+  // Email may be empty for legacy reservations that pre-date the required-email rule.
+  email: z.string().email("Neplatný email").optional().or(z.literal("")),
   priceFinal: z.union([z.coerce.number().min(0), z.literal(""), z.null()]).optional(),
 });
 
