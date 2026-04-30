@@ -1,118 +1,116 @@
-import { prisma } from "@/server/lib/prisma";
-import {
-  getCachedScheduleOverride,
-  getCachedSchedule,
-  getCachedScheduleBreaks,
-  getCachedBarberService,
-} from "@/server/queries/cached";
+import "server-only";
+import { adminDb } from "@/server/lib/firebase-admin";
+import { Timestamp } from "firebase-admin/firestore";
+import { tsToDate } from "@/server/lib/firestore-utils";
 import { SLOT_INTERVAL_MINUTES, TIMEZONE } from "@/lib/constants";
 import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import { addMinutes, isBefore, isAfter } from "date-fns";
+import type {
+  AppointmentDoc,
+  ScheduleDoc,
+  ScheduleBreakDoc,
+  ScheduleOverrideDoc,
+  BarberServiceDoc,
+} from "@/server/types/firestore";
 
 interface TimeRange {
   start: Date;
   end: Date;
 }
 
-/**
- * Get available booking slots for a specific barber, service, and date.
- * Slots are computed dynamically — never stored in the database.
- *
- * All schedule times (workStart, workEnd, breaks) are interpreted as
- * Europe/Bratislava local times and converted to UTC for comparison
- * with appointment times stored in the database.
- *
- * @param slotInterval - optional interval in minutes (from ShopSettings); falls back to constant
- */
 export async function getAvailableSlots(
   barberId: string,
   serviceId: string,
-  dateStr: string, // YYYY-MM-DD
+  dateStr: string,
   slotInterval?: number,
   excludeAppointmentId?: string
 ): Promise<string[]> {
   const intervalMinutes = slotInterval ?? SLOT_INTERVAL_MINUTES;
 
-  // Parse date as Bratislava midnight → UTC
   const dayStartUtc = fromZonedTime(`${dateStr}T00:00:00`, TIMEZONE);
   const dayEndUtc = addMinutes(dayStartUtc, 24 * 60);
-
-  // getDay() on the Bratislava-local date
   const localDate = toZonedTime(dayStartUtc, TIMEZONE);
-  const dayOfWeek = localDate.getDay(); // 0=Sunday..6=Saturday
+  const dayOfWeek = localDate.getDay();
 
-  // 1. Check schedule overrides (cached)
-  const override = await getCachedScheduleOverride(barberId, dayStartUtc);
+  // 1. Override or regular schedule
+  const overrideSnap = await adminDb
+    .doc(`barbers/${barberId}/overrides/${dateStr}`)
+    .get();
 
   let workStart: string;
   let workEnd: string;
   let isOverrideDay = false;
 
-  if (override) {
-    if (!override.isAvailable) return []; // Day off
-    if (!override.startTime || !override.endTime) return [];
-    workStart = override.startTime;
-    workEnd = override.endTime;
+  if (overrideSnap.exists) {
+    const o = overrideSnap.data() as ScheduleOverrideDoc;
+    if (!o.isAvailable || !o.startTime || !o.endTime) return [];
+    workStart = o.startTime;
+    workEnd = o.endTime;
     isOverrideDay = true;
   } else {
-    // 2. Load regular schedule (cached)
-    const schedule = await getCachedSchedule(barberId, dayOfWeek);
-    if (!schedule) return []; // No schedule for this day
-    workStart = schedule.startTime;
-    workEnd = schedule.endTime;
+    const scheduleSnap = await adminDb
+      .doc(`barbers/${barberId}/schedules/${dayOfWeek}`)
+      .get();
+    if (!scheduleSnap.exists) return [];
+    const s = scheduleSnap.data() as ScheduleDoc;
+    if (!s.isActive) return [];
+    workStart = s.startTime;
+    workEnd = s.endTime;
   }
 
-  // 3. Load breaks — only for regular days, not overrides (cached)
+  // 2. Breaks (regular days only)
   let breaks: TimeRange[] = [];
   if (!isOverrideDay) {
-    const scheduleBreaks = await getCachedScheduleBreaks(barberId, dayOfWeek);
-    breaks = scheduleBreaks.map((b) => ({
-      start: timeStringToUtc(dateStr, b.startTime),
-      end: timeStringToUtc(dateStr, b.endTime),
-    }));
+    const breaksSnap = await adminDb
+      .collection(`barbers/${barberId}/breaks`)
+      .where("dayOfWeek", "==", dayOfWeek)
+      .get();
+    breaks = breaksSnap.docs.map((d) => {
+      const b = d.data() as ScheduleBreakDoc;
+      return {
+        start: fromZonedTime(`${dateStr}T${b.startTime}:00`, TIMEZONE),
+        end: fromZonedTime(`${dateStr}T${b.endTime}:00`, TIMEZONE),
+      };
+    });
   }
 
-  // 4. Load active appointments — LIVE query (must be realtime)
-  const appointments = await prisma.appointment.findMany({
-    where: {
-      barberId,
-      startTime: { gte: dayStartUtc },
-      endTime: { lte: dayEndUtc },
-      status: { notIn: ["CANCELLED", "NO_SHOW"] },
-      ...(excludeAppointmentId && { id: { not: excludeAppointmentId } }),
-    },
-    include: {
-      service: { select: { bufferMinutes: true } },
-    },
-  });
+  // 3. Live appointments
+  const apptsSnap = await adminDb
+    .collection("appointments")
+    .where("barberId", "==", barberId)
+    .where("startTime", ">=", Timestamp.fromDate(dayStartUtc))
+    .where("startTime", "<", Timestamp.fromDate(dayEndUtc))
+    .get();
 
-  const bookedRanges: TimeRange[] = appointments.map((a) => ({
-    start: a.startTime,
-    end: addMinutes(a.endTime, a.service.bufferMinutes),
-  }));
+  const bookedRanges: TimeRange[] = apptsSnap.docs
+    .filter((d) => d.id !== excludeAppointmentId)
+    .map((d) => d.data() as AppointmentDoc)
+    .filter((a) => a.status !== "CANCELLED" && a.status !== "NO_SHOW")
+    .map((a) => ({
+      start: tsToDate(a.startTime),
+      end: addMinutes(tsToDate(a.endTime), a.serviceBufferMinutes ?? 0),
+    }));
 
-  // 5. Get effective duration + buffer for the service being booked (cached)
-  const barberService = await getCachedBarberService(barberId, serviceId);
+  // 4. Barber service (duration + buffer)
+  const bsSnap = await adminDb
+    .doc(`barbers/${barberId}/services/${serviceId}`)
+    .get();
+  if (!bsSnap.exists) return [];
+  const bs = bsSnap.data() as BarberServiceDoc;
+  const duration = bs.customDuration ?? bs.defaultDuration;
+  const buffer = bs.bufferMinutes;
 
-  if (!barberService) return []; // Barber doesn't offer this service
-
-  const service = barberService.service;
-  const duration = barberService.customDuration ?? service.durationMinutes;
-  const buffer = service.bufferMinutes;
-
-  // 6. Generate candidates in SLOT_INTERVAL_MINUTES intervals
-  const workingStartUtc = timeStringToUtc(dateStr, workStart);
-  const workingEndUtc = timeStringToUtc(dateStr, workEnd);
+  // 5. Generate candidates
+  const workingStartUtc = fromZonedTime(`${dateStr}T${workStart}:00`, TIMEZONE);
+  const workingEndUtc = fromZonedTime(`${dateStr}T${workEnd}:00`, TIMEZONE);
   const nowUtc = new Date();
 
   const slots: string[] = [];
   let candidate = workingStartUtc;
-
   while (isBefore(candidate, workingEndUtc)) {
     const slotEnd = addMinutes(candidate, duration);
     const blockEnd = addMinutes(candidate, duration + buffer);
 
-    // 7. Check all conditions
     const fitsInWorkingHours = !isAfter(slotEnd, workingEndUtc);
     const notInPast = isAfter(candidate, nowUtc);
     const noBreakOverlap = !breaks.some(
@@ -122,8 +120,12 @@ export async function getAvailableSlots(
       (a) => isBefore(candidate, a.end) && isAfter(blockEnd, a.start)
     );
 
-    if (fitsInWorkingHours && notInPast && noBreakOverlap && noAppointmentOverlap) {
-      // Convert candidate UTC back to Bratislava local for display
+    if (
+      fitsInWorkingHours &&
+      notInPast &&
+      noBreakOverlap &&
+      noAppointmentOverlap
+    ) {
       const local = toZonedTime(candidate, TIMEZONE);
       const hours = local.getHours().toString().padStart(2, "0");
       const mins = local.getMinutes().toString().padStart(2, "0");
@@ -136,7 +138,26 @@ export async function getAvailableSlots(
   return slots;
 }
 
-/** Convert a "HH:mm" time string on a given date to a UTC Date */
-function timeStringToUtc(dateStr: string, timeStr: string): Date {
-  return fromZonedTime(`${dateStr}T${timeStr}:00`, TIMEZONE);
+export async function getWorkingDays(barberId: string): Promise<number[]> {
+  const snap = await adminDb.collection(`barbers/${barberId}/schedules`).get();
+  return snap.docs
+    .map((d) => d.data() as ScheduleDoc)
+    .filter((s) => s.isActive)
+    .map((s) => s.dayOfWeek)
+    .sort((a, b) => a - b);
+}
+
+export async function getScheduleEndTimes(
+  barberId: string
+): Promise<Record<number, string>> {
+  const snap = await adminDb.collection(`barbers/${barberId}/schedules`).get();
+  const result: Record<number, string> = {};
+  for (const d of snap.docs) {
+    const s = d.data() as ScheduleDoc;
+    if (!s.isActive) continue;
+    if (!result[s.dayOfWeek] || s.endTime > result[s.dayOfWeek]) {
+      result[s.dayOfWeek] = s.endTime;
+    }
+  }
+  return result;
 }

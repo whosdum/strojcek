@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateAppointmentStatus } from "@/server/actions/appointments";
-import { AppointmentStatus } from "@/generated/prisma/client";
+import type { AppointmentStatus } from "@/lib/types";
 import { VALID_STATUS_TRANSITIONS, STATUS_LABELS } from "@/lib/constants";
 import { Loader2Icon } from "lucide-react";
 import {

@@ -4,18 +4,24 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Strojcek is a barber shop booking system with two parts: a public 5-step booking wizard for customers and an admin panel for the shop owner. It's a Next.js 16 monolith with PostgreSQL, built for a Slovak barber shop (UI text in Slovak, timezone Europe/Bratislava).
+Strojcek is a barber shop booking system with two parts: a public 5-step booking wizard for customers and an admin panel for the shop owner. It's a Next.js 16 monolith on **Firebase Firestore** + **Firebase Auth**, built for a Slovak barber shop (UI text in Slovak, timezone Europe/Bratislava).
+
+> **Note:** the `feat/firebase-firestore-rewrite` branch (current) replaces the original Postgres + Prisma + Better Auth stack with Firebase. The `main` branch on remote still runs the legacy Vercel + Supabase stack — do not assume parity.
 
 ## Commands
 
 ```bash
-npm run dev          # Start dev server
-npm run build        # Runs `prisma migrate deploy && prisma generate && next build` — migrations are applied on every build
-npm run lint         # ESLint
-npx prisma migrate dev   # Run database migrations (uses DIRECT_URL when set, falls back to DATABASE_URL — see prisma.config.ts)
-npx prisma generate      # Regenerate Prisma client (output: src/generated/prisma)
-npx prisma db seed       # Seed database (seed runner configured in prisma.config.ts → tsx prisma/seed.ts)
-npx tsx scripts/create-admin.ts  # Create default admin user (admin@strojcek.sk / admin123)
+npm run dev              # Start dev server (talks to live Firestore via admin SDK)
+npm run build            # next build (no migrations — Firestore is schemaless)
+npm run lint             # ESLint
+npm run dev:emulators    # firebase emulators (Auth :9099, Firestore :8080, UI :4000)
+npm run dev:app          # Next.js dev pointed at local emulators
+
+# Scripts
+npx tsx scripts/create-admin.ts              # Create admin Firebase user (admin@strojcek.sk / admin123) + role=admin claim
+npx tsx scripts/seed-firestore.ts            # Wipe + seed Firestore (1 barber, 5 services, schedules, breaks, settings)
+npx tsx scripts/test-firebase-connection.ts  # Verify firebase-admin auth + Firestore write/read
+firebase deploy --only firestore:rules,firestore:indexes  # Deploy security rules + composite indexes
 ```
 
 ## Architecture
@@ -23,69 +29,136 @@ npx tsx scripts/create-admin.ts  # Create default admin user (admin@strojcek.sk 
 ### Route Groups
 
 - `src/app/page.tsx` — Booking wizard (5-step: service → barber → datetime → details → confirm)
-- `src/app/(public)/` — Public pages
-  - `/cancel` — Token-based appointment cancellation
-- `src/app/(admin)/` — Admin panel (auth-protected)
-  - `/login` — Better Auth email/password login
+- `src/app/(public)/` — Public pages (`/cancel`, `/vop`, `/ochrana-udajov`)
+- `src/app/(admin)/` — Admin panel (auth-protected via `__session` cookie + Firebase custom claim `role=admin`)
+  - `/login` — Firebase Auth `signInWithEmailAndPassword`, then POST idToken to `/api/auth/session`
   - `/admin/*` — Dashboard, calendar, reservations, barbers, services, schedule, customers
-- `src/app/api/` — API routes: auth handler, calendar data, admin endpoints, cron jobs (`/api/cron/reminders`, `/api/cron/cleanup`)
+- `src/app/api/`
+  - `/auth/session` — POST creates `__session` cookie via `createSessionCookie()`, DELETE clears
+  - `/admin/calendar`, `/admin/services` — guarded JSON endpoints
+  - `/cron/reminders` (daily 16:00 UTC), `/cron/cleanup` (daily 03:00 UTC) — `Authorization: Bearer $CRON_SECRET`
 
 ### Server Layer (`src/server/`)
 
-- **actions/** — Server Actions for all mutations (booking, appointments, customers, barbers, services, schedules, slots)
-- **queries/** — Server-side data fetching (read-only operations)
-- **lib/** — Shared server utilities:
-  - `prisma.ts` — Prisma client singleton using PrismaPg adapter with `pg.Pool` (capped at `max: 1` for serverless). `getPool()` is shared with Better Auth to avoid duplicate connections
-  - `auth.ts` — Better Auth config (email/password, PostgreSQL backend)
-  - `email.ts` — Resend wrapper for booking confirmations/reminders (templates live in `src/emails/`)
-  - `sms.ts` — SMStools.sk SMS notifications
-  - `strings.ts` — `stripDiacritics()` — all SMS bodies go through this (SMSTools charges more for Unicode)
-  - `telegram.ts` — admin push notifications on new bookings
-  - `phone.ts` — Phone number normalization
-  - `tokens.ts` — Cancellation token generation and hashing
+- **lib/**
+  - `firebase-admin.ts` — initializes `firebase-admin/app` with credentials from env. Exports `adminAuth` and `adminDb` singletons. Both are server-only.
+  - `auth.ts` — `getSession()` reads the `__session` cookie, calls `verifySessionCookie()`, requires `role=admin` custom claim
+  - `firestore-utils.ts` — `tsToDate`, `dateKey`, `hourKey`, `generateSearchTokens`, `stripUndefined`
+  - `email.ts` (nodemailer wrapper), `sms.ts` (SMSTools.sk), `telegram.ts`, `phone.ts`, `tokens.ts`, `strings.ts`
+- **actions/** — Server Actions (mutations). All use `adminDb.runTransaction()` where atomicity matters (booking, status changes, customer phone uniqueness)
+- **queries/** — Server-side Firestore reads. All return view-model shapes from `@/lib/types`
+- **types/firestore.ts** — Typed shapes for every Firestore document
 
 ### Client Layer (`src/lib/`)
 
-- `auth-client.ts` — Better Auth React client
-- `constants.ts` — Business rules: cancel window (`MIN_CANCEL_HOURS = 2`), page size (25), anti-spam limits (`GLOBAL_BOOKING_LIMIT = 30`, `PHONE_BOOKING_LIMIT_24H = 3`), slot group boundaries (morning 7–12, afternoon 12–17, evening 17–24), valid status transitions, `formatCurrency()`. Note: `SLOT_INTERVAL_MINUTES = 60` is only a fallback — the real value is read from the `ShopSettings` DB row at runtime
+- `firebase-client.ts` — initializes the Web SDK from `NEXT_PUBLIC_FIREBASE_*` env. Optionally binds to local emulators when `NEXT_PUBLIC_USE_FIREBASE_EMULATORS=true`
+- `types.ts` — Shared `AppointmentStatus`, view models (`AppointmentView`, `BarberView`, etc.). UI components import enums + types from here, never from anywhere Postgres-flavored
 - `validators.ts` — Zod schemas for all entities
+- `constants.ts` — Business rules: `MIN_CANCEL_HOURS = 2`, `PAGE_SIZE = 25`, `GLOBAL_BOOKING_LIMIT = 30`, `PHONE_BOOKING_LIMIT_24H = 3`, `SLOT_GROUP_BOUNDARIES`, `VALID_STATUS_TRANSITIONS`, `formatCurrency()`. `SLOT_INTERVAL_MINUTES = 60` is a fallback — actual value is read from `shopSettings/default` at runtime
 
-### Components (`src/components/`)
+### Firestore data model
 
-- `ui/` — shadcn/ui primitives (base-nova style)
-- `admin/` — Admin panel components (forms, tables, calendar, sidebar)
-- `booking/` — Public booking wizard components (steps, service cards, time slots, summary)
+Top-level collections:
 
-### Database
+```
+/services/{serviceId}
+/barbers/{barberId}                       (denormalized serviceIds[] for fast filtering)
+/barbers/{barberId}/services/{serviceId}  (BarberService — denormalized service info to avoid N+1)
+/barbers/{barberId}/schedules/{dayOfWeek} (doc id = "0".."6")
+/barbers/{barberId}/breaks/{breakId}
+/barbers/{barberId}/overrides/{YYYY-MM-DD}
 
-PostgreSQL via Prisma with PrismaPg adapter. Prisma client is generated to `src/generated/prisma/`.
+/customers/{customerId}                   (UUID; searchTokens[] for prefix search)
+/customerPhones/{phone}                   (lookup index — guarantees phone uniqueness)
 
-Key models: Barber, Service, BarberService (junction with custom pricing/duration), Schedule, ScheduleOverride, ScheduleBreak, Customer, Appointment, AppointmentStatusHistory, ShopSettings.
+/appointments/{appointmentId}             (denormalized barberName, serviceName, serviceBufferMinutes, startDateKey, customer*)
+/appointments/{appointmentId}/history/{id}
 
-Appointment statuses: PENDING → CONFIRMED → IN_PROGRESS → COMPLETED | CANCELLED | NO_SHOW. Valid transitions are defined in `src/lib/constants.ts`.
+/shopSettings/default
+/users/{firebaseUid}                      (admin profile + role)
+/counters/global_bookings                 ({ hourly: { "2026-04-30T14": 7 } } — 1h global rate limit)
+/counters/phone_{normalizedPhone}         ({ bookings: Timestamp[] } — 24h per-phone rate limit)
+```
 
-Service-level settings live on the `Service` model: `durationMinutes`, `price`, and `bufferMinutes` (default 5) — buffer is per-service, not global.
+### Decimal precision
 
-### Auth
+All prices stored as `priceCents: number` (integer). UI divides by 100 for display. This avoids IEEE-754 rounding bugs that Firestore would inherit if we used `Decimal(10,2)`.
 
-Better Auth with email/password for admin users only. Auth guard lives in the admin layout (`src/app/(admin)/admin/layout.tsx`). Public booking requires no authentication — customers are identified by phone number.
+### Slot conflict + race conditions
+
+Postgres had an `EXCLUDE` constraint that DB-enforced no overlapping bookings. Firestore has no equivalent. Booking creation runs inside `adminDb.runTransaction()` and:
+
+1. Re-reads the per-phone + global counters and rejects if over limit
+2. Re-reads all appointments matching `(barberId, startDateKey)` and rejects on overlap
+3. Creates appointment + history + counter updates atomically
+
+`runTransaction` retries on contention; the residual race window is ~ms. Plan §19 documents this as accepted ~0.001% error at current scale.
+
+### Auth flow
+
+```
+Login                       → signInWithEmailAndPassword(auth, email, pw)
+                            → idToken = user.getIdToken()
+                            → POST /api/auth/session { idToken }
+
+POST /api/auth/session      → adminAuth.verifyIdToken()
+                            → require role=admin custom claim
+                            → adminAuth.createSessionCookie(idToken, 7d)
+                            → Set-Cookie: __session (httpOnly, lax, secure in prod)
+
+Server (layout, API routes) → getSession() reads __session
+                            → adminAuth.verifySessionCookie()
+                            → returns null if no role=admin claim
+
+Logout                      → signOut(auth) [client]
+                            → DELETE /api/auth/session [server cookie clear]
+```
+
+Custom claims are set by `scripts/create-admin.ts` (idempotent; safe to run again).
 
 ## Key Patterns
 
 - **Booking wizard state** is stored in URL search params, not client state
-- **Prisma client** uses the `@prisma/adapter-pg` adapter with a `pg.Pool` — not the default Prisma connection
-- **Prisma output** goes to `src/generated/prisma` (not node_modules)
-- **Migrations** require a direct (non-pooled) connection — `prisma.config.ts` reads `DIRECT_URL ?? DATABASE_URL`. Set `DIRECT_URL` when behind PgBouncer/Neon poolers
+- **No Prisma, no Postgres.** All data goes through `adminDb` (server) or `db` (client). Client SDK is rarely used directly — admin pages render server-side and stream data through server queries
 - **Path alias**: `@/*` maps to `./src/*`
-- **Email/SMS/Telegram** send asynchronously with `.catch()` — failures don't block the user flow
-- **Date handling**: all dates use `date-fns` + `date-fns-tz` with `Europe/Bratislava` timezone
-- **Slot calculation**: interval is configurable per shop (`ShopSettings.slotIntervalMinutes`); slots are grouped into morning (7–12), afternoon (12–17), evening (17–24)
-- **Cron jobs**: `.github/workflows/cron.yml` hits `/api/cron/reminders` daily at 16:00 UTC and `/api/cron/cleanup` at 03:00 UTC with `Authorization: Bearer $CRON_SECRET`. Both routes hard-fail with 401 if `CRON_SECRET` is unset
+- **Email/SMS/Telegram** still send asynchronously with `.catch()` — failures don't block the user flow
+- **Date handling**: `date-fns` + `date-fns-tz` with `Europe/Bratislava` timezone. Appointment `startDateKey` is the Bratislava-local YYYY-MM-DD used as the canonical day key for queries
+- **Search**: `searchTokens[]` array on customer docs — generated from name prefixes + phone-tail digits. `array-contains` on a lowercased query gives prefix matching
+- **Firestore caching**: there is no server-side cache layer. Reads are cheap (free tier 50K/day) and freshness matters more than latency. React Query handles client-side caching where appropriate
 
-## Environment Variables
+## Environment variables
 
-See `.env.example` for all required variables. Key ones: `DATABASE_URL`, `DIRECT_URL` (optional, for migrations behind a pooler), `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `RESEND_API_KEY`, `SMSTOOLS_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `CRON_SECRET`.
+```
+# Firebase Admin SDK (server-only)
+FIREBASE_PROJECT_ID
+FIREBASE_CLIENT_EMAIL
+FIREBASE_PRIVATE_KEY        # full -----BEGIN/END----- string with literal \n
+
+# Firebase Web SDK (browser)
+NEXT_PUBLIC_FIREBASE_API_KEY
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+NEXT_PUBLIC_FIREBASE_PROJECT_ID
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+NEXT_PUBLIC_FIREBASE_APP_ID
+
+# Optional
+NEXT_PUBLIC_USE_FIREBASE_EMULATORS=true   # bind client SDK to localhost emulators
+
+# External services
+SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASS    (or use Resend later)
+EMAIL_FROM
+SMSTOOLS_API_KEY
+TELEGRAM_BOT_TOKEN
+TELEGRAM_CHAT_ID
+CRON_SECRET                  # Bearer token for /api/cron/* endpoints
+NEXT_PUBLIC_APP_URL
+```
+
+`serviceAccountKey.json` lives at the repo root, gitignored. Use it only for local scripts that bootstrap the project; the dev server reads credentials from env vars.
 
 ## Other notes
 
-- `Audit.md` is a 45-item UI/UX audit (P0–P3 priorities) — consult it before making UI changes to avoid re-introducing known issues.
+- `Audit.md` is a 45-item UI/UX audit (P0–P3 priorities) — consult it before making UI changes
+- `.github/workflows/cron.yml` schedules cron HTTP calls to `/api/cron/*` — when deployed to Firebase App Hosting, update `APP_URL`
+- Plan: `~/.claude/plans/priprav-mi-detailny-plan-dynamic-pancake.md` has the full migration spec (parts 1–19)

@@ -32,7 +32,7 @@ import {
   STATUS_LABELS,
   TIMEZONE,
 } from "@/lib/constants";
-import type { AppointmentStatus } from "@/generated/prisma/client";
+import type { AppointmentStatus } from "@/lib/types";
 
 interface BarberOption {
   id: string;

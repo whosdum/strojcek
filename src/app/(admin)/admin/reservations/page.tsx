@@ -13,7 +13,7 @@ import {
 import { format } from "date-fns";
 import { sk } from "date-fns/locale";
 import { EyeIcon, ChevronLeftIcon, ChevronRightIcon, PlusIcon } from "lucide-react";
-import { AppointmentStatus } from "@/generated/prisma/client";
+import type { AppointmentStatus } from "@/lib/types";
 import { STATUS_LABELS, STATUS_VARIANTS } from "@/lib/constants";
 
 export default async function ReservationsPage({

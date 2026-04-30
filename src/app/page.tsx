@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
-import { getCachedActiveServices, getCachedActiveBarbersWithServices } from "@/server/queries/cached";
+import { getActiveServices } from "@/server/queries/services";
+import { getActiveBarbersWithServices } from "@/server/queries/barbers";
 import { BookingWizard } from "@/components/booking/booking-wizard";
 import { BookingShell } from "@/components/booking/booking-shell";
 import Image from "next/image";
@@ -8,8 +9,8 @@ import Link from "next/link";
 
 export default async function HomePage() {
   const [services, barbers] = await Promise.all([
-    getCachedActiveServices(),
-    getCachedActiveBarbersWithServices(),
+    getActiveServices(),
+    getActiveBarbersWithServices(),
   ]);
 
   const serializedServices = services.map((s) => ({

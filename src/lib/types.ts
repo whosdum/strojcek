@@ -1,0 +1,184 @@
+export type AppointmentStatus =
+  | "PENDING"
+  | "CONFIRMED"
+  | "IN_PROGRESS"
+  | "COMPLETED"
+  | "CANCELLED"
+  | "NO_SHOW";
+
+export type AppointmentSource = "online" | "admin";
+
+export type SlotInterval = 15 | 30 | 60;
+
+// View models — JS Date for frontend convenience (UI consumes these directly).
+
+export type BarberView = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string | null;
+  phone: string | null;
+  bio: string | null;
+  avatarUrl: string | null;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type ServiceView = {
+  id: string;
+  name: string;
+  description: string | null;
+  durationMinutes: number;
+  price: number;
+  bufferMinutes: number;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type BarberServiceView = {
+  serviceId: string;
+  customPrice: number | null;
+  customDuration: number | null;
+};
+
+export type ScheduleView = {
+  id: string;
+  barberId: string;
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  isActive: boolean;
+};
+
+export type ScheduleBreakView = {
+  id: string;
+  barberId: string;
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  label: string;
+};
+
+export type ScheduleOverrideView = {
+  id: string;
+  barberId: string;
+  overrideDate: Date;
+  isAvailable: boolean;
+  startTime: string | null;
+  endTime: string | null;
+  reason: string | null;
+};
+
+export type CustomerView = {
+  id: string;
+  firstName: string;
+  lastName: string | null;
+  phone: string;
+  email: string | null;
+  notes: string | null;
+  visitCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type AppointmentView = {
+  id: string;
+  barberId: string;
+  customerId: string | null;
+  serviceId: string;
+  startTime: Date;
+  endTime: Date;
+  status: AppointmentStatus;
+  priceExpected: number;
+  priceFinal: number | null;
+  customerName: string | null;
+  customerPhone: string | null;
+  customerEmail: string | null;
+  cancellationToken: string | null;
+  cancellationReason: string | null;
+  notes: string | null;
+  source: AppointmentSource;
+  reminderSentAt: Date | null;
+  serviceBufferMinutes: number;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type AppointmentStatusHistoryView = {
+  id: string;
+  appointmentId: string;
+  oldStatus: AppointmentStatus | null;
+  newStatus: AppointmentStatus;
+  changedBy: string | null;
+  reason: string | null;
+  changedAt: Date;
+};
+
+export type ShopSettingsView = {
+  id: string;
+  slotIntervalMinutes: SlotInterval;
+  updatedAt: Date;
+};
+
+// Composite view models used by UI
+
+export type BarberWithServicesView = BarberView & {
+  services: Array<BarberServiceView & { service: ServiceView }>;
+};
+
+export type BarberWithSchedulesView = BarberView & {
+  schedules: ScheduleView[];
+  scheduleBreaks: ScheduleBreakView[];
+};
+
+export type BarberFullView = BarberView & {
+  services: Array<BarberServiceView & { service: ServiceView }>;
+  schedules: ScheduleView[];
+  scheduleBreaks: ScheduleBreakView[];
+};
+
+export type AppointmentWithBarberServiceView = AppointmentView & {
+  barber: { firstName: string; lastName: string };
+  service: { name: string };
+};
+
+export type AppointmentDetailView = AppointmentView & {
+  barber: BarberView;
+  service: ServiceView;
+  customer: CustomerView | null;
+  statusHistory: AppointmentStatusHistoryView[];
+};
+
+export type AppointmentTokenView = AppointmentView & {
+  barber: { firstName: string; lastName: string };
+  service: { name: string; durationMinutes: number; price: number };
+};
+
+export type AppointmentListView = AppointmentView & {
+  barber: { firstName: string; lastName: string };
+  service: { name: string };
+  customer: { firstName: string; lastName: string | null; phone: string } | null;
+};
+
+export type CustomerWithAppointmentsView = CustomerView & {
+  appointments: Array<
+    AppointmentView & {
+      barber: { firstName: string; lastName: string };
+      service: { name: string };
+    }
+  >;
+};
+
+export type ActiveBarberWithServiceIdsView = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  bio: string | null;
+  avatarUrl: string | null;
+  serviceIds: string[];
+  serviceOverrides: Record<string, { price?: string; duration?: number }>;
+};

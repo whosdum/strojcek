@@ -1,41 +1,34 @@
 "use server";
 
-import { revalidatePath, revalidateTag } from "next/cache";
-import { prisma } from "@/server/lib/prisma";
-import {
-  scheduleInputSchema,
-  breakInputSchema,
-} from "@/lib/validators";
+import { revalidatePath } from "next/cache";
+import { adminDb } from "@/server/lib/firebase-admin";
+import { stripUndefined } from "@/server/lib/firestore-utils";
+import { scheduleInputSchema, breakInputSchema } from "@/lib/validators";
+import { randomUUID } from "crypto";
 
 type ActionResult = { success: boolean; error?: string };
 
-function invalidateScheduleCaches() {
-  revalidateTag("schedules", "max");
+function invalidate() {
   revalidatePath("/");
+  revalidatePath("/admin/schedule");
 }
 
 export async function upsertSchedule(input: unknown): Promise<ActionResult> {
   try {
     const data = scheduleInputSchema.parse(input);
-
-    const existing = await prisma.schedule.findFirst({
-      where: { barberId: data.barberId, dayOfWeek: data.dayOfWeek },
-    });
-
-    if (existing) {
-      await prisma.schedule.update({
-        where: { id: existing.id },
-        data: {
-          startTime: data.startTime,
-          endTime: data.endTime,
-          isActive: data.isActive,
-        },
-      });
-    } else {
-      await prisma.schedule.create({ data });
-    }
-
-    invalidateScheduleCaches();
+    const ref = adminDb.doc(
+      `barbers/${data.barberId}/schedules/${data.dayOfWeek}`
+    );
+    await ref.set(
+      stripUndefined({
+        dayOfWeek: data.dayOfWeek,
+        startTime: data.startTime,
+        endTime: data.endTime,
+        isActive: data.isActive,
+      }),
+      { merge: false }
+    );
+    invalidate();
     return { success: true };
   } catch (e) {
     console.error("[upsertSchedule]", e);
@@ -43,10 +36,19 @@ export async function upsertSchedule(input: unknown): Promise<ActionResult> {
   }
 }
 
+/**
+ * Delete schedule by composite id `${barberId}:${dayOfWeek}` OR by document id.
+ * Older callers passed the Postgres UUID; new ones pass `barberId:dayOfWeek` so we
+ * can find the doc directly.
+ */
 export async function deleteSchedule(id: string): Promise<ActionResult> {
   try {
-    await prisma.schedule.delete({ where: { id } });
-    invalidateScheduleCaches();
+    const [barberId, dayOfWeek] = id.split(":");
+    if (!barberId || !dayOfWeek) {
+      return { success: false, error: "Neplatné ID rozvrhu." };
+    }
+    await adminDb.doc(`barbers/${barberId}/schedules/${dayOfWeek}`).delete();
+    invalidate();
     return { success: true };
   } catch (e) {
     console.error("[deleteSchedule]", e);
@@ -57,8 +59,15 @@ export async function deleteSchedule(id: string): Promise<ActionResult> {
 export async function createBreak(input: unknown): Promise<ActionResult> {
   try {
     const data = breakInputSchema.parse(input);
-    await prisma.scheduleBreak.create({ data });
-    invalidateScheduleCaches();
+    const id = randomUUID();
+    await adminDb.doc(`barbers/${data.barberId}/breaks/${id}`).set({
+      id,
+      dayOfWeek: data.dayOfWeek,
+      startTime: data.startTime,
+      endTime: data.endTime,
+      label: data.label ?? "Prestavka",
+    });
+    invalidate();
     return { success: true };
   } catch (e) {
     console.error("[createBreak]", e);
@@ -66,10 +75,17 @@ export async function createBreak(input: unknown): Promise<ActionResult> {
   }
 }
 
+/**
+ * Delete break by composite id `${barberId}:${breakId}`.
+ */
 export async function deleteBreak(id: string): Promise<ActionResult> {
   try {
-    await prisma.scheduleBreak.delete({ where: { id } });
-    invalidateScheduleCaches();
+    const [barberId, breakId] = id.split(":");
+    if (!barberId || !breakId) {
+      return { success: false, error: "Neplatné ID prestávky." };
+    }
+    await adminDb.doc(`barbers/${barberId}/breaks/${breakId}`).delete();
+    invalidate();
     return { success: true };
   } catch (e) {
     console.error("[deleteBreak]", e);

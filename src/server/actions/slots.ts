@@ -1,11 +1,7 @@
 "use server";
 
-import { getAvailableSlots } from "@/server/queries/slots";
-import {
-  getCachedShopSettings,
-  getCachedWorkingDays,
-  getCachedScheduleEndTimes,
-} from "@/server/queries/cached";
+import { getAvailableSlots, getWorkingDays, getScheduleEndTimes } from "@/server/queries/slots";
+import { getShopSettings } from "@/server/queries/settings";
 
 export async function fetchSlots(
   barberId: string,
@@ -13,7 +9,7 @@ export async function fetchSlots(
   dateStr: string,
   excludeAppointmentId?: string
 ): Promise<string[]> {
-  const settings = await getCachedShopSettings();
+  const settings = await getShopSettings();
   return getAvailableSlots(
     barberId,
     serviceId,
@@ -23,15 +19,12 @@ export async function fetchSlots(
   );
 }
 
-export async function fetchWorkingDays(
-  barberId: string
-): Promise<number[]> {
-  return getCachedWorkingDays(barberId);
+export async function fetchWorkingDays(barberId: string): Promise<number[]> {
+  return getWorkingDays(barberId);
 }
 
-/** Returns a map of dayOfWeek → latest end time (e.g. { 1: "18:00", 2: "18:00" }) */
 export async function fetchScheduleEndTimes(
   barberId: string
 ): Promise<Record<number, string>> {
-  return getCachedScheduleEndTimes(barberId);
+  return getScheduleEndTimes(barberId);
 }

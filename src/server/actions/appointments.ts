@@ -1,7 +1,17 @@
 "use server";
 
-import { prisma } from "@/server/lib/prisma";
-import { AppointmentStatus } from "@/generated/prisma/client";
+import { revalidatePath } from "next/cache";
+import { Timestamp, FieldValue } from "firebase-admin/firestore";
+import { addMinutes, format } from "date-fns";
+import { fromZonedTime, toZonedTime } from "date-fns-tz";
+import { randomUUID } from "crypto";
+
+import { adminDb } from "@/server/lib/firebase-admin";
+import {
+  dateKey,
+  generateSearchTokens,
+  stripUndefined,
+} from "@/server/lib/firestore-utils";
 import { TIMEZONE, VALID_STATUS_TRANSITIONS } from "@/lib/constants";
 import {
   adminAppointmentInputSchema,
@@ -11,11 +21,80 @@ import { normalizePhone } from "@/server/lib/phone";
 import { generateToken, hashToken } from "@/server/lib/tokens";
 import { sendEmail } from "@/server/lib/email";
 import { bookingConfirmationHtml } from "@/emails/booking-confirmation";
-import { addMinutes, format } from "date-fns";
-import { fromZonedTime, toZonedTime } from "date-fns-tz";
-import { revalidatePath } from "next/cache";
+import type { AppointmentStatus } from "@/lib/types";
+import type {
+  AppointmentDoc,
+  BarberDoc,
+  BarberServiceDoc,
+} from "@/server/types/firestore";
 
 type ActionResult = { success: boolean; error?: string; appointmentId?: string };
+
+interface CustomerUpsertResult {
+  customerId: string;
+}
+
+async function upsertCustomerByPhone(input: {
+  phone: string;
+  firstName: string;
+  lastName: string | null;
+  email: string | null;
+}): Promise<CustomerUpsertResult> {
+  const { phone, firstName, lastName, email } = input;
+  const phoneIdxRef = adminDb.doc(`customerPhones/${phone}`);
+  const idxSnap = await phoneIdxRef.get();
+
+  if (idxSnap.exists) {
+    const customerId = (idxSnap.data() as { customerId: string }).customerId;
+    await adminDb.doc(`customers/${customerId}`).update({
+      firstName,
+      lastName: lastName ?? null,
+      email: email ?? null,
+      emailSearch: email ? email.toLowerCase() : null,
+      searchTokens: generateSearchTokens([firstName, lastName, phone, email]),
+      updatedAt: Timestamp.now(),
+    });
+    return { customerId };
+  }
+
+  const customerId = randomUUID();
+  const batch = adminDb.batch();
+  batch.create(adminDb.doc(`customers/${customerId}`), {
+    id: customerId,
+    firstName,
+    lastName: lastName ?? null,
+    phone,
+    phoneSearch: phone.slice(-9),
+    email: email ?? null,
+    emailSearch: email ? email.toLowerCase() : null,
+    notes: null,
+    visitCount: 0,
+    searchTokens: generateSearchTokens([firstName, lastName, phone, email]),
+    createdAt: Timestamp.now(),
+    updatedAt: Timestamp.now(),
+  });
+  batch.create(phoneIdxRef, { customerId });
+  await batch.commit();
+  return { customerId };
+}
+
+async function loadBarberAndService(
+  barberId: string,
+  serviceId: string
+): Promise<{
+  barber: BarberDoc & { id: string };
+  bs: BarberServiceDoc;
+} | null> {
+  const [barberSnap, bsSnap] = await Promise.all([
+    adminDb.doc(`barbers/${barberId}`).get(),
+    adminDb.doc(`barbers/${barberId}/services/${serviceId}`).get(),
+  ]);
+  if (!barberSnap.exists || !bsSnap.exists) return null;
+  return {
+    barber: { ...(barberSnap.data() as BarberDoc), id: barberSnap.id },
+    bs: bsSnap.data() as BarberServiceDoc,
+  };
+}
 
 export async function updateAppointmentStatus(
   id: string,
@@ -23,59 +102,55 @@ export async function updateAppointmentStatus(
   reason?: string
 ): Promise<ActionResult> {
   try {
-    const appointment = await prisma.appointment.findUnique({
-      where: { id },
-      include: { customer: true },
-    });
+    const apptRef = adminDb.doc(`appointments/${id}`);
 
-    if (!appointment) {
-      return { success: false, error: "Rezervácia nenájdená." };
-    }
+    const result = await adminDb.runTransaction(async (tx) => {
+      const snap = await tx.get(apptRef);
+      if (!snap.exists) return { kind: "not_found" as const };
+      const current = snap.data() as AppointmentDoc;
 
-    if (appointment.status === newStatus) {
-      return { success: true };
-    }
+      if (current.status === newStatus) return { kind: "noop" as const };
 
-    const allowed = VALID_STATUS_TRANSITIONS[appointment.status] ?? [];
-    if (!allowed.includes(newStatus)) {
-      return {
-        success: false,
-        error: `Nie je možné zmeniť stav z "${appointment.status}" na "${newStatus}".`,
-      };
-    }
+      const allowed = VALID_STATUS_TRANSITIONS[current.status] ?? [];
+      if (!allowed.includes(newStatus)) {
+        return { kind: "invalid" as const, from: current.status };
+      }
 
-    await prisma.$transaction(async (tx) => {
-      await tx.appointment.update({
-        where: { id },
-        data: { status: newStatus },
+      tx.update(apptRef, {
+        status: newStatus,
+        updatedAt: Timestamp.now(),
       });
 
-      await tx.appointmentStatusHistory.create({
-        data: {
-          appointmentId: id,
-          oldStatus: appointment.status,
-          newStatus,
-          changedBy: "admin",
-          reason,
-        },
+      const historyRef = apptRef.collection("history").doc();
+      tx.create(historyRef, {
+        id: historyRef.id,
+        oldStatus: current.status,
+        newStatus,
+        changedBy: "admin",
+        reason: reason ?? null,
+        changedAt: Timestamp.now(),
       });
 
-      // Adjust visitCount: +1 when completing, -1 when leaving completed
-      if (appointment.customerId) {
-        if (newStatus === "COMPLETED" && appointment.status !== "COMPLETED") {
-          await tx.customer.update({
-            where: { id: appointment.customerId },
-            data: { visitCount: { increment: 1 } },
-          });
-        } else if (appointment.status === "COMPLETED" && newStatus !== "COMPLETED") {
-          await tx.customer.update({
-            where: { id: appointment.customerId },
-            data: { visitCount: { decrement: 1 } },
-          });
+      if (current.customerId) {
+        const customerRef = adminDb.doc(`customers/${current.customerId}`);
+        if (newStatus === "COMPLETED" && current.status !== "COMPLETED") {
+          tx.update(customerRef, { visitCount: FieldValue.increment(1) });
+        } else if (current.status === "COMPLETED" && newStatus !== "COMPLETED") {
+          tx.update(customerRef, { visitCount: FieldValue.increment(-1) });
         }
       }
+      return { kind: "ok" as const };
     });
 
+    if (result.kind === "not_found") {
+      return { success: false, error: "Rezervácia nenájdená." };
+    }
+    if (result.kind === "invalid") {
+      return {
+        success: false,
+        error: `Nie je možné zmeniť stav z "${result.from}" na "${newStatus}".`,
+      };
+    }
     return { success: true };
   } catch (e) {
     console.error("[updateAppointmentStatus]", e);
@@ -83,130 +158,128 @@ export async function updateAppointmentStatus(
   }
 }
 
-export async function createAppointmentAdmin(input: unknown): Promise<ActionResult> {
+export async function createAppointmentAdmin(
+  input: unknown
+): Promise<ActionResult> {
   try {
     const data = adminAppointmentInputSchema.parse(input);
     const phone = normalizePhone(data.phone);
 
-    const barberService = await prisma.barberService.findUnique({
-      where: {
-        barberId_serviceId: {
-          barberId: data.barberId,
-          serviceId: data.serviceId,
-        },
-      },
-      include: { service: true, barber: true },
-    });
-
-    if (!barberService) {
+    const loaded = await loadBarberAndService(data.barberId, data.serviceId);
+    if (!loaded) {
       return { success: false, error: "Barber neponúka túto službu." };
     }
+    const { barber, bs } = loaded;
 
-    const service = barberService.service;
-    const barber = barberService.barber;
-    const duration = barberService.customDuration ?? service.durationMinutes;
-    const price = barberService.customPrice ?? service.price;
+    const duration = bs.customDuration ?? bs.defaultDuration;
+    const buffer = bs.bufferMinutes;
+    const priceCents = bs.customPriceCents ?? bs.defaultPriceCents;
 
     const startTime = fromZonedTime(`${data.date}T${data.time}:00`, TIMEZONE);
     const endTime = addMinutes(startTime, duration);
+    const startKey = dateKey(startTime);
 
-    const customer = await prisma.customer.upsert({
-      where: { phone },
-      update: {
-        firstName: data.firstName,
-        lastName: data.lastName || null,
-        email: data.email,
-      },
-      create: {
-        firstName: data.firstName,
-        lastName: data.lastName || null,
-        phone,
-        email: data.email,
-        visitCount: 0,
-      },
+    const { customerId } = await upsertCustomerByPhone({
+      phone,
+      firstName: data.firstName,
+      lastName: data.lastName || null,
+      email: data.email,
     });
 
     const rawToken = generateToken();
-    const hashedToken = hashToken(rawToken);
+    const tokenHash = hashToken(rawToken);
+    const appointmentId = randomUUID();
 
-    let appointmentId: string;
     try {
-      const appointment = await prisma.$transaction(async (tx) => {
+      await adminDb.runTransaction(async (tx) => {
         if (!data.ignoreSchedule) {
-          const overlapping = await tx.appointment.findFirst({
-            where: {
-              barberId: data.barberId,
-              status: { notIn: ["CANCELLED", "NO_SHOW"] },
-              startTime: { lt: endTime },
-              endTime: { gt: startTime },
-            },
+          const startTs = Timestamp.fromDate(startTime);
+          const endTs = Timestamp.fromDate(endTime);
+          const overlapping = await tx.get(
+            adminDb
+              .collection("appointments")
+              .where("barberId", "==", data.barberId)
+              .where("startTime", "<", endTs)
+              .where("startTime", ">=", Timestamp.fromMillis(
+                startTs.toMillis() - 24 * 60 * 60 * 1000
+              ))
+          );
+          const conflict = overlapping.docs.some((d) => {
+            const a = d.data() as AppointmentDoc;
+            if (a.status === "CANCELLED" || a.status === "NO_SHOW") return false;
+            const aStart = a.startTime.toMillis();
+            const aEnd = a.endTime.toMillis();
+            return aStart < endTime.getTime() && aEnd > startTime.getTime();
           });
-          if (overlapping) {
-            throw new Error("SLOT_TAKEN");
-          }
+          if (conflict) throw new Error("SLOT_TAKEN");
         }
 
-        const appt = await tx.appointment.create({
-          data: {
+        const apptRef = adminDb.doc(`appointments/${appointmentId}`);
+        tx.create(
+          apptRef,
+          stripUndefined({
+            id: appointmentId,
             barberId: data.barberId,
-            customerId: customer.id,
+            customerId,
             serviceId: data.serviceId,
-            startTime,
-            endTime,
-            status: "CONFIRMED",
-            priceExpected: price,
+            barberName: `${barber.firstName} ${barber.lastName}`,
+            serviceName: bs.serviceName,
+            serviceBufferMinutes: buffer,
             customerName: `${data.firstName} ${data.lastName || ""}`.trim(),
             customerPhone: phone,
             customerEmail: data.email,
-            cancellationToken: hashedToken,
+            startTime: Timestamp.fromDate(startTime),
+            endTime: Timestamp.fromDate(endTime),
+            startDateKey: startKey,
+            status: "CONFIRMED" as AppointmentStatus,
+            priceExpectedCents: priceCents,
+            priceFinalCents: null,
+            cancellationTokenHash: tokenHash,
+            cancellationTokenFallback: rawToken,
+            cancellationReason: null,
             notes: data.notes || null,
             source: "admin",
-          },
-        });
+            reminderSentAt: null,
+            createdAt: Timestamp.now(),
+            updatedAt: Timestamp.now(),
+          })
+        );
 
-        await tx.appointmentStatusHistory.create({
-          data: {
-            appointmentId: appt.id,
-            oldStatus: null,
-            newStatus: "CONFIRMED",
-            changedBy: "admin",
-          },
+        const historyRef = apptRef.collection("history").doc();
+        tx.create(historyRef, {
+          id: historyRef.id,
+          oldStatus: null,
+          newStatus: "CONFIRMED",
+          changedBy: "admin",
+          reason: null,
+          changedAt: Timestamp.now(),
         });
-
-        return appt;
       });
-      appointmentId = appointment.id;
     } catch (e: unknown) {
       if (e instanceof Error && e.message === "SLOT_TAKEN") {
         return {
           success: false,
-          error: "Tento termín je obsadený. Zapnite „Ignorovať rozvrh“ alebo zvoľte iný čas.",
-        };
-      }
-      const pgError = e as { code?: string };
-      if (pgError.code === "23P01") {
-        return {
-          success: false,
-          error: "Tento termín je obsadený. Zapnite „Ignorovať rozvrh“ alebo zvoľte iný čas.",
+          error:
+            "Tento termín je obsadený. Zapnite „Ignorovať rozvrh“ alebo zvoľte iný čas.",
         };
       }
       throw e;
     }
 
-    // Send confirmation email (non-blocking — log on failure but don't fail the action)
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const cancelUrl = `${appUrl}/cancel?token=${rawToken}`;
     const localStart = toZonedTime(startTime, TIMEZONE);
+
     sendEmail({
       to: data.email,
       subject: "Potvrdenie rezervácie - Strojček",
       html: bookingConfirmationHtml({
         customerName: data.firstName,
-        serviceName: service.name,
+        serviceName: bs.serviceName,
         barberName: `${barber.firstName} ${barber.lastName}`,
         date: format(localStart, "d.M.yyyy"),
         time: format(localStart, "HH:mm"),
-        price: price.toString(),
+        price: (priceCents / 100).toString(),
         cancelUrl,
         startTimeUtc: startTime.toISOString(),
         endTimeUtc: endTime.toISOString(),
@@ -227,123 +300,113 @@ export async function createAppointmentAdmin(input: unknown): Promise<ActionResu
   }
 }
 
-export async function updateAppointment(id: string, input: unknown): Promise<ActionResult> {
+export async function updateAppointment(
+  id: string,
+  input: unknown
+): Promise<ActionResult> {
   try {
-    const existing = await prisma.appointment.findUnique({ where: { id } });
-    if (!existing) {
+    const apptRef = adminDb.doc(`appointments/${id}`);
+    const existingSnap = await apptRef.get();
+    if (!existingSnap.exists) {
       return { success: false, error: "Rezervácia nenájdená." };
     }
+    const existing = existingSnap.data() as AppointmentDoc;
 
     if (existing.status === "CANCELLED" || existing.status === "NO_SHOW") {
       return { success: false, error: "Túto rezerváciu už nie je možné upraviť." };
     }
 
     const data = adminAppointmentEditSchema.parse(input);
-    const limited = existing.status === "IN_PROGRESS" || existing.status === "COMPLETED";
+    const limited =
+      existing.status === "IN_PROGRESS" || existing.status === "COMPLETED";
 
     if (limited) {
       const priceFinal =
-        data.priceFinal === "" || data.priceFinal === null || data.priceFinal === undefined
+        data.priceFinal === "" || data.priceFinal == null
           ? null
-          : data.priceFinal;
+          : Math.round(Number(data.priceFinal) * 100);
 
-      await prisma.appointment.update({
-        where: { id },
-        data: {
-          notes: data.notes || null,
-          priceFinal,
-        },
+      await apptRef.update({
+        notes: data.notes || null,
+        priceFinalCents: priceFinal,
+        updatedAt: Timestamp.now(),
       });
     } else {
       const phone = normalizePhone(data.phone);
-
-      const barberService = await prisma.barberService.findUnique({
-        where: {
-          barberId_serviceId: {
-            barberId: data.barberId,
-            serviceId: data.serviceId,
-          },
-        },
-        include: { service: true },
-      });
-
-      if (!barberService) {
+      const loaded = await loadBarberAndService(data.barberId, data.serviceId);
+      if (!loaded) {
         return { success: false, error: "Barber neponúka túto službu." };
       }
-
-      const duration = barberService.customDuration ?? barberService.service.durationMinutes;
-      const price = barberService.customPrice ?? barberService.service.price;
+      const { barber, bs } = loaded;
+      const duration = bs.customDuration ?? bs.defaultDuration;
+      const buffer = bs.bufferMinutes;
+      const priceCents = bs.customPriceCents ?? bs.defaultPriceCents;
 
       const startTime = fromZonedTime(`${data.date}T${data.time}:00`, TIMEZONE);
       const endTime = addMinutes(startTime, duration);
+      const startKey = dateKey(startTime);
 
-      const customer = await prisma.customer.upsert({
-        where: { phone },
-        update: {
-          firstName: data.firstName,
-          lastName: data.lastName || null,
-          email: data.email || null,
-        },
-        create: {
-          firstName: data.firstName,
-          lastName: data.lastName || null,
-          phone,
-          email: data.email || null,
-          visitCount: 0,
-        },
+      const { customerId } = await upsertCustomerByPhone({
+        phone,
+        firstName: data.firstName,
+        lastName: data.lastName || null,
+        email: data.email || null,
       });
 
       const priceFinal =
-        data.priceFinal === "" || data.priceFinal === null || data.priceFinal === undefined
+        data.priceFinal === "" || data.priceFinal == null
           ? null
-          : data.priceFinal;
+          : Math.round(Number(data.priceFinal) * 100);
 
       try {
-        await prisma.$transaction(async (tx) => {
+        await adminDb.runTransaction(async (tx) => {
           if (!data.ignoreSchedule) {
-            const overlapping = await tx.appointment.findFirst({
-              where: {
-                id: { not: id },
-                barberId: data.barberId,
-                status: { notIn: ["CANCELLED", "NO_SHOW"] },
-                startTime: { lt: endTime },
-                endTime: { gt: startTime },
-              },
+            const overlapping = await tx.get(
+              adminDb
+                .collection("appointments")
+                .where("barberId", "==", data.barberId)
+                .where("startDateKey", "==", startKey)
+            );
+            const conflict = overlapping.docs.some((d) => {
+              if (d.id === id) return false;
+              const a = d.data() as AppointmentDoc;
+              if (a.status === "CANCELLED" || a.status === "NO_SHOW") return false;
+              return (
+                a.startTime.toMillis() < endTime.getTime() &&
+                a.endTime.toMillis() > startTime.getTime()
+              );
             });
-            if (overlapping) {
-              throw new Error("SLOT_TAKEN");
-            }
+            if (conflict) throw new Error("SLOT_TAKEN");
           }
 
-          await tx.appointment.update({
-            where: { id },
-            data: {
+          tx.update(
+            apptRef,
+            stripUndefined({
               barberId: data.barberId,
               serviceId: data.serviceId,
-              customerId: customer.id,
-              startTime,
-              endTime,
-              priceExpected: price,
-              priceFinal,
+              customerId,
+              barberName: `${barber.firstName} ${barber.lastName}`,
+              serviceName: bs.serviceName,
+              serviceBufferMinutes: buffer,
+              startTime: Timestamp.fromDate(startTime),
+              endTime: Timestamp.fromDate(endTime),
+              startDateKey: startKey,
+              priceExpectedCents: priceCents,
+              priceFinalCents: priceFinal,
               customerName: `${data.firstName} ${data.lastName || ""}`.trim(),
               customerPhone: phone,
               customerEmail: data.email || null,
               notes: data.notes || null,
-            },
-          });
+              updatedAt: Timestamp.now(),
+            })
+          );
         });
       } catch (e: unknown) {
         if (e instanceof Error && e.message === "SLOT_TAKEN") {
           return {
             success: false,
-            error: "Tento termín je obsadený. Zapnite „Ignorovať rozvrh“ alebo zvoľte iný čas.",
-          };
-        }
-        const pgError = e as { code?: string };
-        if (pgError.code === "23P01") {
-          return {
-            success: false,
-            error: "Tento termín je obsadený. Zapnite „Ignorovať rozvrh“ alebo zvoľte iný čas.",
+            error:
+              "Tento termín je obsadený. Zapnite „Ignorovať rozvrh“ alebo zvoľte iný čas.",
           };
         }
         throw e;
@@ -367,20 +430,28 @@ export async function updateAppointment(id: string, input: unknown): Promise<Act
 
 export async function deleteAppointment(id: string): Promise<ActionResult> {
   try {
-    await prisma.$transaction(async (tx) => {
-      // If it was COMPLETED, decrement visitCount
-      const appointment = await tx.appointment.findUnique({ where: { id } });
-      if (appointment?.status === "COMPLETED" && appointment.customerId) {
-        await tx.customer.update({
-          where: { id: appointment.customerId },
-          data: { visitCount: { decrement: 1 } },
-        });
-      }
+    const apptRef = adminDb.doc(`appointments/${id}`);
+    const snap = await apptRef.get();
+    if (!snap.exists) {
+      return { success: false, error: "Rezervácia nenájdená." };
+    }
+    const data = snap.data() as AppointmentDoc;
 
-      await tx.appointmentStatusHistory.deleteMany({ where: { appointmentId: id } });
-      await tx.appointment.delete({ where: { id } });
-    });
+    if (data.status === "COMPLETED" && data.customerId) {
+      await adminDb.doc(`customers/${data.customerId}`).update({
+        visitCount: FieldValue.increment(-1),
+      });
+    }
 
+    const historySnap = await apptRef.collection("history").get();
+    const batch = adminDb.batch();
+    for (const h of historySnap.docs) batch.delete(h.ref);
+    batch.delete(apptRef);
+    await batch.commit();
+
+    revalidatePath("/admin/reservations");
+    revalidatePath("/admin/calendar");
+    revalidatePath("/admin");
     return { success: true };
   } catch (e) {
     console.error("[deleteAppointment]", e);
