@@ -10,6 +10,9 @@ import { subHours, subMonths } from "date-fns";
  *
  * Firebase Auth sessions expire automatically, no cleanup needed.
  */
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;

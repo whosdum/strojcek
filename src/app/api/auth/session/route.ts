@@ -3,6 +3,9 @@ import { cookies } from "next/headers";
 import { adminAuth } from "@/server/lib/firebase-admin";
 import { SESSION_COOKIE } from "@/server/lib/auth";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 const SESSION_DURATION_MS = 60 * 60 * 24 * 7 * 1000; // 7 days
 
 export async function POST(request: NextRequest) {

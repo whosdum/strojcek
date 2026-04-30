@@ -69,19 +69,25 @@ env:
       - RUNTIME
 
   # ---- Server-only Firebase Admin SDK ----
-  # Project ID is safe as plain value; client_email + private_key go through
-  # Cloud Secret Manager.
+  # BUILD availability is needed because Next.js statically analyzes API
+  # routes at build time and imports `src/server/lib/firebase-admin.ts`,
+  # which validates these env vars at module load. Cloud Build is the
+  # only consumer of BUILD-availability secrets — they are not baked
+  # into the runtime bundle.
   - variable: FIREBASE_PROJECT_ID
     value: strojcek-staging
     availability:
+      - BUILD
       - RUNTIME
   - variable: FIREBASE_CLIENT_EMAIL
     secret: FIREBASE_CLIENT_EMAIL
     availability:
+      - BUILD
       - RUNTIME
   - variable: FIREBASE_PRIVATE_KEY
     secret: FIREBASE_PRIVATE_KEY
     availability:
+      - BUILD
       - RUNTIME
 
   # ---- Email (nodemailer SMTP) ----

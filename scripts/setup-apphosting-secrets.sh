@@ -33,6 +33,7 @@ push() {
   printf '%s' "$value" | firebase apphosting:secrets:set "$name" \
     --project "$PROJECT" \
     --force \
+    --non-interactive \
     --data-file=- > /dev/null
   echo "    ✓"
 }

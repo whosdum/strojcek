@@ -3,6 +3,9 @@ import { getSession } from "@/server/lib/auth";
 import { getAppointmentsForCalendar } from "@/server/queries/appointments";
 import { parseISO } from "date-fns";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function GET(request: NextRequest) {

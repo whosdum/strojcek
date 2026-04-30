@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/server/lib/auth";
 import { getAllServices } from "@/server/queries/services";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 export async function GET() {
   const session = await getSession();
   if (!session) {

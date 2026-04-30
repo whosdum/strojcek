@@ -11,6 +11,9 @@ import { toZonedTime } from "date-fns-tz";
 import { TIMEZONE } from "@/lib/constants";
 import type { AppointmentDoc } from "@/server/types/firestore";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
