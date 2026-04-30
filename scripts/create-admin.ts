@@ -1,21 +1,8 @@
-import "dotenv/config";
-import { initializeApp, getApps, cert } from "firebase-admin/app";
+import { bootstrapAdminApp } from "./_firebase-bootstrap";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
 
-const projectId = process.env.FIREBASE_PROJECT_ID;
-const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n");
-
-if (!projectId || !clientEmail || !privateKey) {
-  console.error("Missing FIREBASE_* env vars in .env");
-  process.exit(1);
-}
-
-if (!getApps().length) {
-  initializeApp({ credential: cert({ projectId, clientEmail, privateKey }) });
-}
-
+const { projectId } = bootstrapAdminApp();
 const auth = getAuth();
 const db = getFirestore();
 
@@ -55,7 +42,7 @@ async function main() {
   );
 
   console.log("");
-  console.log("Admin ready:");
+  console.log(`Admin ready in project ${projectId}:`);
   console.log(`  uid:      ${uid}`);
   console.log(`  email:    ${email}`);
   console.log(`  password: ${password}`);
