@@ -1,16 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/server/lib/auth";
+import { getSession } from "@/server/lib/auth";
 import { getAppointmentsForCalendar } from "@/server/queries/appointments";
 import { parseISO } from "date-fns";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function GET(request: NextRequest) {
-  // Auth check — only logged-in admin users
-  const session = await auth.api.getSession({
-    headers: request.headers,
-  });
-
+  const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

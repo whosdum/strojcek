@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { authClient } from "@/lib/auth-client";
+import { onAuthStateChanged, signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/lib/firebase-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,17 +18,15 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
 
-  // Redirect to /admin if already logged in
   useEffect(() => {
-    authClient.getSession().then((res) => {
-      if (res.data?.session) {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (user) {
         router.replace("/admin");
       } else {
         setChecking(false);
       }
-    }).catch(() => {
-      setChecking(false);
     });
+    return () => unsub();
   }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -36,19 +35,40 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const result = await authClient.signIn.email({
-        email,
-        password,
+      const credential = await signInWithEmailAndPassword(auth, email, password);
+      const idToken = await credential.user.getIdToken();
+
+      const res = await fetch("/api/auth/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken }),
       });
 
-      if (result.error) {
-        setError("Nesprávny email alebo heslo.");
-      } else {
-        router.replace("/admin");
+      if (!res.ok) {
+        if (res.status === 403) {
+          setError("Tento účet nemá administrátorské oprávnenia.");
+        } else {
+          setError("Nepodarilo sa vytvoriť session. Skús znova.");
+        }
+        setLoading(false);
+        return;
       }
-    } catch {
-      setError("Nastala chyba. Skúste to znova.");
-    } finally {
+
+      router.replace("/admin");
+    } catch (err) {
+      const code = (err as { code?: string })?.code;
+      if (
+        code === "auth/invalid-credential" ||
+        code === "auth/wrong-password" ||
+        code === "auth/user-not-found" ||
+        code === "auth/invalid-email"
+      ) {
+        setError("Nesprávny email alebo heslo.");
+      } else if (code === "auth/too-many-requests") {
+        setError("Príliš veľa pokusov. Skús neskôr.");
+      } else {
+        setError("Nastala chyba. Skúste to znova.");
+      }
       setLoading(false);
     }
   };
@@ -58,46 +78,44 @@ export default function LoginPage() {
       {checking ? (
         <Loader2Icon className="size-6 animate-spin text-muted-foreground" />
       ) : (
-      <Card className="w-full max-w-sm">
-        <CardHeader className="text-center">
-          <CardTitle className="text-xl">Strojček Admin</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="password">Heslo</Label>
-              <Input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            {error && (
-              <p className="text-sm text-destructive">{error}</p>
-            )}
-            <Button type="submit" disabled={loading} className="w-full">
-              {loading ? (
-                <Loader2Icon className="mr-2 size-4 animate-spin" />
-              ) : null}
-              Prihlásiť sa
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+        <Card className="w-full max-w-sm">
+          <CardHeader className="text-center">
+            <CardTitle className="text-xl">Strojček Admin</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="password">Heslo</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+              {error && <p className="text-sm text-destructive">{error}</p>}
+              <Button type="submit" disabled={loading} className="w-full">
+                {loading ? (
+                  <Loader2Icon className="mr-2 size-4 animate-spin" />
+                ) : null}
+                Prihlásiť sa
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

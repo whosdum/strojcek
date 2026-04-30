@@ -1,8 +1,7 @@
 export const dynamic = "force-dynamic";
 
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { auth } from "@/server/lib/auth";
+import { getSession } from "@/server/lib/auth";
 import { Sidebar } from "@/components/admin/sidebar";
 
 export default async function AdminAuthLayout({
@@ -10,17 +9,7 @@ export default async function AdminAuthLayout({
 }: {
   children: React.ReactNode;
 }) {
-  let session;
-  try {
-    session = await auth.api.getSession({
-      headers: await headers(),
-    });
-  } catch (e) {
-    console.error("[admin/layout] Session check failed:", e);
-    // DB cold start or transient error — don't redirect to login
-    // Let the page render; client-side auth will handle it
-  }
-
+  const session = await getSession();
   if (!session) {
     redirect("/login");
   }

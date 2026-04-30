@@ -16,7 +16,8 @@ import {
   LogOutIcon,
   MenuIcon,
 } from "lucide-react";
-import { authClient } from "@/lib/auth-client";
+import { signOut } from "firebase/auth";
+import { auth } from "@/lib/firebase-client";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -56,7 +57,8 @@ export function Sidebar() {
 
   const handleLogout = async () => {
     try {
-      await authClient.signOut();
+      await signOut(auth);
+      await fetch("/api/auth/session", { method: "DELETE" });
     } catch (e) {
       console.error("[logout]", e);
     }
