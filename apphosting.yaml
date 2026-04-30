@@ -85,7 +85,11 @@ env:
       - RUNTIME
 
   # ---- Email (nodemailer SMTP) ----
-  # Comment out the SMTP_* secrets if you switch to Resend later.
+  # SMTP_USER/PASS, SMSTOOLS_API_KEY, TELEGRAM_* are intentionally not declared
+  # here yet — the local dotenv has them commented out, so no secret was pushed
+  # to Cloud Secret Manager. App Hosting will fail if it tries to resolve a
+  # secret that doesn't exist. To re-enable: push the secret via
+  # `firebase apphosting:secrets:set` and add a `- variable:` block here.
   - variable: EMAIL_FROM
     value: Strojcek <barbershopstrojcek@gmail.com>
     availability:
@@ -98,28 +102,8 @@ env:
     value: "587"
     availability:
       - RUNTIME
-  - variable: SMTP_USER
-    secret: SMTP_USER
-    availability:
-      - RUNTIME
-  - variable: SMTP_PASS
-    secret: SMTP_PASS
-    availability:
-      - RUNTIME
 
-  # ---- SMS / Telegram / Cron ----
-  - variable: SMSTOOLS_API_KEY
-    secret: SMSTOOLS_API_KEY
-    availability:
-      - RUNTIME
-  - variable: TELEGRAM_BOT_TOKEN
-    secret: TELEGRAM_BOT_TOKEN
-    availability:
-      - RUNTIME
-  - variable: TELEGRAM_CHAT_ID
-    secret: TELEGRAM_CHAT_ID
-    availability:
-      - RUNTIME
+  # ---- Cron ----
   - variable: CRON_SECRET
     secret: CRON_SECRET
     availability:
