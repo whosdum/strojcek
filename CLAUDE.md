@@ -157,8 +157,31 @@ NEXT_PUBLIC_APP_URL
 
 `serviceAccountKey.json` lives at the repo root, gitignored. Use it only for local scripts that bootstrap the project; the dev server reads credentials from env vars.
 
+## Deployment (Firebase App Hosting)
+
+`apphosting.yaml` at the repo root drives the deploy. App Hosting **requires Blaze (pay-as-you-go)** — Spark won't work because it provisions Cloud Run + Cloud Build under the hood. Free tier on Blaze still covers our scale at $0/mes.
+
+**First-time setup:**
+
+```bash
+# 1. Upgrade project to Blaze in Firebase Console → Settings → Usage and billing
+# 2. Create the App Hosting backend (connects to GitHub branch)
+firebase apphosting:backends:create --project strojcek-staging
+#    → choose region europe-west4 (or europe-west1)
+#    → connect repo + branch feat/firebase-firestore-rewrite
+# 3. Push secrets to Cloud Secret Manager
+./scripts/setup-apphosting-secrets.sh strojcek-staging
+# 4. First deploy
+git push origin feat/firebase-firestore-rewrite
+#    → App Hosting auto-builds + deploys on every push
+```
+
+`scripts/setup-apphosting-secrets.sh` reads `.env` and pushes each server secret (`FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`, `SMTP_*`, `SMSTOOLS_API_KEY`, `TELEGRAM_*`, `CRON_SECRET`) to Cloud Secret Manager. Public values (`NEXT_PUBLIC_FIREBASE_*`) are inlined in `apphosting.yaml` — they ship in the client bundle anyway.
+
+After deploy, update `NEXT_PUBLIC_APP_URL` in `apphosting.yaml` to the actual backend URL (Console shows it after first deploy), then commit + push.
+
 ## Other notes
 
 - `Audit.md` is a 45-item UI/UX audit (P0–P3 priorities) — consult it before making UI changes
-- `.github/workflows/cron.yml` schedules cron HTTP calls to `/api/cron/*` — when deployed to Firebase App Hosting, update `APP_URL`
+- `.github/workflows/cron.yml` schedules cron HTTP calls to `/api/cron/*` — when deployed to App Hosting, set the GitHub Actions `APP_URL` repo secret to the backend URL
 - Plan: `~/.claude/plans/priprav-mi-detailny-plan-dynamic-pancake.md` has the full migration spec (parts 1–19)
