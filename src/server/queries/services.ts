@@ -39,7 +39,3 @@ export async function getServiceById(id: string): Promise<ServiceView | null> {
   if (!snap.exists) return null;
   return mapService(snap as FirebaseFirestore.QueryDocumentSnapshot);
 }
-
-// Replacements for old `getCached*` API — same signature, no caching layer.
-// (React Query on the client provides caching; server queries go straight to Firestore.)
-export const getCachedActiveServices = getActiveServices;
