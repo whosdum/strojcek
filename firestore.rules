@@ -1,0 +1,77 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null
+          && request.auth.token.role == "admin";
+    }
+
+    function isAuthed() {
+      return request.auth != null;
+    }
+
+    // Public read for booking wizard
+    match /services/{serviceId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /barbers/{barberId} {
+      allow read: if true;
+      allow write: if isAdmin();
+
+      match /services/{serviceId} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+
+      match /schedules/{dayOfWeek} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+
+      match /breaks/{breakId} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+
+      match /overrides/{date} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+    }
+
+    match /shopSettings/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Private collections — only admin SDK (server) writes; admin UI reads via authed session
+    match /customers/{customerId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /customerPhones/{phone} {
+      allow read, write: if isAdmin();
+    }
+
+    match /appointments/{appointmentId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+
+      match /history/{historyId} {
+        allow read, write: if isAdmin();
+      }
+    }
+
+    match /counters/{any=**} {
+      allow read, write: if isAdmin();
+    }
+
+    match /users/{uid} {
+      allow read: if isAuthed() && request.auth.uid == uid;
+      allow write: if isAdmin();
+    }
+  }
+}

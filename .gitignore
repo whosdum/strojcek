@@ -42,3 +42,12 @@ next-env.d.ts
 node_modules/
 
 /src/generated/prisma
+
+# firebase
+serviceAccountKey.json
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+/firebase-data/
+
