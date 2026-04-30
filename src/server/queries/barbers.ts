@@ -217,5 +217,3 @@ export async function getBarberById(id: string): Promise<BarberFullView | null> 
 
   return { ...base, services, ...sched };
 }
-
-export const getCachedActiveBarbersWithServices = getActiveBarbersWithServices;

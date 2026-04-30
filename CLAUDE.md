@@ -4,9 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Strojcek is a barber shop booking system with two parts: a public 5-step booking wizard for customers and an admin panel for the shop owner. It's a Next.js 16 monolith on **Firebase Firestore** + **Firebase Auth**, built for a Slovak barber shop (UI text in Slovak, timezone Europe/Bratislava).
-
-> **Note:** the `feat/firebase-firestore-rewrite` branch (current) replaces the original Postgres + Prisma + Better Auth stack with Firebase. The `main` branch on remote still runs the legacy Vercel + Supabase stack — do not assume parity.
+Strojcek is a barber shop booking system with two parts: a public 5-step booking wizard for customers and an admin panel for the shop owner. It's a Next.js 16 monolith on **Firebase Firestore** + **Firebase Auth** + **Firebase App Hosting**, built for a Slovak barber shop (UI text in Slovak, timezone Europe/Bratislava).
 
 ## Commands
 
@@ -146,7 +144,7 @@ NEXT_PUBLIC_FIREBASE_APP_ID
 NEXT_PUBLIC_USE_FIREBASE_EMULATORS=true   # bind client SDK to localhost emulators
 
 # External services
-SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASS    (or use Resend later)
+SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASS
 EMAIL_FROM
 SMSTOOLS_API_KEY
 TELEGRAM_BOT_TOKEN
@@ -184,4 +182,4 @@ After deploy, update `NEXT_PUBLIC_APP_URL` in `apphosting.yaml` to the actual ba
 
 - `Audit.md` is a 45-item UI/UX audit (P0–P3 priorities) — consult it before making UI changes
 - `.github/workflows/cron.yml` schedules cron HTTP calls to `/api/cron/*` — when deployed to App Hosting, set the GitHub Actions `APP_URL` repo secret to the backend URL
-- Plan: `~/.claude/plans/priprav-mi-detailny-plan-dynamic-pancake.md` has the full migration spec (parts 1–19)
+- `docs/archive/2026-pre-firebase/` contains the original implementation plans/specs from the Postgres + Prisma + Better Auth + Vercel era — kept for historical reference only, not for current development

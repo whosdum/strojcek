@@ -31,5 +31,3 @@ export async function getShopSettings(): Promise<ShopSettingsView> {
     updatedAt: tsToDate(initial.updatedAt),
   };
 }
-
-export const getCachedShopSettings = getShopSettings;
