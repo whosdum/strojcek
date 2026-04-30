@@ -85,11 +85,6 @@ env:
       - RUNTIME
 
   # ---- Email (nodemailer SMTP) ----
-  # SMTP_USER/PASS, SMSTOOLS_API_KEY, TELEGRAM_* are intentionally not declared
-  # here yet — the local dotenv has them commented out, so no secret was pushed
-  # to Cloud Secret Manager. App Hosting will fail if it tries to resolve a
-  # secret that doesn't exist. To re-enable: push the secret via
-  # `firebase apphosting:secrets:set` and add a `- variable:` block here.
   - variable: EMAIL_FROM
     value: Strojcek <barbershopstrojcek@gmail.com>
     availability:
@@ -108,3 +103,45 @@ env:
     secret: CRON_SECRET
     availability:
       - RUNTIME
+
+  # ============================================================
+  # OPTIONAL secrets — uncomment AFTER pushing each secret to
+  # Cloud Secret Manager, otherwise the build fails with
+  # `fah/misconfigured-secret`.
+  #
+  # To re-enable any block below:
+  #   1. Uncomment the relevant lines in your local dotenv file
+  #   2. Run: ./scripts/setup-apphosting-secrets.sh strojcek-staging
+  #      (it will only push the non-empty values)
+  #   3. Run: firebase apphosting:secrets:grantaccess <NAMES> \
+  #            --backend strojcek-staging --location europe-west4 \
+  #            --project strojcek-staging
+  #   4. Uncomment the matching block here
+  #   5. git commit + push  →  App Hosting auto-redeploys
+  # ============================================================
+  #
+  # ---- Email (real SMTP, e.g. Gmail) ----
+  # - variable: SMTP_USER
+  #   secret: SMTP_USER
+  #   availability:
+  #     - RUNTIME
+  # - variable: SMTP_PASS
+  #   secret: SMTP_PASS
+  #   availability:
+  #     - RUNTIME
+  #
+  # ---- SMS (SMSTools.sk) ----
+  # - variable: SMSTOOLS_API_KEY
+  #   secret: SMSTOOLS_API_KEY
+  #   availability:
+  #     - RUNTIME
+  #
+  # ---- Telegram admin notifications ----
+  # - variable: TELEGRAM_BOT_TOKEN
+  #   secret: TELEGRAM_BOT_TOKEN
+  #   availability:
+  #     - RUNTIME
+  # - variable: TELEGRAM_CHAT_ID
+  #   secret: TELEGRAM_CHAT_ID
+  #   availability:
+  #     - RUNTIME
