@@ -1,6 +1,8 @@
 {
   "projects": {
-    "staging": "strojcek-staging"
+    "default": "strojcek-staging",
+    "staging": "strojcek-staging",
+    "production": "strojcek-production"
   },
   "targets": {},
   "etags": {}

@@ -1,15 +1,17 @@
 # Firebase App Hosting configuration.
-# Docs: https://firebase.google.com/docs/app-hosting/configure
 #
-# Prerequisites before first deploy:
-#   1. Upgrade project to Blaze plan (App Hosting requires it)
-#   2. firebase apphosting:backends:create   (creates Cloud Run service + connects GitHub)
-#   3. firebase apphosting:secrets:set <NAME> for every server secret below
+# This single yaml works for BOTH `strojcek-staging` and `strojcek-production`
+# backends. Per-project values (Firebase Web App config, project URL, project
+# ID) are stored as `secret:` references — each Firebase project's Cloud
+# Secret Manager holds its own values, so resolution at deploy time produces
+# the correct config per backend automatically.
 #
-# After first push, App Hosting auto-deploys on every commit to the connected branch.
+# Server credentials: firebase-admin uses Application Default Credentials on
+# Cloud Run (no FIREBASE_CLIENT_EMAIL / FIREBASE_PRIVATE_KEY needed in prod —
+# Cloud Run identity is auto-bound). Locally `npm run dev` falls back to
+# explicit service-account env via the local dotenv file.
 
 runConfig:
-  # Conservative defaults for staging; raise once you know real load.
   cpu: 1
   memoryMiB: 512
   maxInstances: 5
@@ -17,46 +19,55 @@ runConfig:
   concurrency: 80
 
 env:
-  # ---- Firebase project (public; baked into client bundle at build) ----
-  # NEXT_PUBLIC_FIREBASE_API_KEY is project-scoped, not a secret. Firestore
-  # security rules + Auth's authorized domains are what actually gate access.
+  # ---- Firebase Web App (per-project; resolved from each project's Secret Manager) ----
   - variable: NEXT_PUBLIC_FIREBASE_API_KEY
-    value: AIzaSyDUrSB-a7_k3orWrpNLCDR9mcWM8TyZQT4
+    secret: NEXT_PUBLIC_FIREBASE_API_KEY
     availability:
       - BUILD
       - RUNTIME
   - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-    value: strojcek-staging.firebaseapp.com
+    secret: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
     availability:
       - BUILD
       - RUNTIME
   - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
-    value: strojcek-staging
+    secret: NEXT_PUBLIC_FIREBASE_PROJECT_ID
     availability:
       - BUILD
       - RUNTIME
   - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-    value: strojcek-staging.firebasestorage.app
+    secret: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
     availability:
       - BUILD
       - RUNTIME
   - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-    value: "961307537397"
+    secret: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
     availability:
       - BUILD
       - RUNTIME
   - variable: NEXT_PUBLIC_FIREBASE_APP_ID
-    value: 1:961307537397:web:c051105329c1f01edd7abc
+    secret: NEXT_PUBLIC_FIREBASE_APP_ID
     availability:
       - BUILD
       - RUNTIME
 
-  # ---- Public app config ----
+  # ---- App URL (per-project) ----
   - variable: NEXT_PUBLIC_APP_URL
-    value: https://strojcek-staging--strojcek-staging.europe-west4.hosted.app
+    secret: NEXT_PUBLIC_APP_URL
     availability:
       - BUILD
       - RUNTIME
+
+  # ---- Server Firebase project ID (used by firebase-admin in dev fallback) ----
+  # Mapped from FIREBASE_PROJECT_ID_SECRET to avoid name collision with the
+  # auto-injected FIREBASE_CONFIG.projectId that ADC reads from.
+  - variable: FIREBASE_PROJECT_ID
+    secret: FIREBASE_PROJECT_ID_SECRET
+    availability:
+      - BUILD
+      - RUNTIME
+
+  # ---- Shared static config (same across all projects) ----
   - variable: NEXT_PUBLIC_SHOP_NAME
     value: Strojcek
     availability:
@@ -64,28 +75,6 @@ env:
       - RUNTIME
   - variable: NEXT_PUBLIC_SHOP_TIMEZONE
     value: Europe/Bratislava
-    availability:
-      - BUILD
-      - RUNTIME
-
-  # ---- Server-only Firebase Admin SDK ----
-  # BUILD availability is needed because Next.js statically analyzes API
-  # routes at build time and imports `src/server/lib/firebase-admin.ts`,
-  # which validates these env vars at module load. Cloud Build is the
-  # only consumer of BUILD-availability secrets — they are not baked
-  # into the runtime bundle.
-  - variable: FIREBASE_PROJECT_ID
-    value: strojcek-staging
-    availability:
-      - BUILD
-      - RUNTIME
-  - variable: FIREBASE_CLIENT_EMAIL
-    secret: FIREBASE_CLIENT_EMAIL
-    availability:
-      - BUILD
-      - RUNTIME
-  - variable: FIREBASE_PRIVATE_KEY
-    secret: FIREBASE_PRIVATE_KEY
     availability:
       - BUILD
       - RUNTIME
@@ -103,14 +92,6 @@ env:
     value: "587"
     availability:
       - RUNTIME
-
-  # ---- Cron ----
-  - variable: CRON_SECRET
-    secret: CRON_SECRET
-    availability:
-      - RUNTIME
-
-  # ---- Email (real SMTP, e.g. Gmail) ----
   - variable: SMTP_USER
     secret: SMTP_USER
     availability:
@@ -136,14 +117,28 @@ env:
     availability:
       - RUNTIME
 
+  # ---- Cron ----
+  - variable: CRON_SECRET
+    secret: CRON_SECRET
+    availability:
+      - RUNTIME
+
   # ============================================================
-  # NOTE: To DISABLE any of the optional secrets above, comment
-  # out the matching block. To re-add later:
-  #   1. Set value in local dotenv file
-  #   2. Run: ./scripts/setup-apphosting-secrets.sh strojcek-staging
-  #   3. Run: firebase apphosting:secrets:grantaccess <NAMES> \
-  #            --backend strojcek-staging --location europe-west4 \
-  #            --project strojcek-staging
-  #   4. Uncomment the block here
-  #   5. git commit + push  →  App Hosting auto-redeploys
+  # NOTES on multi-environment:
+  #
+  # Each Firebase project has its own Cloud Secret Manager. Pushing the
+  # same secret name to BOTH `strojcek-staging` and `strojcek-production`
+  # with DIFFERENT values produces correct per-environment resolution at
+  # build/runtime — the same yaml works for both.
+  #
+  # Currently shared across both projects (same value):
+  #   SMTP_USER, SMTP_PASS, SMSTOOLS_API_KEY,
+  #   TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, CRON_SECRET
+  #
+  # Per-project (different values pushed manually per env):
+  #   NEXT_PUBLIC_FIREBASE_*, NEXT_PUBLIC_APP_URL, FIREBASE_PROJECT_ID_SECRET
+  #
+  # firebase-admin uses Application Default Credentials on Cloud Run, so
+  # there is NO need for FIREBASE_CLIENT_EMAIL / FIREBASE_PRIVATE_KEY
+  # secrets in production. (They remain in local dotenv for `npm run dev`.)
   # ============================================================
