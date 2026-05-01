@@ -2,7 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { onAuthStateChanged, signInWithEmailAndPassword } from "firebase/auth";
+import {
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signOut,
+} from "firebase/auth";
 import { auth } from "@/lib/firebase-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,11 +22,40 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
 
+  // When the page mounts, Firebase Auth may already have a user cached in
+  // IndexedDB from a previous session. We CANNOT just redirect to /admin
+  // on that signal alone — if the server-side __session cookie is missing
+  // or invalid (failed prior login, expired, server-side revocation), the
+  // middleware on /admin redirects right back to /login → infinite loop.
+  //
+  // Instead: when we see a user, POST a fresh ID token to the session
+  // endpoint to (re)create the server cookie. If that succeeds, redirect.
+  // If it fails (no admin claim, invalid token, etc.), sign the client
+  // out so the next mount sees no user and shows the form.
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        router.replace("/admin");
-      } else {
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        setChecking(false);
+        return;
+      }
+      try {
+        const idToken = await user.getIdToken(true);
+        const res = await fetch("/api/auth/session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken }),
+        });
+        if (res.ok) {
+          router.replace("/admin");
+          return;
+        }
+        await signOut(auth).catch(() => {});
+        if (res.status === 403) {
+          setError("Tento účet nemá administrátorské oprávnenia.");
+        }
+        setChecking(false);
+      } catch {
+        await signOut(auth).catch(() => {});
         setChecking(false);
       }
     });
@@ -49,6 +82,10 @@ export default function LoginPage() {
       });
 
       if (!res.ok) {
+        // Sign out the Firebase client so we don't leave a user behind
+        // that the useEffect above would later try to "resume" — that's
+        // exactly how the /login → /admin → /login loop got started.
+        await signOut(auth).catch(() => {});
         if (res.status === 403) {
           setError("Tento účet nemá administrátorské oprávnenia.");
         } else {
