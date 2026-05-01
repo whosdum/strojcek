@@ -15,6 +15,11 @@ export function normalizePhone(phone: string): string {
   // Strip everything except digits
   const digits = cleaned.replace(/\D/g, "");
 
+  // International dial-out prefix: 00421... or 00420... → +421... / +420...
+  if (digits.startsWith("00421") || digits.startsWith("00420")) {
+    return "+" + digits.slice(2);
+  }
+
   // Full prefix with country code: 421903... or 420603...
   if ((digits.startsWith("421") || digits.startsWith("420")) && digits.length >= 12) {
     return "+" + digits;

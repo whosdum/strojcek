@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Strojcek is a barber shop booking system with two parts: a public 5-step booking wizard for customers and an admin panel for the shop owner. It's a Next.js 16 monolith on **Firebase Firestore** + **Firebase Auth** + **Firebase App Hosting**, built for a Slovak barber shop (UI text in Slovak, timezone Europe/Bratislava).
+Strojcek is a barber shop booking system with two parts: a public 6-step booking wizard for customers (service → barber → date → time → details → confirm) and an admin panel for the shop owner. It's a Next.js 16 monolith on **Firebase Firestore** + **Firebase Auth** + **Firebase App Hosting**, built for a Slovak barber shop (UI text in Slovak, timezone Europe/Bratislava).
 
 ## Commands
 
@@ -26,7 +26,7 @@ firebase deploy --only firestore:rules,firestore:indexes  # Deploy security rule
 
 ### Route Groups
 
-- `src/app/page.tsx` — Booking wizard (5-step: service → barber → datetime → details → confirm)
+- `src/app/page.tsx` — Booking wizard (6-step: service → barber → date → time → contact → confirm). Steps render via `BookingWizard` (client component).
 - `src/app/(public)/` — Public pages (`/cancel`, `/vop`, `/ochrana-udajov`)
 - `src/app/(admin)/` — Admin panel (auth-protected via `__session` cookie + Firebase custom claim `role=admin`)
   - `/login` — Firebase Auth `signInWithEmailAndPassword`, then POST idToken to `/api/auth/session`
@@ -116,13 +116,16 @@ Custom claims are set by `scripts/create-admin.ts` (idempotent; safe to run agai
 
 ## Key Patterns
 
-- **Booking wizard state** is stored in URL search params, not client state
+- **Booking wizard state** is held in `useReducer` + persisted to `sessionStorage` (`strojcek-draft`, 30 min TTL). Browser back/forward does NOT change wizard step — refresh restores the draft.
+- **Denormalized fields are SNAPSHOT at booking time, not propagated.** `appointmentDoc.barberName / serviceName / customerName / customerPhone / customerEmail / serviceBufferMinutes / priceCents` are written once at create and never updated when the source (`barbers/{id}`, `services/{id}`, `customers/{id}`) is renamed. UI in admin reservations therefore shows values that were valid at the moment of booking — by design (audit trail / historical truth).
 - **No Prisma, no Postgres.** All data goes through `adminDb` (server) or `db` (client). Client SDK is rarely used directly — admin pages render server-side and stream data through server queries
 - **Path alias**: `@/*` maps to `./src/*`
-- **Email/SMS/Telegram** still send asynchronously with `.catch()` — failures don't block the user flow
-- **Date handling**: `date-fns` + `date-fns-tz` with `Europe/Bratislava` timezone. Appointment `startDateKey` is the Bratislava-local YYYY-MM-DD used as the canonical day key for queries
+- **Email is awaited on booking create** (so a failed SMTP is reported back), Telegram admin alert is fire-and-forget. `cron/reminders` uses **lock-then-send** — `reminderSentAt` is set in a transaction *before* notifications go out so a duplicate cron run does not double-send.
+- **Customer phone uniqueness**: `customerPhones/{normalizedPhone}` is the unique index; get-or-create runs in `runTransaction` so concurrent bookings with the same phone resolve to the same `customerId`.
+- **Date handling**: `date-fns` + `date-fns-tz` with `Europe/Bratislava` timezone. Appointment `startDateKey` is the Bratislava-local YYYY-MM-DD used as the canonical day key for queries.
 - **Search**: `searchTokens[]` array on customer docs — generated from name prefixes + phone-tail digits. `array-contains` on a lowercased query gives prefix matching
 - **Firestore caching**: there is no server-side cache layer. Reads are cheap (free tier 50K/day) and freshness matters more than latency. React Query handles client-side caching where appropriate
+- **Shop contact info** lives in [src/lib/business-info.ts](src/lib/business-info.ts) — phone, email, address. Used in emails, public pages, structured data, error messages.
 
 ## Environment variables
 

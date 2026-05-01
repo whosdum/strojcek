@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { format } from "date-fns";
 import { sk } from "date-fns/locale";
-import { EyeIcon, ChevronLeftIcon, ChevronRightIcon, PlusIcon } from "lucide-react";
+import { EyeIcon, ChevronRightIcon, PlusIcon } from "lucide-react";
 import type { AppointmentStatus } from "@/lib/types";
 import { STATUS_LABELS, STATUS_VARIANTS } from "@/lib/constants";
 
@@ -20,17 +20,23 @@ export default async function ReservationsPage({
   searchParams,
 }: {
   searchParams: Promise<{
-    page?: string;
+    cursor?: string;
     barberId?: string;
     status?: string;
   }>;
 }) {
   const params = await searchParams;
-  const page = parseInt(params.page || "1");
+  const cursor = params.cursor;
   const barberId = params.barberId || undefined;
   const status = params.status as AppointmentStatus | undefined;
 
-  const { items, pages } = await getAppointments({ page, barberId, status });
+  const { items, nextCursor } = await getAppointments({ cursor, barberId, status });
+
+  const filtersQuery = new URLSearchParams();
+  if (barberId) filtersQuery.set("barberId", barberId);
+  if (status) filtersQuery.set("status", status);
+  const filtersStr = filtersQuery.toString();
+  const filtersSuffix = filtersStr ? `&${filtersStr}` : "";
 
   return (
     <div>
@@ -138,43 +144,28 @@ export default async function ReservationsPage({
         </Table>
       </div>
 
-      {/* Pagination */}
-      {pages > 1 && (
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-          <Link
-            href={`/admin/reservations?page=${Math.max(1, page - 1)}${status ? `&status=${status}` : ""}`}
-            aria-disabled={page <= 1}
-            className={page <= 1 ? "pointer-events-none opacity-50" : ""}
-          >
-            <Button variant="outline" size="sm">
-              <ChevronLeftIcon className="size-4" />
-            </Button>
-          </Link>
-          {Array.from({ length: pages }, (_, i) => i + 1).map((p) => (
-            <Link
-              key={p}
-              href={`/admin/reservations?page=${p}${status ? `&status=${status}` : ""}`}
-            >
-              <Button
-                variant={p === page ? "default" : "outline"}
-                size="sm"
-              >
-                {p}
+      {/* Pagination — Firestore native cursor. Forward-only; use the
+          browser back button to go back. The previous numbered-page UI
+          required reading the entire collection and slicing in JS. */}
+      {(cursor || nextCursor) && (
+        <div className="mt-4 flex items-center justify-between gap-2">
+          {cursor ? (
+            <Link href={`/admin/reservations${filtersStr ? `?${filtersStr}` : ""}`}>
+              <Button variant="outline" size="sm">
+                Prvá strana
               </Button>
             </Link>
-          ))}
-          <Link
-            href={`/admin/reservations?page=${Math.min(pages, page + 1)}${status ? `&status=${status}` : ""}`}
-            aria-disabled={page >= pages}
-            className={page >= pages ? "pointer-events-none opacity-50" : ""}
-          >
-            <Button variant="outline" size="sm">
-              <ChevronRightIcon className="size-4" />
-            </Button>
-          </Link>
-          <span className="ml-2 text-xs text-muted-foreground">
-            Strana {page} z {pages}
-          </span>
+          ) : (
+            <span />
+          )}
+          {nextCursor && (
+            <Link href={`/admin/reservations?cursor=${nextCursor}${filtersSuffix}`}>
+              <Button variant="outline" size="sm">
+                Ďalšia
+                <ChevronRightIcon className="ml-1 size-4" />
+              </Button>
+            </Link>
+          )}
         </div>
       )}
     </div>

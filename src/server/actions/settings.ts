@@ -2,6 +2,7 @@
 
 import { Timestamp } from "firebase-admin/firestore";
 import { adminDb } from "@/server/lib/firebase-admin";
+import { getSession } from "@/server/lib/auth";
 import { revalidatePath } from "next/cache";
 
 const VALID_INTERVALS = [15, 30, 60] as const;
@@ -11,6 +12,9 @@ type ActionResult = { success: boolean; error?: string };
 export async function updateSlotInterval(
   minutes: number
 ): Promise<ActionResult> {
+  if (!(await getSession())) {
+    return { success: false, error: "Neautorizovaný prístup." };
+  }
   if (!VALID_INTERVALS.includes(minutes as (typeof VALID_INTERVALS)[number])) {
     return {
       success: false,

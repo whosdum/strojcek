@@ -3,6 +3,7 @@ import { adminDb } from "@/server/lib/firebase-admin";
 import { Timestamp } from "firebase-admin/firestore";
 import { tsToDate } from "@/server/lib/firestore-utils";
 import { SLOT_INTERVAL_MINUTES, TIMEZONE } from "@/lib/constants";
+import { MIN_BOOKING_LEAD_MINUTES } from "@/lib/business-info";
 import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import { addMinutes, isBefore, isAfter } from "date-fns";
 import type {
@@ -32,10 +33,23 @@ export async function getAvailableSlots(
   const localDate = toZonedTime(dayStartUtc, TIMEZONE);
   const dayOfWeek = localDate.getDay();
 
-  // 1. Override or regular schedule
-  const overrideSnap = await adminDb
-    .doc(`barbers/${barberId}/overrides/${dateStr}`)
-    .get();
+  // Reads 1, 2, 3, 4 are independent — fan them out in parallel. Saves
+  // roughly 100-300ms of latency per slot fetch (the booking wizard
+  // calls this on every date change, so it adds up).
+  const [overrideSnap, breaksSnap, apptsSnap, bsSnap] = await Promise.all([
+    adminDb.doc(`barbers/${barberId}/overrides/${dateStr}`).get(),
+    adminDb
+      .collection(`barbers/${barberId}/breaks`)
+      .where("dayOfWeek", "==", dayOfWeek)
+      .get(),
+    adminDb
+      .collection("appointments")
+      .where("barberId", "==", barberId)
+      .where("startTime", ">=", Timestamp.fromDate(dayStartUtc))
+      .where("startTime", "<", Timestamp.fromDate(dayEndUtc))
+      .get(),
+    adminDb.doc(`barbers/${barberId}/services/${serviceId}`).get(),
+  ]);
 
   let workStart: string;
   let workEnd: string;
@@ -48,6 +62,9 @@ export async function getAvailableSlots(
     workEnd = o.endTime;
     isOverrideDay = true;
   } else {
+    // Schedule is only needed when there's no override — sequential read
+    // here is fine, the common path (override absent) does one extra
+    // round-trip rather than always paying for it.
     const scheduleSnap = await adminDb
       .doc(`barbers/${barberId}/schedules/${dayOfWeek}`)
       .get();
@@ -59,29 +76,17 @@ export async function getAvailableSlots(
   }
 
   // 2. Breaks (regular days only)
-  let breaks: TimeRange[] = [];
-  if (!isOverrideDay) {
-    const breaksSnap = await adminDb
-      .collection(`barbers/${barberId}/breaks`)
-      .where("dayOfWeek", "==", dayOfWeek)
-      .get();
-    breaks = breaksSnap.docs.map((d) => {
-      const b = d.data() as ScheduleBreakDoc;
-      return {
-        start: fromZonedTime(`${dateStr}T${b.startTime}:00`, TIMEZONE),
-        end: fromZonedTime(`${dateStr}T${b.endTime}:00`, TIMEZONE),
-      };
-    });
-  }
+  const breaks: TimeRange[] = isOverrideDay
+    ? []
+    : breaksSnap.docs.map((d) => {
+        const b = d.data() as ScheduleBreakDoc;
+        return {
+          start: fromZonedTime(`${dateStr}T${b.startTime}:00`, TIMEZONE),
+          end: fromZonedTime(`${dateStr}T${b.endTime}:00`, TIMEZONE),
+        };
+      });
 
   // 3. Live appointments
-  const apptsSnap = await adminDb
-    .collection("appointments")
-    .where("barberId", "==", barberId)
-    .where("startTime", ">=", Timestamp.fromDate(dayStartUtc))
-    .where("startTime", "<", Timestamp.fromDate(dayEndUtc))
-    .get();
-
   const bookedRanges: TimeRange[] = apptsSnap.docs
     .filter((d) => d.id !== excludeAppointmentId)
     .map((d) => d.data() as AppointmentDoc)
@@ -92,9 +97,6 @@ export async function getAvailableSlots(
     }));
 
   // 4. Barber service (duration + buffer)
-  const bsSnap = await adminDb
-    .doc(`barbers/${barberId}/services/${serviceId}`)
-    .get();
   if (!bsSnap.exists) return [];
   const bs = bsSnap.data() as BarberServiceDoc;
   const duration = bs.customDuration ?? bs.defaultDuration;
@@ -105,6 +107,10 @@ export async function getAvailableSlots(
   const workingEndUtc = fromZonedTime(`${dateStr}T${workEnd}:00`, TIMEZONE);
   const nowUtc = new Date();
 
+  // Customers need lead time to actually arrive — never offer a slot
+  // that starts within MIN_BOOKING_LEAD_MINUTES from now.
+  const earliestStartMs = nowUtc.getTime() + MIN_BOOKING_LEAD_MINUTES * 60_000;
+
   const slots: string[] = [];
   let candidate = workingStartUtc;
   while (isBefore(candidate, workingEndUtc)) {
@@ -112,7 +118,7 @@ export async function getAvailableSlots(
     const blockEnd = addMinutes(candidate, duration + buffer);
 
     const fitsInWorkingHours = !isAfter(slotEnd, workingEndUtc);
-    const notInPast = isAfter(candidate, nowUtc);
+    const notInPast = candidate.getTime() >= earliestStartMs;
     const noBreakOverlap = !breaks.some(
       (b) => isBefore(candidate, b.end) && isAfter(slotEnd, b.start)
     );

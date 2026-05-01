@@ -1,3 +1,14 @@
+import {
+  SHOP_NAME,
+  SHOP_PHONE_E164,
+  SHOP_EMAIL,
+  SHOP_STREET,
+  SHOP_CITY,
+  SHOP_POSTAL_CODE,
+  SHOP_COUNTRY,
+  SHOP_GEO,
+} from "@/lib/business-info";
+
 interface OpeningHoursSpec {
   dayOfWeek: string;
   opens: string;
@@ -31,26 +42,27 @@ const DEFAULT_HOURS: OpeningHoursSpec[] = [
 export function StructuredData({ openingHours, services }: StructuredDataProps) {
   const hours = openingHours ?? DEFAULT_HOURS;
 
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://strojcek.sk";
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "BarberShop",
-    name: "Strojček",
-    url: process.env.NEXT_PUBLIC_APP_URL || "https://strojcek.sk",
-    logo: `${process.env.NEXT_PUBLIC_APP_URL || "https://strojcek.sk"}/logo.jpg`,
-    image: `${process.env.NEXT_PUBLIC_APP_URL || "https://strojcek.sk"}/logo.jpg`,
-    telephone: "+421944932871",
-    email: "strojcekbarbershop@gmail.com",
+    name: SHOP_NAME,
+    url: baseUrl,
+    logo: `${baseUrl}/logo.jpg`,
+    image: `${baseUrl}/logo.jpg`,
+    telephone: SHOP_PHONE_E164,
+    email: SHOP_EMAIL,
     address: {
       "@type": "PostalAddress",
-      streetAddress: "Moyzesova 379/2",
-      addressLocality: "Bytča",
-      postalCode: "01401",
-      addressCountry: "SK",
+      streetAddress: SHOP_STREET,
+      addressLocality: SHOP_CITY,
+      postalCode: SHOP_POSTAL_CODE,
+      addressCountry: SHOP_COUNTRY,
     },
     geo: {
       "@type": "GeoCoordinates",
-      latitude: 49.2241,
-      longitude: 18.5583,
+      latitude: SHOP_GEO.lat,
+      longitude: SHOP_GEO.lng,
     },
     priceRange: "€€",
     currenciesAccepted: "EUR",

@@ -4,15 +4,22 @@ import { revalidatePath } from "next/cache";
 import { Timestamp } from "firebase-admin/firestore";
 import { adminDb } from "@/server/lib/firebase-admin";
 import { generateSearchTokens } from "@/server/lib/firestore-utils";
+import { getSession } from "@/server/lib/auth";
 import { customerInputSchema } from "@/lib/validators";
 import { normalizePhone } from "@/server/lib/phone";
 
 type ActionResult = { success: boolean; error?: string };
 
+const UNAUTH: ActionResult = {
+  success: false,
+  error: "Neautorizovaný prístup.",
+};
+
 export async function updateCustomer(
   id: string,
   input: unknown
 ): Promise<ActionResult> {
+  if (!(await getSession())) return UNAUTH;
   try {
     const data = customerInputSchema.parse(input);
     const newPhone = normalizePhone(data.phone);
@@ -71,6 +78,7 @@ export async function updateCustomer(
 }
 
 export async function deleteCustomer(id: string): Promise<ActionResult> {
+  if (!(await getSession())) return UNAUTH;
   try {
     const customerRef = adminDb.doc(`customers/${id}`);
     const snap = await customerRef.get();

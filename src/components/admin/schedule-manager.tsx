@@ -97,8 +97,13 @@ export function ScheduleManager({ barbers }: ScheduleManagerProps) {
     setBreakToDelete(null);
     startTransition(async () => {
       try {
-        await deleteBreak(id);
-        router.refresh();
+        const res = await deleteBreak(id);
+        if (res.success) {
+          toast.success("Prestávka bola zmazaná");
+          router.refresh();
+        } else {
+          toast.error(res.error ?? "Nepodarilo sa zmazať prestávku");
+        }
       } catch {
         toast.error("Nepodarilo sa zmazať prestávku");
       }
@@ -159,7 +164,10 @@ export function ScheduleManager({ barbers }: ScheduleManagerProps) {
                 );
                 return (
                   <DayScheduleRow
-                    key={dayOfWeek}
+                    // Key includes barberId so switching barber forces a remount
+                    // and the row picks up the new defaults instead of keeping
+                    // the previous barber's times in local state.
+                    key={`${selectedBarber}-${dayOfWeek}`}
                     dayName={dayName}
                     dayOfWeek={dayOfWeek}
                     startTime={schedule?.startTime ?? "09:00"}
@@ -197,7 +205,9 @@ export function ScheduleManager({ barbers }: ScheduleManagerProps) {
                           <Button
                             variant="ghost"
                             size="icon-xs"
-                            onClick={() => handleDeleteBreak(brk.id)}
+                            onClick={() =>
+                              handleDeleteBreak(`${selectedBarber}:${brk.id}`)
+                            }
                             disabled={isPending}
                           >
                             <TrashIcon className="size-3" />
@@ -205,6 +215,9 @@ export function ScheduleManager({ barbers }: ScheduleManagerProps) {
                         </div>
                       ))}
                       <AddBreakRow
+                        // Remount when barber changes or the number of breaks
+                        // for that day changes, so inputs reset to defaults.
+                        key={`${selectedBarber}-${dayOfWeek}-${dayBreaks.length}`}
                         dayOfWeek={dayOfWeek}
                         isPending={isPending}
                         onAdd={handleAddBreak}

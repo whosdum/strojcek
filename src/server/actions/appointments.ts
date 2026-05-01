@@ -12,6 +12,7 @@ import {
   generateSearchTokens,
   stripUndefined,
 } from "@/server/lib/firestore-utils";
+import { getSession } from "@/server/lib/auth";
 import { TIMEZONE, VALID_STATUS_TRANSITIONS } from "@/lib/constants";
 import {
   adminAppointmentInputSchema,
@@ -20,7 +21,13 @@ import {
 import { normalizePhone } from "@/server/lib/phone";
 import { generateToken, hashToken } from "@/server/lib/tokens";
 import { sendEmail } from "@/server/lib/email";
+import {
+  escapeTelegramHtml,
+  sendTelegramNotification,
+} from "@/server/lib/telegram";
 import { bookingConfirmationHtml } from "@/emails/booking-confirmation";
+import { bookingCancellationHtml } from "@/emails/booking-cancellation";
+import { format as formatDate } from "date-fns";
 import type { AppointmentStatus } from "@/lib/types";
 import type {
   AppointmentDoc,
@@ -29,6 +36,11 @@ import type {
 } from "@/server/types/firestore";
 
 type ActionResult = { success: boolean; error?: string; appointmentId?: string };
+
+const UNAUTH: ActionResult = {
+  success: false,
+  error: "Neautorizovaný prístup.",
+};
 
 interface CustomerUpsertResult {
   customerId: string;
@@ -101,6 +113,7 @@ export async function updateAppointmentStatus(
   newStatus: AppointmentStatus,
   reason?: string
 ): Promise<ActionResult> {
+  if (!(await getSession())) return UNAUTH;
   try {
     const apptRef = adminDb.doc(`appointments/${id}`);
 
@@ -139,7 +152,7 @@ export async function updateAppointmentStatus(
           tx.update(customerRef, { visitCount: FieldValue.increment(-1) });
         }
       }
-      return { kind: "ok" as const };
+      return { kind: "ok" as const, prev: current };
     });
 
     if (result.kind === "not_found") {
@@ -151,6 +164,57 @@ export async function updateAppointmentStatus(
         error: `Nie je možné zmeniť stav z "${result.from}" na "${newStatus}".`,
       };
     }
+
+    // Notify on admin-driven status changes that the customer needs to know
+    // about. We do this AFTER the transaction so a failed email doesn't roll
+    // back the status update.
+    if (result.kind === "ok") {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      const localStart = toZonedTime(result.prev.startTime.toDate(), TIMEZONE);
+      const dateStr = formatDate(localStart, "d.M.yyyy");
+      const timeStr = formatDate(localStart, "HH:mm");
+
+      // Customer email when admin cancels.
+      if (
+        newStatus === "CANCELLED" &&
+        result.prev.status !== "CANCELLED" &&
+        result.prev.customerEmail
+      ) {
+        sendEmail({
+          to: result.prev.customerEmail,
+          subject: "Vaša rezervácia bola zrušená — Strojček",
+          html: bookingCancellationHtml({
+            customerName: result.prev.customerName || "zákazník",
+            serviceName: result.prev.serviceName,
+            barberName: result.prev.barberName,
+            date: dateStr,
+            time: timeStr,
+            bookUrl: appUrl,
+          }),
+        }).catch((err) =>
+          console.error("[updateAppointmentStatus][email]", err)
+        );
+      }
+
+      // Telegram audit ping for the admin's records on every transition.
+      const chatId = process.env.TELEGRAM_CHAT_ID;
+      if (chatId) {
+        sendTelegramNotification({
+          chatId,
+          message:
+            `<b>Stav rezervácie zmenený</b>\n` +
+            `${escapeTelegramHtml(result.prev.serviceName)} · ${escapeTelegramHtml(result.prev.barberName)}\n` +
+            `${dateStr} ${timeStr}\n` +
+            `${result.prev.status} → <b>${newStatus}</b>\n` +
+            (result.prev.customerName
+              ? `Zákazník: ${escapeTelegramHtml(result.prev.customerName)}`
+              : ""),
+        }).catch((err) =>
+          console.error("[updateAppointmentStatus][telegram]", err)
+        );
+      }
+    }
+
     return { success: true };
   } catch (e) {
     console.error("[updateAppointmentStatus]", e);
@@ -161,6 +225,7 @@ export async function updateAppointmentStatus(
 export async function createAppointmentAdmin(
   input: unknown
 ): Promise<ActionResult> {
+  if (!(await getSession())) return UNAUTH;
   try {
     const data = adminAppointmentInputSchema.parse(input);
     const phone = normalizePhone(data.phone);
@@ -235,7 +300,8 @@ export async function createAppointmentAdmin(
             priceExpectedCents: priceCents,
             priceFinalCents: null,
             cancellationTokenHash: tokenHash,
-            cancellationTokenFallback: rawToken,
+            // No plaintext fallback on new bookings — see booking.ts.
+            cancellationTokenFallback: null,
             cancellationReason: null,
             notes: data.notes || null,
             source: "admin",
@@ -270,7 +336,10 @@ export async function createAppointmentAdmin(
     const cancelUrl = `${appUrl}/cancel?token=${rawToken}`;
     const localStart = toZonedTime(startTime, TIMEZONE);
 
-    sendEmail({
+    // Await the customer-facing confirmation email so a misconfigured
+    // SMTP surfaces as a real failure path rather than disappearing
+    // when Cloud Run shuts down the response.
+    await sendEmail({
       to: data.email,
       subject: "Potvrdenie rezervácie - Strojček",
       html: bookingConfirmationHtml({
@@ -304,6 +373,7 @@ export async function updateAppointment(
   id: string,
   input: unknown
 ): Promise<ActionResult> {
+  if (!(await getSession())) return UNAUTH;
   try {
     const apptRef = adminDb.doc(`appointments/${id}`);
     const existingSnap = await apptRef.get();
@@ -429,6 +499,7 @@ export async function updateAppointment(
 }
 
 export async function deleteAppointment(id: string): Promise<ActionResult> {
+  if (!(await getSession())) return UNAUTH;
   try {
     const apptRef = adminDb.doc(`appointments/${id}`);
     const snap = await apptRef.get();

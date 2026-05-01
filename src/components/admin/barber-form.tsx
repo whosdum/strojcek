@@ -76,13 +76,20 @@ export function BarberForm({ barber, allServices }: BarberFormProps) {
           }
         } else {
           result = await createBarber(data);
+          // Persist initial service selection on the freshly created barber.
+          // Without this, the checkboxes the admin filled in are silently
+          // ignored on first save and they have to come back into the detail
+          // view to assign services again.
+          if (result.success && result.id && serviceIds.length > 0) {
+            await updateBarberServices(result.id, serviceIds);
+          }
         }
         if (result.success) {
           toast.success("Barber bol uložený");
           router.push("/admin/barbers");
           router.refresh();
         } else {
-          toast.error("Nepodarilo sa uložiť barbera");
+          toast.error(result.error ?? "Nepodarilo sa uložiť barbera");
         }
       } catch {
         toast.error("Nepodarilo sa uložiť barbera");

@@ -109,7 +109,18 @@ export function ServiceForm({ service, onClose }: ServiceFormProps) {
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="price">Cena (€)</Label>
-          <Input id="price" type="number" step="0.01" {...register("price")} />
+          {/* Type=text + inputmode=decimal so SK users can type "15,50".
+              setValueAs normalises the comma to a dot before Zod
+              coerces. type=number rejects a comma in most browsers. */}
+          <Input
+            id="price"
+            type="text"
+            inputMode="decimal"
+            {...register("price", {
+              setValueAs: (v) =>
+                typeof v === "string" ? v.replace(",", ".") : v,
+            })}
+          />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="bufferMinutes">Buffer (min)</Label>

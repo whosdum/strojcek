@@ -1,4 +1,11 @@
 import { escapeHtml } from "./utils";
+import {
+  SHOP_NAME,
+  SHOP_ADDRESS_FULL,
+  SHOP_PHONE_DISPLAY,
+  SHOP_STREET,
+  SHOP_CITY,
+} from "@/lib/business-info";
 
 interface BookingConfirmationProps {
   customerName: string;
@@ -34,9 +41,9 @@ export function bookingConfirmationHtml({
   const toCalFormat = (iso: string) => iso.replace(/[-:]/g, "").replace(/\.\d{3}/, "");
   const calStart = toCalFormat(startTimeUtc);
   const calEnd = toCalFormat(endTimeUtc);
-  const calTitle = encodeURIComponent(`Strojček — ${serviceName}`);
-  const calDetails = encodeURIComponent(`Barber: ${barberName}\nSlužba: ${serviceName}\nCena: ${price} €`);
-  const calLocation = encodeURIComponent("Moyzesova 379/2, 014 01 Bytča");
+  const calTitle = encodeURIComponent(`${SHOP_NAME} — ${safeServiceName}`);
+  const calDetails = encodeURIComponent(`Barber: ${safeBarberName}\nSlužba: ${safeServiceName}\nCena: ${price} €`);
+  const calLocation = encodeURIComponent(SHOP_ADDRESS_FULL);
 
   const googleCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${calTitle}&dates=${calStart}/${calEnd}&details=${calDetails}&location=${calLocation}`;
 
@@ -97,8 +104,8 @@ export function bookingConfirmationHtml({
     </tr>
     <tr>
       <td style="background-color: #1a1a2e; padding: 20px 24px; text-align: center; border-radius: 0 0 8px 8px;">
-        <p style="color: #888; margin: 0; font-size: 12px;">Strojček Barbershop · Moyzesova 379/2, Bytča</p>
-        <p style="color: #666; margin: 4px 0 0; font-size: 11px;">Tel: 0944 932 871</p>
+        <p style="color: #888; margin: 0; font-size: 12px;">${SHOP_NAME} Barbershop · ${SHOP_STREET}, ${SHOP_CITY}</p>
+        <p style="color: #666; margin: 4px 0 0; font-size: 11px;">Tel: ${SHOP_PHONE_DISPLAY}</p>
       </td>
     </tr>
   </table>

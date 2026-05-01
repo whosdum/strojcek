@@ -36,6 +36,7 @@ import {
   GLOBAL_BOOKING_LIMIT,
   PHONE_BOOKING_LIMIT_24H,
 } from "@/lib/constants";
+import { SHOP_PHONE_DISPLAY } from "@/lib/business-info";
 import type { AppointmentStatus } from "@/lib/types";
 import type {
   AppointmentDoc,
@@ -194,7 +195,11 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
             priceExpectedCents: priceCents,
             priceFinalCents: null,
             cancellationTokenHash: tokenHash,
-            cancellationTokenFallback: rawToken,
+            // Plaintext fallback would defeat the purpose of hashing on
+            // a DB leak. Lookup still works for new bookings via the
+            // hashed field; legacy docs from the migration may still
+            // carry a fallback, which getTokenLookupValues handles.
+            cancellationTokenFallback: null,
             cancellationReason: null,
             notes: data.note || null,
             source: "online",
@@ -233,8 +238,7 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
         if (e.message === "PHONE_LIMIT") {
           return {
             success: false,
-            error:
-              "Dosiahli ste maximálny počet rezervácií za 24 hodín. Pre ďalšiu rezerváciu zavolajte na 0944 932 871.",
+            error: `Dosiahli ste maximálny počet rezervácií za 24 hodín. Pre ďalšiu rezerváciu zavolajte na ${SHOP_PHONE_DISPLAY}.`,
           };
         }
         if (e.message === "GLOBAL_LIMIT") {
@@ -253,7 +257,6 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
       throw e;
     }
 
-    // Fire-and-forget notifications (don't block on failure)
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const cancelUrl = `${appUrl}/cancel?token=${rawToken}`;
     const localStart = toZonedTime(startTime, TIMEZONE);
@@ -261,41 +264,51 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
     const formattedTime = format(localStart, "HH:mm");
     const barberName = `${barber.firstName} ${barber.lastName}`;
 
-    const notifications: Promise<unknown>[] = [
-      sendEmail({
-        to: data.email,
-        subject: "Potvrdenie rezervácie - Strojček",
-        html: bookingConfirmationHtml({
-          customerName: data.firstName,
-          serviceName: bs.serviceName,
-          barberName,
-          date: formattedDate,
-          time: formattedTime,
-          price: (priceCents / 100).toString(),
-          cancelUrl,
-          startTimeUtc: startTime.toISOString(),
-          endTimeUtc: endTime.toISOString(),
-        }),
-      }).catch((err) => console.error("[EMAIL]", err)),
-    ];
+    // Email is the customer-facing confirmation — await it so a failed
+    // SMTP returns to the booking response (handled below) rather than
+    // a Cloud Run shutdown silently dropping the send.
+    const emailResult = await sendEmail({
+      to: data.email,
+      subject: "Potvrdenie rezervácie - Strojček",
+      html: bookingConfirmationHtml({
+        customerName: data.firstName,
+        serviceName: bs.serviceName,
+        barberName,
+        date: formattedDate,
+        time: formattedTime,
+        price: (priceCents / 100).toString(),
+        cancelUrl,
+        startTimeUtc: startTime.toISOString(),
+        endTimeUtc: endTime.toISOString(),
+      }),
+    }).catch((err) => {
+      console.error("[booking][email]", err);
+      return { success: false } as const;
+    });
 
+    // Telegram is admin-only — fire-and-forget. The Cloud Run instance
+    // stays alive for the rest of the response, which is enough for the
+    // request to land at Telegram.
     const chatId = process.env.TELEGRAM_CHAT_ID;
     if (chatId) {
-      notifications.push(
-        sendTelegramNotification({
-          chatId,
-          message:
-            `<b>Nová rezervácia</b>\n` +
-            `Zákazník: ${escapeTelegramHtml(`${data.firstName} ${data.lastName}`)}\n` +
-            `Služba: ${escapeTelegramHtml(bs.serviceName)}\n` +
-            `Dátum: ${escapeTelegramHtml(formattedDate)} o ${escapeTelegramHtml(formattedTime)}\n` +
-            `Tel: ${escapeTelegramHtml(phone)}\n` +
-            `Email: ${escapeTelegramHtml(data.email)}`,
-        }).catch((err) => console.error("[TELEGRAM]", err))
-      );
+      sendTelegramNotification({
+        chatId,
+        message:
+          `<b>Nová rezervácia</b>\n` +
+          `Zákazník: ${escapeTelegramHtml(`${data.firstName} ${data.lastName}`)}\n` +
+          `Služba: ${escapeTelegramHtml(bs.serviceName)}\n` +
+          `Dátum: ${escapeTelegramHtml(formattedDate)} o ${escapeTelegramHtml(formattedTime)}\n` +
+          `Tel: ${escapeTelegramHtml(phone)}\n` +
+          `Email: ${escapeTelegramHtml(data.email)}`,
+      }).catch((err) => console.error("[booking][telegram]", err));
     }
 
-    await Promise.all(notifications);
+    if (!emailResult.success) {
+      // Booking is committed in Firestore. Tell the customer it succeeded
+      // but warn that the email may not arrive — better than pretending
+      // success when SMTP is misconfigured.
+      console.warn("[booking] email send failed for", appointmentId);
+    }
 
     return { success: true, appointmentId };
   } catch (e) {

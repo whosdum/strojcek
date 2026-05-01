@@ -4,10 +4,16 @@ import { revalidatePath } from "next/cache";
 import { Timestamp } from "firebase-admin/firestore";
 import { adminDb } from "@/server/lib/firebase-admin";
 import { stripUndefined } from "@/server/lib/firestore-utils";
+import { getSession } from "@/server/lib/auth";
 import { serviceInputSchema } from "@/lib/validators";
 import { randomUUID } from "crypto";
 
 type ActionResult = { success: boolean; error?: string };
+
+const UNAUTH: ActionResult = {
+  success: false,
+  error: "Neautorizovaný prístup.",
+};
 
 function invalidate() {
   revalidatePath("/");
@@ -27,6 +33,7 @@ function toDoc(data: ReturnType<typeof serviceInputSchema.parse>) {
 }
 
 export async function createService(input: unknown): Promise<ActionResult> {
+  if (!(await getSession())) return UNAUTH;
   try {
     const data = serviceInputSchema.parse(input);
     const id = randomUUID();
@@ -48,6 +55,7 @@ export async function updateService(
   id: string,
   input: unknown
 ): Promise<ActionResult> {
+  if (!(await getSession())) return UNAUTH;
   try {
     const data = serviceInputSchema.parse(input);
     await adminDb.doc(`services/${id}`).update({
