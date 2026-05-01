@@ -3,10 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { adminDb } from "@/server/lib/firebase-admin";
 import { stripUndefined } from "@/server/lib/firestore-utils";
+import { getSession } from "@/server/lib/auth";
 import { scheduleInputSchema, breakInputSchema } from "@/lib/validators";
 import { randomUUID } from "crypto";
 
 type ActionResult = { success: boolean; error?: string };
+
+const UNAUTH: ActionResult = {
+  success: false,
+  error: "Neautorizovaný prístup.",
+};
 
 function invalidate() {
   revalidatePath("/");
@@ -14,6 +20,7 @@ function invalidate() {
 }
 
 export async function upsertSchedule(input: unknown): Promise<ActionResult> {
+  if (!(await getSession())) return UNAUTH;
   try {
     const data = scheduleInputSchema.parse(input);
     const ref = adminDb.doc(
@@ -42,6 +49,7 @@ export async function upsertSchedule(input: unknown): Promise<ActionResult> {
  * can find the doc directly.
  */
 export async function deleteSchedule(id: string): Promise<ActionResult> {
+  if (!(await getSession())) return UNAUTH;
   try {
     const [barberId, dayOfWeek] = id.split(":");
     if (!barberId || !dayOfWeek) {
@@ -57,6 +65,7 @@ export async function deleteSchedule(id: string): Promise<ActionResult> {
 }
 
 export async function createBreak(input: unknown): Promise<ActionResult> {
+  if (!(await getSession())) return UNAUTH;
   try {
     const data = breakInputSchema.parse(input);
     const id = randomUUID();
@@ -79,6 +88,7 @@ export async function createBreak(input: unknown): Promise<ActionResult> {
  * Delete break by composite id `${barberId}:${breakId}`.
  */
 export async function deleteBreak(id: string): Promise<ActionResult> {
+  if (!(await getSession())) return UNAUTH;
   try {
     const [barberId, breakId] = id.split(":");
     if (!barberId || !breakId) {

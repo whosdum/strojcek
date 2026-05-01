@@ -4,11 +4,17 @@ import { revalidatePath } from "next/cache";
 import { Timestamp } from "firebase-admin/firestore";
 import { adminDb } from "@/server/lib/firebase-admin";
 import { stripUndefined } from "@/server/lib/firestore-utils";
+import { getSession } from "@/server/lib/auth";
 import { barberInputSchema } from "@/lib/validators";
 import { randomUUID } from "crypto";
 import type { ServiceDoc } from "@/server/types/firestore";
 
-type ActionResult = { success: boolean; error?: string };
+type ActionResult = { success: boolean; error?: string; id?: string };
+
+const UNAUTH: ActionResult = {
+  success: false,
+  error: "Neautorizovaný prístup.",
+};
 
 function invalidate() {
   revalidatePath("/");
@@ -29,6 +35,7 @@ function toBarberData(data: ReturnType<typeof barberInputSchema.parse>) {
 }
 
 export async function createBarber(input: unknown): Promise<ActionResult> {
+  if (!(await getSession())) return UNAUTH;
   try {
     const data = barberInputSchema.parse(input);
     const id = randomUUID();
@@ -40,7 +47,7 @@ export async function createBarber(input: unknown): Promise<ActionResult> {
       updatedAt: Timestamp.now(),
     });
     invalidate();
-    return { success: true };
+    return { success: true, id };
   } catch (e) {
     console.error("[createBarber]", e);
     return { success: false, error: "Nastala chyba pri vytváraní barbera." };
@@ -51,6 +58,7 @@ export async function updateBarber(
   id: string,
   input: unknown
 ): Promise<ActionResult> {
+  if (!(await getSession())) return UNAUTH;
   try {
     const data = barberInputSchema.parse(input);
     await adminDb.doc(`barbers/${id}`).update({
@@ -69,6 +77,7 @@ export async function updateBarberServices(
   barberId: string,
   serviceIds: string[]
 ): Promise<ActionResult> {
+  if (!(await getSession())) return UNAUTH;
   try {
     const subColl = adminDb.collection(`barbers/${barberId}/services`);
 

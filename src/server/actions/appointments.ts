@@ -12,6 +12,7 @@ import {
   generateSearchTokens,
   stripUndefined,
 } from "@/server/lib/firestore-utils";
+import { getSession } from "@/server/lib/auth";
 import { TIMEZONE, VALID_STATUS_TRANSITIONS } from "@/lib/constants";
 import {
   adminAppointmentInputSchema,
@@ -29,6 +30,11 @@ import type {
 } from "@/server/types/firestore";
 
 type ActionResult = { success: boolean; error?: string; appointmentId?: string };
+
+const UNAUTH: ActionResult = {
+  success: false,
+  error: "Neautorizovaný prístup.",
+};
 
 interface CustomerUpsertResult {
   customerId: string;
@@ -101,6 +107,7 @@ export async function updateAppointmentStatus(
   newStatus: AppointmentStatus,
   reason?: string
 ): Promise<ActionResult> {
+  if (!(await getSession())) return UNAUTH;
   try {
     const apptRef = adminDb.doc(`appointments/${id}`);
 
@@ -161,6 +168,7 @@ export async function updateAppointmentStatus(
 export async function createAppointmentAdmin(
   input: unknown
 ): Promise<ActionResult> {
+  if (!(await getSession())) return UNAUTH;
   try {
     const data = adminAppointmentInputSchema.parse(input);
     const phone = normalizePhone(data.phone);
@@ -304,6 +312,7 @@ export async function updateAppointment(
   id: string,
   input: unknown
 ): Promise<ActionResult> {
+  if (!(await getSession())) return UNAUTH;
   try {
     const apptRef = adminDb.doc(`appointments/${id}`);
     const existingSnap = await apptRef.get();
@@ -429,6 +438,7 @@ export async function updateAppointment(
 }
 
 export async function deleteAppointment(id: string): Promise<ActionResult> {
+  if (!(await getSession())) return UNAUTH;
   try {
     const apptRef = adminDb.doc(`appointments/${id}`);
     const snap = await apptRef.get();
