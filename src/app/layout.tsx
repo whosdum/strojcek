@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { StructuredData } from "@/components/structured-data";
+import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
 const jakarta = Plus_Jakarta_Sans({
@@ -78,6 +79,7 @@ export default function RootLayout({
       <body className={`${jakarta.variable} font-sans antialiased`}>
         <StructuredData />
         {children}
+        <Toaster />
       </body>
     </html>
   );

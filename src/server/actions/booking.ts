@@ -36,6 +36,7 @@ import {
   GLOBAL_BOOKING_LIMIT,
   PHONE_BOOKING_LIMIT_24H,
 } from "@/lib/constants";
+import { SHOP_PHONE_DISPLAY } from "@/lib/business-info";
 import type { AppointmentStatus } from "@/lib/types";
 import type {
   AppointmentDoc,
@@ -233,8 +234,7 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
         if (e.message === "PHONE_LIMIT") {
           return {
             success: false,
-            error:
-              "Dosiahli ste maximálny počet rezervácií za 24 hodín. Pre ďalšiu rezerváciu zavolajte na 0944 932 871.",
+            error: `Dosiahli ste maximálny počet rezervácií za 24 hodín. Pre ďalšiu rezerváciu zavolajte na ${SHOP_PHONE_DISPLAY}.`,
           };
         }
         if (e.message === "GLOBAL_LIMIT") {

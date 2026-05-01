@@ -9,6 +9,7 @@ import { bookingReminderHtml } from "@/emails/booking-reminder";
 import { addDays, format } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import { TIMEZONE } from "@/lib/constants";
+import { SHOP_PHONE_DISPLAY } from "@/lib/business-info";
 import type { AppointmentDoc } from "@/server/types/firestore";
 
 export const dynamic = "force-dynamic";
@@ -58,7 +59,7 @@ export async function GET(request: NextRequest) {
       if (appt.customerPhone) {
         sendSMS({
           phone: appt.customerPhone,
-          message: `Strojcek: zajtra o ${format(toZonedTime(appt.startTime.toDate(), TIMEZONE), "HH:mm")} mate rezervaciu na ${stripDiacritics(appt.serviceName)}. Pre zrusenie zavolajte 0944 932 871.`,
+          message: `Strojcek: zajtra o ${format(toZonedTime(appt.startTime.toDate(), TIMEZONE), "HH:mm")} mate rezervaciu na ${stripDiacritics(appt.serviceName)}. Pre zrusenie zavolajte ${SHOP_PHONE_DISPLAY}.`,
         }).catch((err) =>
           console.error(`[cron/reminders] SMS failed for ${d.id}:`, err)
         );

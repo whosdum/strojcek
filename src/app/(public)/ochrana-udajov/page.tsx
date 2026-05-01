@@ -181,12 +181,12 @@ export default function OchranaUdajovPage() {
               </p>
               <ul className="list-disc space-y-1.5 pl-6">
                 <li>
-                  <strong>Poskytovateľ e-mailových služieb (Resend)</strong> —
+                  <strong>Poskytovateľ e-mailových služieb (Google / Gmail SMTP)</strong> —
                   na zasielanie potvrdení a pripomienok o rezerváciách
                   prostredníctvom e-mailu.
                 </li>
                 <li>
-                  <strong>Poskytovateľ SMS služieb</strong> — na zasielanie SMS
+                  <strong>Poskytovateľ SMS služieb (SMSTools.sk)</strong> — na zasielanie SMS
                   pripomienok pred blížiacim sa termínom rezervácie.
                 </li>
               </ul>
