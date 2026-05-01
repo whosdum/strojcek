@@ -243,7 +243,8 @@ export async function createAppointmentAdmin(
             priceExpectedCents: priceCents,
             priceFinalCents: null,
             cancellationTokenHash: tokenHash,
-            cancellationTokenFallback: rawToken,
+            // No plaintext fallback on new bookings — see booking.ts.
+            cancellationTokenFallback: null,
             cancellationReason: null,
             notes: data.notes || null,
             source: "admin",

@@ -195,7 +195,11 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
             priceExpectedCents: priceCents,
             priceFinalCents: null,
             cancellationTokenHash: tokenHash,
-            cancellationTokenFallback: rawToken,
+            // Plaintext fallback would defeat the purpose of hashing on
+            // a DB leak. Lookup still works for new bookings via the
+            // hashed field; legacy docs from the migration may still
+            // carry a fallback, which getTokenLookupValues handles.
+            cancellationTokenFallback: null,
             cancellationReason: null,
             notes: data.note || null,
             source: "online",

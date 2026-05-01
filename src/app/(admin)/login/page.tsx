@@ -36,7 +36,11 @@ export default function LoginPage() {
 
     try {
       const credential = await signInWithEmailAndPassword(auth, email, password);
-      const idToken = await credential.user.getIdToken();
+      // Force refresh so a freshly granted role=admin claim is in the
+      // token. Without this, an admin whose claim was just set in
+      // Firebase Auth will get "Tento účet nemá administrátorské
+      // oprávnenia" until the next token rotation.
+      const idToken = await credential.user.getIdToken(true);
 
       const res = await fetch("/api/auth/session", {
         method: "POST",
