@@ -3,6 +3,7 @@ import { adminDb } from "@/server/lib/firebase-admin";
 import { Timestamp } from "firebase-admin/firestore";
 import { tsToDate } from "@/server/lib/firestore-utils";
 import { SLOT_INTERVAL_MINUTES, TIMEZONE } from "@/lib/constants";
+import { MIN_BOOKING_LEAD_MINUTES } from "@/lib/business-info";
 import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import { addMinutes, isBefore, isAfter } from "date-fns";
 import type {
@@ -105,6 +106,10 @@ export async function getAvailableSlots(
   const workingEndUtc = fromZonedTime(`${dateStr}T${workEnd}:00`, TIMEZONE);
   const nowUtc = new Date();
 
+  // Customers need lead time to actually arrive — never offer a slot
+  // that starts within MIN_BOOKING_LEAD_MINUTES from now.
+  const earliestStartMs = nowUtc.getTime() + MIN_BOOKING_LEAD_MINUTES * 60_000;
+
   const slots: string[] = [];
   let candidate = workingStartUtc;
   while (isBefore(candidate, workingEndUtc)) {
@@ -112,7 +117,7 @@ export async function getAvailableSlots(
     const blockEnd = addMinutes(candidate, duration + buffer);
 
     const fitsInWorkingHours = !isAfter(slotEnd, workingEndUtc);
-    const notInPast = isAfter(candidate, nowUtc);
+    const notInPast = candidate.getTime() >= earliestStartMs;
     const noBreakOverlap = !breaks.some(
       (b) => isBefore(candidate, b.end) && isAfter(slotEnd, b.start)
     );
