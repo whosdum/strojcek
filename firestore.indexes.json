@@ -81,6 +81,13 @@
         { "fieldPath": "isActive", "order": "ASCENDING" },
         { "fieldPath": "sortOrder", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "history",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "changedAt", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": [

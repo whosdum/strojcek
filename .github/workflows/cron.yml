@@ -8,27 +8,40 @@ on:
     - cron: "0 3 * * *"
   workflow_dispatch: # allow manual trigger
 
+# Block concurrent runs of the same trigger so a manual dispatch landing
+# on top of a scheduled run does not produce two simultaneous HTTP calls
+# to /api/cron/*. Reminders rely on lock-then-send for correctness, but
+# we still avoid the wasted invocations.
+concurrency:
+  group: cron-${{ github.event.schedule || github.event_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
 jobs:
   reminders:
     if: github.event.schedule == '0 16 * * *' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Send reminders
         env:
           APP_URL: ${{ secrets.APP_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          curl -s -f -X GET "${APP_URL}/api/cron/reminders" \
+          curl -sS -f --max-time 120 -X GET "${APP_URL}/api/cron/reminders" \
             -H "Authorization: Bearer ${CRON_SECRET}"
 
   cleanup:
     if: github.event.schedule == '0 3 * * *' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Run cleanup
         env:
           APP_URL: ${{ secrets.APP_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          curl -s -f -X GET "${APP_URL}/api/cron/cleanup" \
+          curl -sS -f --max-time 300 -X GET "${APP_URL}/api/cron/cleanup" \
             -H "Authorization: Bearer ${CRON_SECRET}"
