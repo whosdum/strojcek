@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { deleteAppointment } from "@/server/actions/appointments";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,7 +30,10 @@ export function AppointmentDeleteButton({ appointmentId }: AppointmentDeleteButt
     startTransition(async () => {
       const result = await deleteAppointment(appointmentId);
       if (result.success) {
+        toast.success("Rezervácia bola zmazaná");
         router.push("/admin/reservations");
+      } else {
+        toast.error(result.error ?? "Nepodarilo sa zmazať rezerváciu");
       }
     });
   };

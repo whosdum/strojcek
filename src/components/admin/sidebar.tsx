@@ -56,11 +56,19 @@ export function Sidebar() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const handleLogout = async () => {
+    // Clear server cookie + revoke Firebase refresh tokens FIRST.
+    // If we sign out the client SDK first and the server fetch then fails
+    // (offline, network blip), the cookie keeps the user "logged in" on
+    // the server side while the client has no Firebase user — desync.
     try {
-      await signOut(auth);
       await fetch("/api/auth/session", { method: "DELETE" });
     } catch (e) {
-      console.error("[logout]", e);
+      console.error("[logout][server]", e);
+    }
+    try {
+      await signOut(auth);
+    } catch (e) {
+      console.error("[logout][client]", e);
     }
     setOpen(false);
     router.push("/login");
