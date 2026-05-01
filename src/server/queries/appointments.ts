@@ -3,7 +3,7 @@ import { adminDb } from "@/server/lib/firebase-admin";
 import { Timestamp } from "firebase-admin/firestore";
 import { dateKey, tsToDate, tsToDateOrNull } from "@/server/lib/firestore-utils";
 import { PAGE_SIZE, TIMEZONE } from "@/lib/constants";
-import { startOfDay, endOfDay, startOfMonth } from "date-fns";
+import { startOfDay, startOfMonth } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import type {
   AppointmentView,
@@ -115,68 +115,65 @@ export async function getUpcomingAppointments(
 }
 
 interface GetAppointmentsParams {
-  page?: number;
+  /** Cursor = ISO timestamp of the last item on the previous page. */
+  cursor?: string;
   barberId?: string;
   status?: AppointmentStatus;
-  dateFrom?: Date;
-  dateTo?: Date;
 }
 
 export async function getAppointments({
-  page = 1,
+  cursor,
   barberId,
   status,
-  dateFrom,
-  dateTo,
 }: GetAppointmentsParams = {}): Promise<{
   items: AppointmentListView[];
-  total: number;
-  pages: number;
+  nextCursor: string | null;
 }> {
-  // Build server-side query for the cheapest filterable subset.
-  // Avoid composite-index requirements by filtering by date in JS when ranges are present.
+  // Cursor-based Firestore-native pagination. Push the orderBy/limit
+  // into the query so we never read more than PAGE_SIZE+1 docs per page.
+  // The previous offset/JS-paginate approach would scale O(total) per
+  // request — unbounded read amplification at production volumes.
   let query: FirebaseFirestore.Query = adminDb.collection("appointments");
   if (barberId) query = query.where("barberId", "==", barberId);
   if (status) query = query.where("status", "==", status);
-  // Always sort by startTime DESC at the end — but Firestore range + composite indexes
-  // may complicate things. We fetch matching subset and sort/paginate in JS for now.
-
-  const snap = await query.get();
-
-  let items = snap.docs
-    .map((d) => {
-      const data = d.data() as AppointmentDoc;
-      const base = mapAppointment(d);
-      const { firstName, lastName } = splitName(data.barberName);
-      return {
-        ...base,
-        barber: { firstName, lastName },
-        service: { name: data.serviceName },
-        customer:
-          data.customerName || data.customerPhone
-            ? {
-                firstName: splitName(data.customerName).firstName,
-                lastName: splitName(data.customerName).lastName || null,
-                phone: data.customerPhone ?? "",
-              }
-            : null,
-      } as AppointmentListView;
-    })
-    .sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
-
-  if (dateFrom) {
-    const fromMs = startOfDay(dateFrom).getTime();
-    items = items.filter((a) => a.startTime.getTime() >= fromMs);
-  }
-  if (dateTo) {
-    const toMs = endOfDay(dateTo).getTime();
-    items = items.filter((a) => a.startTime.getTime() <= toMs);
+  query = query.orderBy("startTime", "desc");
+  if (cursor) {
+    const ms = Number(cursor);
+    if (Number.isFinite(ms)) {
+      query = query.startAfter(Timestamp.fromMillis(ms));
+    }
   }
 
-  const total = items.length;
-  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const paged = items.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  return { items: paged, total, pages };
+  const snap = await query.limit(PAGE_SIZE + 1).get();
+  const hasMore = snap.size > PAGE_SIZE;
+  const docs = hasMore ? snap.docs.slice(0, PAGE_SIZE) : snap.docs;
+
+  const items = docs.map((d) => {
+    const data = d.data() as AppointmentDoc;
+    const base = mapAppointment(d);
+    const { firstName, lastName } = splitName(data.barberName);
+    const customerSplit = splitName(data.customerName);
+    return {
+      ...base,
+      barber: { firstName, lastName },
+      service: { name: data.serviceName },
+      customer:
+        data.customerName || data.customerPhone
+          ? {
+              firstName: customerSplit.firstName,
+              lastName: customerSplit.lastName || null,
+              phone: data.customerPhone ?? "",
+            }
+          : null,
+    } as AppointmentListView;
+  });
+
+  const nextCursor =
+    hasMore && items.length > 0
+      ? items[items.length - 1].startTime.getTime().toString()
+      : null;
+
+  return { items, nextCursor };
 }
 
 export async function getAppointmentById(

@@ -33,10 +33,23 @@ export async function getAvailableSlots(
   const localDate = toZonedTime(dayStartUtc, TIMEZONE);
   const dayOfWeek = localDate.getDay();
 
-  // 1. Override or regular schedule
-  const overrideSnap = await adminDb
-    .doc(`barbers/${barberId}/overrides/${dateStr}`)
-    .get();
+  // Reads 1, 2, 3, 4 are independent — fan them out in parallel. Saves
+  // roughly 100-300ms of latency per slot fetch (the booking wizard
+  // calls this on every date change, so it adds up).
+  const [overrideSnap, breaksSnap, apptsSnap, bsSnap] = await Promise.all([
+    adminDb.doc(`barbers/${barberId}/overrides/${dateStr}`).get(),
+    adminDb
+      .collection(`barbers/${barberId}/breaks`)
+      .where("dayOfWeek", "==", dayOfWeek)
+      .get(),
+    adminDb
+      .collection("appointments")
+      .where("barberId", "==", barberId)
+      .where("startTime", ">=", Timestamp.fromDate(dayStartUtc))
+      .where("startTime", "<", Timestamp.fromDate(dayEndUtc))
+      .get(),
+    adminDb.doc(`barbers/${barberId}/services/${serviceId}`).get(),
+  ]);
 
   let workStart: string;
   let workEnd: string;
@@ -49,6 +62,9 @@ export async function getAvailableSlots(
     workEnd = o.endTime;
     isOverrideDay = true;
   } else {
+    // Schedule is only needed when there's no override — sequential read
+    // here is fine, the common path (override absent) does one extra
+    // round-trip rather than always paying for it.
     const scheduleSnap = await adminDb
       .doc(`barbers/${barberId}/schedules/${dayOfWeek}`)
       .get();
@@ -60,29 +76,17 @@ export async function getAvailableSlots(
   }
 
   // 2. Breaks (regular days only)
-  let breaks: TimeRange[] = [];
-  if (!isOverrideDay) {
-    const breaksSnap = await adminDb
-      .collection(`barbers/${barberId}/breaks`)
-      .where("dayOfWeek", "==", dayOfWeek)
-      .get();
-    breaks = breaksSnap.docs.map((d) => {
-      const b = d.data() as ScheduleBreakDoc;
-      return {
-        start: fromZonedTime(`${dateStr}T${b.startTime}:00`, TIMEZONE),
-        end: fromZonedTime(`${dateStr}T${b.endTime}:00`, TIMEZONE),
-      };
-    });
-  }
+  const breaks: TimeRange[] = isOverrideDay
+    ? []
+    : breaksSnap.docs.map((d) => {
+        const b = d.data() as ScheduleBreakDoc;
+        return {
+          start: fromZonedTime(`${dateStr}T${b.startTime}:00`, TIMEZONE),
+          end: fromZonedTime(`${dateStr}T${b.endTime}:00`, TIMEZONE),
+        };
+      });
 
   // 3. Live appointments
-  const apptsSnap = await adminDb
-    .collection("appointments")
-    .where("barberId", "==", barberId)
-    .where("startTime", ">=", Timestamp.fromDate(dayStartUtc))
-    .where("startTime", "<", Timestamp.fromDate(dayEndUtc))
-    .get();
-
   const bookedRanges: TimeRange[] = apptsSnap.docs
     .filter((d) => d.id !== excludeAppointmentId)
     .map((d) => d.data() as AppointmentDoc)
@@ -93,9 +97,6 @@ export async function getAvailableSlots(
     }));
 
   // 4. Barber service (duration + buffer)
-  const bsSnap = await adminDb
-    .doc(`barbers/${barberId}/services/${serviceId}`)
-    .get();
   if (!bsSnap.exists) return [];
   const bs = bsSnap.data() as BarberServiceDoc;
   const duration = bs.customDuration ?? bs.defaultDuration;

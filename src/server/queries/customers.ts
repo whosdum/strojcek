@@ -1,4 +1,5 @@
 import "server-only";
+import { Timestamp } from "firebase-admin/firestore";
 import { adminDb } from "@/server/lib/firebase-admin";
 import { tsToDate } from "@/server/lib/firestore-utils";
 import { PAGE_SIZE } from "@/lib/constants";
@@ -25,25 +26,44 @@ function mapCustomer(doc: FirebaseFirestore.DocumentSnapshot): CustomerView {
 }
 
 export async function getCustomers(
-  page = 1,
+  cursor: string | undefined,
   search?: string
-): Promise<{ items: CustomerView[]; total: number; pages: number }> {
-  const allSnap = search
-    ? await adminDb
-        .collection("customers")
-        .where("searchTokens", "array-contains", search.toLowerCase().trim())
-        .get()
-    : await adminDb.collection("customers").get();
+): Promise<{ items: CustomerView[]; nextCursor: string | null }> {
+  const trimmed = search?.toLowerCase().trim() ?? "";
 
-  const all = allSnap.docs
-    .map((d) => mapCustomer(d))
-    .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+  if (trimmed) {
+    // Search path: array-contains on prefix tokens. Cap the result so a
+    // very common prefix ("a") cannot pull thousands of docs in one go.
+    const snap = await adminDb
+      .collection("customers")
+      .where("searchTokens", "array-contains", trimmed)
+      .limit(200)
+      .get();
+    const items = snap.docs
+      .map((d) => mapCustomer(d))
+      .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+    return { items, nextCursor: null };
+  }
 
-  const total = all.length;
-  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const items = all.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  // Cursor pagination on updatedAt DESC. Reads only PAGE_SIZE+1 per page.
+  let query = adminDb.collection("customers").orderBy("updatedAt", "desc");
+  if (cursor) {
+    const ms = Number(cursor);
+    if (Number.isFinite(ms)) {
+      query = query.startAfter(Timestamp.fromMillis(ms));
+    }
+  }
+  const snap = await query.limit(PAGE_SIZE + 1).get();
+  const hasMore = snap.size > PAGE_SIZE;
+  const docs = hasMore ? snap.docs.slice(0, PAGE_SIZE) : snap.docs;
 
-  return { items, total, pages };
+  const items = docs.map((d) => mapCustomer(d));
+  const nextCursor =
+    hasMore && items.length > 0
+      ? items[items.length - 1].updatedAt.getTime().toString()
+      : null;
+
+  return { items, nextCursor };
 }
 
 export async function getCustomerById(

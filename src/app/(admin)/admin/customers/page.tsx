@@ -10,18 +10,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ChevronLeftIcon, ChevronRightIcon, EyeIcon, SearchIcon } from "lucide-react";
+import { ChevronRightIcon, EyeIcon, SearchIcon } from "lucide-react";
 
 export default async function CustomersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; search?: string }>;
+  searchParams: Promise<{ cursor?: string; search?: string }>;
 }) {
   const params = await searchParams;
-  const page = parseInt(params.page || "1");
+  const cursor = params.cursor;
   const search = params.search || "";
 
-  const { items, pages } = await getCustomers(page, search || undefined);
+  const { items, nextCursor } = await getCustomers(cursor, search || undefined);
+  const searchSuffix = search ? `&search=${encodeURIComponent(search)}` : "";
 
   return (
     <div>
@@ -120,39 +121,25 @@ export default async function CustomersPage({
         </Table>
       </div>
 
-      {pages > 1 && (
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-          <Link
-            href={`/admin/customers?page=${Math.max(1, page - 1)}${search ? `&search=${search}` : ""}`}
-            aria-disabled={page <= 1}
-            className={page <= 1 ? "pointer-events-none opacity-50" : ""}
-          >
-            <Button variant="outline" size="sm">
-              <ChevronLeftIcon className="size-4" />
-            </Button>
-          </Link>
-          {Array.from({ length: pages }, (_, i) => i + 1).map((p) => (
-            <Link
-              key={p}
-              href={`/admin/customers?page=${p}${search ? `&search=${search}` : ""}`}
-            >
-              <Button variant={p === page ? "default" : "outline"} size="sm">
-                {p}
+      {(cursor || nextCursor) && (
+        <div className="mt-4 flex items-center justify-between gap-2">
+          {cursor ? (
+            <Link href={`/admin/customers${search ? `?${searchSuffix.slice(1)}` : ""}`}>
+              <Button variant="outline" size="sm">
+                Prvá strana
               </Button>
             </Link>
-          ))}
-          <Link
-            href={`/admin/customers?page=${Math.min(pages, page + 1)}${search ? `&search=${search}` : ""}`}
-            aria-disabled={page >= pages}
-            className={page >= pages ? "pointer-events-none opacity-50" : ""}
-          >
-            <Button variant="outline" size="sm">
-              <ChevronRightIcon className="size-4" />
-            </Button>
-          </Link>
-          <span className="ml-2 text-xs text-muted-foreground">
-            Strana {page} z {pages}
-          </span>
+          ) : (
+            <span />
+          )}
+          {nextCursor && (
+            <Link href={`/admin/customers?cursor=${nextCursor}${searchSuffix}`}>
+              <Button variant="outline" size="sm">
+                Ďalšia
+                <ChevronRightIcon className="ml-1 size-4" />
+              </Button>
+            </Link>
+          )}
         </div>
       )}
     </div>
