@@ -336,7 +336,10 @@ export async function createAppointmentAdmin(
     const cancelUrl = `${appUrl}/cancel?token=${rawToken}`;
     const localStart = toZonedTime(startTime, TIMEZONE);
 
-    sendEmail({
+    // Await the customer-facing confirmation email so a misconfigured
+    // SMTP surfaces as a real failure path rather than disappearing
+    // when Cloud Run shuts down the response.
+    await sendEmail({
       to: data.email,
       subject: "Potvrdenie rezervácie - Strojček",
       html: bookingConfirmationHtml({

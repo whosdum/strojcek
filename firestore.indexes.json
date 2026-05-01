@@ -91,14 +91,6 @@
       ]
     },
     {
-      "collectionGroup": "customers",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "searchTokens", "arrayConfig": "CONTAINS" },
-        { "fieldPath": "lastName", "order": "ASCENDING" }
-      ]
-    },
-    {
       "collectionGroup": "barbers",
       "queryScope": "COLLECTION",
       "fields": [
