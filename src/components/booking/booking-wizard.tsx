@@ -4,6 +4,7 @@ import {
   useReducer,
   useRef,
   useEffect,
+  useMemo,
   useTransition,
   useCallback,
   useState,
@@ -305,17 +306,23 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
   const [showTermsHint, setShowTermsHint] = useState(false);
   const draftRestored = useRef(false);
 
-  const sectionRefs = useRef<Record<number, HTMLDivElement | null>>({});
-  const sectionRefCallbacks = useRef<Record<number, (el: HTMLDivElement | null) => void>>({});
+  const sectionRefs = useRef<Array<HTMLDivElement | null>>(
+    Array(TOTAL_STEPS + 1).fill(null)
+  );
 
-  const setSectionRef = useCallback((step: number) => {
-    if (!sectionRefCallbacks.current[step]) {
-      sectionRefCallbacks.current[step] = (el: HTMLDivElement | null) => {
-        sectionRefs.current[step] = el;
-      };
-    }
-    return sectionRefCallbacks.current[step];
-  }, []);
+  // Pre-build a stable callback per step (1..TOTAL_STEPS). Avoids the
+  // previous lazy "create callback on first render" pattern which the
+  // react-hooks plugin (v7+) flags as "cannot access refs during render".
+  const sectionRefCallbacks = useMemo(
+    () =>
+      Array.from({ length: TOTAL_STEPS + 1 }, (_, step) =>
+        (el: HTMLDivElement | null) => {
+          sectionRefs.current[step] = el;
+        }
+      ),
+    []
+  );
+  const setSectionRef = (step: number) => sectionRefCallbacks[step];
 
   // Defined here (above useEffects that depend on it) so the deps array
   // doesn't read it through the temporal dead zone on first render.
@@ -397,13 +404,18 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
     };
   }, [state.step]);
 
-  // Reset terms checkbox when service/barber changes (price may differ)
+  // Reset terms checkbox when service/barber changes (price may differ).
+  // react-hooks/set-state-in-effect flags any sync setState in an effect.
+  // Here the resets don't cascade (the deps don't include the states
+  // being set), so the warning is a false positive.
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
     setTermsAccepted(false);
     setShowTermsHint(false);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [state.serviceId, state.barberId]);
 
-  // Show terms hint after a short delay once user reaches the confirm step
+  // Show terms hint after a short delay once user reaches the confirm step.
   useEffect(() => {
     if (state.step === TOTAL_STEPS) {
       const timer = setTimeout(() => {
@@ -411,6 +423,7 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
       }, 10000);
       return () => clearTimeout(timer);
     }
+    /* eslint-disable-next-line react-hooks/set-state-in-effect */
     setShowTermsHint(false);
   }, [state.step]);
 
