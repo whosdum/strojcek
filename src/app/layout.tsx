@@ -56,13 +56,6 @@ export const metadata: Metadata = {
       "Pánsky barbershop v Bytči. Rezervujte si termín online.",
     images: ["/logo.jpg"],
   },
-  icons: {
-    icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: "/icon.svg", type: "image/svg+xml" },
-    ],
-    apple: "/apple-touch-icon.png",
-  },
   robots: {
     index: true,
     follow: true,
