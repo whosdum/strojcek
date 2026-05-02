@@ -276,6 +276,7 @@ export async function getDayStats(date: Date = nowInTz()): Promise<{
   const snap = await adminDb
     .collection("appointments")
     .where("startDateKey", "==", dayKey)
+    .limit(200)
     .get();
 
   let total = 0;
@@ -304,6 +305,7 @@ export async function getServicePopularity(
   const snap = await adminDb
     .collection("appointments")
     .where("startTime", ">=", Timestamp.fromDate(monthStart))
+    .limit(2000)
     .get();
 
   const stats = new Map<string, { name: string; count: number; revenueCents: number }>();

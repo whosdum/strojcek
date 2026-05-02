@@ -25,12 +25,17 @@ export async function getActiveServices(): Promise<ServiceView[]> {
     .collection("services")
     .where("isActive", "==", true)
     .orderBy("sortOrder", "asc")
+    .limit(50)
     .get();
   return snap.docs.map(mapService);
 }
 
 export async function getAllServices(): Promise<ServiceView[]> {
-  const snap = await adminDb.collection("services").orderBy("sortOrder", "asc").get();
+  const snap = await adminDb
+    .collection("services")
+    .orderBy("sortOrder", "asc")
+    .limit(100)
+    .get();
   return snap.docs.map(mapService);
 }
 

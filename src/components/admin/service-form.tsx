@@ -149,15 +149,7 @@ export function ServiceForm({ service, onClose }: ServiceFormProps) {
         <Label htmlFor="isActive">Aktívna</Label>
       </div>
 
-      <div className="flex flex-col-reverse gap-2 sm:flex-row">
-        <Button
-          type="submit"
-          disabled={isPending}
-          className="w-full sm:w-auto"
-        >
-          {isPending && <Loader2Icon className="mr-2 size-4 animate-spin" />}
-          {isEdit ? "Uložiť" : "Vytvoriť"}
-        </Button>
+      <div className="flex flex-col-reverse justify-end gap-2 sm:flex-row">
         {onClose && (
           <Button
             type="button"
@@ -168,6 +160,14 @@ export function ServiceForm({ service, onClose }: ServiceFormProps) {
             Zrušiť
           </Button>
         )}
+        <Button
+          type="submit"
+          disabled={isPending}
+          className="w-full sm:w-auto"
+        >
+          {isPending && <Loader2Icon className="mr-2 size-4 animate-spin" />}
+          {isEdit ? "Uložiť" : "Vytvoriť"}
+        </Button>
       </div>
     </form>
   );

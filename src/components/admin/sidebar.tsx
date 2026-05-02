@@ -139,12 +139,20 @@ export function Sidebar() {
           </div>
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger
-              render={<Button variant="outline" size="icon-sm" />}
+              render={
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  aria-expanded={open}
+                  aria-controls="admin-mobile-nav"
+                />
+              }
             >
               <MenuIcon className="size-4" />
               <span className="sr-only">Otvoriť menu</span>
             </SheetTrigger>
             <SheetContent
+              id="admin-mobile-nav"
               side="left"
               className="w-[85vw] max-w-sm p-0"
             >

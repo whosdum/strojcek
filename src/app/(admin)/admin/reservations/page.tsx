@@ -15,7 +15,13 @@ import { format } from "date-fns";
 import { sk } from "date-fns/locale";
 import { EyeIcon, ChevronRightIcon, PlusIcon } from "lucide-react";
 import type { AppointmentStatus } from "@/lib/types";
-import { STATUS_LABELS, STATUS_VARIANTS } from "@/lib/constants";
+import {
+  STATUS_LABELS,
+  STATUS_VARIANTS,
+  DATE_FORMAT,
+  TIME_FORMAT,
+  DATETIME_DAY_FORMAT,
+} from "@/lib/constants";
 
 export default async function ReservationsPage({
   searchParams,
@@ -44,7 +50,7 @@ export default async function ReservationsPage({
       <nav className="mb-2 text-sm text-muted-foreground" aria-label="Breadcrumb">
         <Link href="/admin" className="hover:text-foreground">Dashboard</Link>
         <span className="mx-1.5">/</span>
-        <span className="text-foreground">Rezervácie</span>
+        <span className="text-foreground" aria-current="page">Rezervácie</span>
       </nav>
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold sm:text-3xl">Rezervácie</h1>
@@ -81,7 +87,7 @@ export default async function ReservationsPage({
               <div>
                 <p className="font-medium">{appt.customerName}</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {format(appt.startTime, "EEEE d.M. HH:mm", { locale: sk })}
+                  {format(appt.startTime, DATETIME_DAY_FORMAT, { locale: sk })}
                 </p>
               </div>
               <Badge variant={STATUS_VARIANTS[appt.status]}>
@@ -116,13 +122,13 @@ export default async function ReservationsPage({
               <ClickableTableRow
                 key={appt.id}
                 href={`/admin/reservations/${appt.id}`}
-                ariaLabel="Otvoriť detail rezervácie"
+                ariaLabel={`Otvoriť rezerváciu ${appt.customerName ?? ""} ${format(appt.startTime, DATE_FORMAT)}`.trim()}
               >
                 <TableCell>
-                  {format(appt.startTime, "d.M.yyyy")}
+                  {format(appt.startTime, DATE_FORMAT)}
                 </TableCell>
                 <TableCell>
-                  {format(appt.startTime, "HH:mm")}
+                  {format(appt.startTime, TIME_FORMAT)}
                 </TableCell>
                 <TableCell className="font-medium">
                   {appt.customerName}

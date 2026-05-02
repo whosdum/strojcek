@@ -7,7 +7,11 @@ import { format } from "date-fns";
 import { sk } from "date-fns/locale";
 import Link from "next/link";
 import { CustomerActions } from "@/components/admin/customer-actions";
-import { STATUS_LABELS } from "@/lib/constants";
+import {
+  STATUS_LABELS,
+  STATUS_VARIANTS,
+  DATETIME_FORMAT,
+} from "@/lib/constants";
 
 export default async function CustomerDetailPage({
   params,
@@ -26,7 +30,7 @@ export default async function CustomerDetailPage({
         <span className="mx-1.5">/</span>
         <Link href="/admin/customers" className="hover:text-foreground">Zákazníci</Link>
         <span className="mx-1.5">/</span>
-        <span className="text-foreground">{customer.firstName} {customer.lastName}</span>
+        <span className="text-foreground" aria-current="page">{customer.firstName} {customer.lastName}</span>
       </nav>
 
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -92,11 +96,14 @@ export default async function CustomerDetailPage({
                   >
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <span className="font-medium">
-                        {format(appt.startTime, "d.M.yyyy HH:mm", {
+                        {format(appt.startTime, DATETIME_FORMAT, {
                           locale: sk,
                         })}
                       </span>
-                      <Badge variant="outline" className="self-start">
+                      <Badge
+                        variant={STATUS_VARIANTS[appt.status]}
+                        className="self-start"
+                      >
                         {STATUS_LABELS[appt.status] ?? appt.status}
                       </Badge>
                     </div>

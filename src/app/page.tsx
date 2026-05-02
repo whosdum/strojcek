@@ -1,4 +1,4 @@
-export const dynamic = "force-dynamic";
+export const revalidate = 1800;
 
 import { getActiveServices } from "@/server/queries/services";
 import { getActiveBarbersWithServices } from "@/server/queries/barbers";

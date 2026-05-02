@@ -98,12 +98,17 @@ interface WizardState {
    * block a normally working day. Map<"YYYY-MM-DD", isAvailable>.
    */
   overrides: Record<string, boolean> | null;
+  /** True when the schedule fetch on barber-select failed; the calendar
+   *  shows a retry button instead of an indefinite spinner. */
+  calendarError: boolean;
   loadingSlots: boolean;
   submitting: boolean;
   result: {
     success: boolean;
     error?: string;
+    field?: "firstName" | "lastName" | "phone" | "email" | "note";
     appointmentId?: string;
+    emailFailed?: boolean;
   } | null;
 }
 
@@ -118,6 +123,7 @@ const initialState: WizardState = {
   workingDays: null,
   scheduleEndTimes: null,
   overrides: null,
+  calendarError: false,
   loadingSlots: false,
   submitting: false,
   result: null,
@@ -137,11 +143,18 @@ type WizardAction =
   | { type: "SET_WORKING_DAYS"; workingDays: number[] }
   | { type: "SET_SCHEDULE_END_TIMES"; endTimes: Record<number, string> }
   | { type: "SET_OVERRIDES"; overrides: Record<string, boolean> }
+  | { type: "SET_CALENDAR_ERROR"; error: boolean }
   | { type: "SET_LOADING_SLOTS"; loading: boolean }
   | { type: "SUBMIT_START" }
   | {
       type: "SUBMIT_RESULT";
-      result: { success: boolean; error?: string; appointmentId?: string };
+      result: {
+        success: boolean;
+        error?: string;
+        field?: "firstName" | "lastName" | "phone" | "email" | "note";
+        appointmentId?: string;
+        emailFailed?: boolean;
+      };
     }
   | { type: "EDIT_STEP"; step: number };
 
@@ -209,6 +222,9 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
 
     case "SET_OVERRIDES":
       return { ...state, overrides: action.overrides };
+
+    case "SET_CALENDAR_ERROR":
+      return { ...state, calendarError: action.error };
 
     case "SET_LOADING_SLOTS":
       return { ...state, loadingSlots: action.loading };
@@ -305,6 +321,7 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showTermsHint, setShowTermsHint] = useState(false);
   const draftRestored = useRef(false);
+  const honeypotRef = useRef<HTMLInputElement>(null);
 
   const sectionRefs = useRef<Array<HTMLDivElement | null>>(
     Array(TOTAL_STEPS + 1).fill(null)
@@ -326,37 +343,64 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
 
   // Defined here (above useEffects that depend on it) so the deps array
   // doesn't read it through the temporal dead zone on first render.
+  // Errors are explicitly caught and surfaced via SET_CALENDAR_ERROR — a
+  // silent swallow used to leave the calendar stuck on "Načítavam..." if
+  // any of the three parallel server actions failed (network blip, cold
+  // start, transient Firestore error).
   const loadBarberCalendar = useCallback((barberId: string) => {
+    dispatch({ type: "SET_CALENDAR_ERROR", error: false });
     startTransition(async () => {
-      const [days, endTimes, dateOverrides] = await Promise.all([
-        fetchWorkingDays(barberId),
-        fetchScheduleEndTimes(barberId),
-        fetchUpcomingOverrides(barberId),
-      ]);
-      dispatch({ type: "SET_WORKING_DAYS", workingDays: days });
-      dispatch({ type: "SET_SCHEDULE_END_TIMES", endTimes });
-      dispatch({
-        type: "SET_OVERRIDES",
-        overrides: Object.fromEntries(
-          dateOverrides.map((o) => [o.date, o.isAvailable])
-        ),
-      });
+      try {
+        const [days, endTimes, dateOverrides] = await Promise.all([
+          fetchWorkingDays(barberId),
+          fetchScheduleEndTimes(barberId),
+          fetchUpcomingOverrides(barberId),
+        ]);
+        dispatch({ type: "SET_WORKING_DAYS", workingDays: days });
+        dispatch({ type: "SET_SCHEDULE_END_TIMES", endTimes });
+        dispatch({
+          type: "SET_OVERRIDES",
+          overrides: Object.fromEntries(
+            dateOverrides.map((o) => [o.date, o.isAvailable])
+          ),
+        });
+      } catch (err) {
+        console.error("[booking-wizard] schedule fetch failed", err);
+        dispatch({ type: "SET_CALENDAR_ERROR", error: true });
+      }
     });
   }, []);
 
-  // Restore draft from sessionStorage on mount
+  // Restore draft from sessionStorage on mount. Validates that both
+  // serviceId AND the matching barber for that service still exist —
+  // if a service was deleted/disabled (or the barber dropped that
+  // service) since the draft was saved, restore is silently skipped
+  // and the draft is wiped, so the user starts at step 1 instead of
+  // landing on a broken auto-selected service.
   useEffect(() => {
     if (draftRestored.current) return;
     draftRestored.current = true;
     const draft = getRestoredState();
     if (!draft) return;
-    if (draft.serviceId && services.some((s) => s.id === draft.serviceId)) {
-      dispatch({ type: "SELECT_SERVICE", serviceId: draft.serviceId });
-      if (draft.barberId && barbers.some((b) => b.id === draft.barberId)) {
-        dispatch({ type: "SELECT_BARBER", barberId: draft.barberId });
-        loadBarberCalendar(draft.barberId);
+    const service = draft.serviceId
+      ? services.find((s) => s.id === draft.serviceId)
+      : undefined;
+    if (!service) {
+      try {
+        sessionStorage.removeItem(DRAFT_KEY);
+      } catch {
+        // ignore
       }
+      return;
     }
+    dispatch({ type: "SELECT_SERVICE", serviceId: service.id });
+    if (!draft.barberId) return;
+    const barber = barbers.find(
+      (b) => b.id === draft.barberId && b.serviceIds.includes(service.id)
+    );
+    if (!barber) return; // barber gone or no longer offers this service
+    dispatch({ type: "SELECT_BARBER", barberId: barber.id });
+    loadBarberCalendar(barber.id);
   }, [services, barbers, loadBarberCalendar]);
 
   // Save draft to sessionStorage on relevant state changes
@@ -538,6 +582,7 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
         phone: `${state.contact!.prefix}${state.contact!.phone}`,
         email: state.contact!.email,
         note: state.contact!.note,
+        website: honeypotRef.current?.value ?? "",
       });
       dispatch({ type: "SUBMIT_RESULT", result });
     });
@@ -599,9 +644,25 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
             <h2 className="mt-5 text-2xl font-bold text-foreground">
               Rezervácia potvrdená!
             </h2>
-            <p className="mt-2 text-[15px] text-muted-foreground">
-              Potvrdenie sme odoslali na váš email.
-            </p>
+            {state.result?.emailFailed ? (
+              <div
+                role="alert"
+                className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2.5 text-left text-[13px] text-amber-200"
+              >
+                <p className="font-medium">
+                  Potvrdzujúci email sa nepodarilo odoslať.
+                </p>
+                <p className="mt-1 leading-snug">
+                  Vaša rezervácia je uložená — uložte si prosím detaily
+                  nižšie alebo nás kontaktujte, ak potrebujete cancel
+                  link.
+                </p>
+              </div>
+            ) : (
+              <p className="mt-2 text-[15px] text-muted-foreground">
+                Potvrdenie sme odoslali na váš email.
+              </p>
+            )}
 
             <div className="mt-6 space-y-3 rounded-xl bg-muted/50 p-4 text-left text-[15px]">
               <div className="flex items-center justify-between gap-3">
@@ -659,15 +720,26 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
         <p className="font-medium text-destructive">
           {state.result.error || "Nastala neočakávaná chyba."}
         </p>
-        <Button
-          variant="outline"
-          size="sm"
-          className="mt-2"
-          onClick={handleSubmitBooking}
-          disabled={state.submitting}
-        >
-          Skúsiť znova
-        </Button>
+        {state.result.field ? (
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-2"
+            onClick={() => handleEdit(5)}
+          >
+            Upraviť kontaktné údaje
+          </Button>
+        ) : (
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-2"
+            onClick={handleSubmitBooking}
+            disabled={state.submitting}
+          >
+            Skúsiť znova
+          </Button>
+        )}
       </div>
     </div>
   );
@@ -724,6 +796,24 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
 
   return (
     <div className="space-y-3">
+      <input
+        ref={honeypotRef}
+        type="text"
+        name="website"
+        tabIndex={-1}
+        autoComplete="off"
+        aria-hidden="true"
+        defaultValue=""
+        style={{
+          position: "absolute",
+          left: "-9999px",
+          top: "-9999px",
+          width: 1,
+          height: 1,
+          opacity: 0,
+          pointerEvents: "none",
+        }}
+      />
       {/* Progress indicator */}
       <div className="flex items-center gap-3 px-1">
         <button
@@ -746,7 +836,7 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
           aria-valuenow={state.step}
           aria-valuemin={1}
           aria-valuemax={TOTAL_STEPS}
-          aria-label="Postup rezervácie"
+          aria-label={`Krok ${state.step} z ${TOTAL_STEPS}`}
         >
           {Array.from({ length: TOTAL_STEPS }, (_, i) => {
             const filled = i + 1 <= state.step;
@@ -850,7 +940,29 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
         }
         onEdit={() => handleEdit(3)}
       >
-        {!state.workingDays ? (
+        {state.calendarError ? (
+          <div
+            role="alert"
+            className="flex flex-col items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-8 text-center text-[15px]"
+          >
+            <AlertCircleIcon className="size-6 text-destructive" />
+            <p className="font-medium text-destructive">
+              Nepodarilo sa načítať rozvrh.
+            </p>
+            <p className="text-[13px] text-muted-foreground">
+              Skontrolujte pripojenie a skúste znova.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => state.barberId && loadBarberCalendar(state.barberId)}
+              disabled={!state.barberId}
+            >
+              Skúsiť znova
+            </Button>
+          </div>
+        ) : !state.workingDays ? (
           <div role="status" aria-live="polite" className="flex items-center justify-center gap-2 py-10 text-[15px] text-muted-foreground">
             <Loader2Icon className="size-5 animate-spin text-primary" />
             <span>Načítavam rozvrh...</span>
@@ -912,6 +1024,14 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
         <ContactForm
           onSubmit={handleContactSubmit}
           defaultValues={state.contact ?? undefined}
+          serverError={
+            state.result &&
+            !state.result.success &&
+            state.result.field &&
+            state.result.error
+              ? { field: state.result.field, message: state.result.error }
+              : null
+          }
         />
       </SectionWrapper>
 

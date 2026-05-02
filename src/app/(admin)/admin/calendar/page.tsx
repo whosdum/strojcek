@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PlusIcon } from "lucide-react";
 import { AdminCalendar } from "@/components/admin/admin-calendar";
+import { CalendarErrorBoundary } from "@/components/admin/calendar-error-boundary";
 import { Button } from "@/components/ui/button";
 
 export default function CalendarPage() {
@@ -15,7 +16,9 @@ export default function CalendarPage() {
           </Button>
         </Link>
       </div>
-      <AdminCalendar />
+      <CalendarErrorBoundary>
+        <AdminCalendar />
+      </CalendarErrorBoundary>
     </div>
   );
 }

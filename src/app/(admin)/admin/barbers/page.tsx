@@ -21,7 +21,7 @@ export default async function BarbersPage() {
       <nav className="mb-2 text-sm text-muted-foreground" aria-label="Breadcrumb">
         <Link href="/admin" className="hover:text-foreground">Dashboard</Link>
         <span className="mx-1.5">/</span>
-        <span className="text-foreground">Barberi</span>
+        <span className="text-foreground" aria-current="page">Barberi</span>
       </nav>
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold sm:text-3xl">Barberi</h1>

@@ -41,7 +41,13 @@ export const bookingInputSchema = z.object({
 export type BookingInput = z.infer<typeof bookingInputSchema>;
 
 export const cancelBookingInputSchema = z.object({
-  token: z.string().min(1, "Neplatný odkaz na zrušenie"),
+  // generateToken() emits 32 random bytes hex-encoded → exactly 64 hex
+  // chars; hashToken() (sha256 hex) is the same shape. A strict regex
+  // rejects junk strings upfront so they don't burn Firestore reads
+  // looking for impossible-format tokens.
+  token: z
+    .string()
+    .regex(/^[a-f0-9]{64}$/i, "Neplatný odkaz na zrušenie"),
   reason: z
     .string()
     .trim()

@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
 
   let sent = 0;
   let failed = 0;
+  let smsFailed = 0;
   for (const d of candidates) {
     // Lock-then-send: claim the appointment by setting reminderSentAt
     // INSIDE a transaction before any notification goes out. If two
@@ -78,13 +79,20 @@ export async function GET(request: NextRequest) {
         }),
       });
 
+      // SMS is awaited (Cloud Run may shut the instance down before a
+      // detached fire-and-forget fetch lands at SMSTools). Tracked
+      // independently of `failed` so the response distinguishes between
+      // "email failed" (we count both) and "SMS failed" (email was OK).
       if (appt.customerPhone) {
-        sendSMS({
-          phone: appt.customerPhone,
-          message: `Strojcek: zajtra o ${format(toZonedTime(appt.startTime.toDate(), TIMEZONE), "HH:mm")} mate rezervaciu na ${stripDiacritics(appt.serviceName)}. Pre zrusenie zavolajte ${SHOP_PHONE_DISPLAY}.`,
-        }).catch((err) =>
-          console.error(`[cron/reminders] SMS failed for ${d.id}:`, err)
-        );
+        try {
+          await sendSMS({
+            phone: appt.customerPhone,
+            message: `Strojcek: zajtra o ${format(toZonedTime(appt.startTime.toDate(), TIMEZONE), "HH:mm")} mate rezervaciu na ${stripDiacritics(appt.serviceName)}. Pre zrusenie zavolajte ${SHOP_PHONE_DISPLAY}.`,
+          });
+        } catch (err) {
+          console.error(`[cron/reminders] SMS failed for ${d.id}:`, err);
+          smsFailed++;
+        }
       }
 
       sent++;
@@ -99,5 +107,6 @@ export async function GET(request: NextRequest) {
     found: candidates.length,
     sent,
     failed,
+    smsFailed,
   });
 }

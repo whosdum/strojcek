@@ -18,7 +18,7 @@ export default async function NewReservationPage() {
           Rezervácie
         </Link>
         <span className="mx-1.5">/</span>
-        <span className="text-foreground">Nová</span>
+        <span className="text-foreground" aria-current="page">Nová</span>
       </nav>
       <h1 className="mb-6 text-2xl font-bold sm:text-3xl">Nová rezervácia</h1>
 

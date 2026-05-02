@@ -35,7 +35,9 @@ import {
   TIMEZONE,
   GLOBAL_BOOKING_LIMIT,
   PHONE_BOOKING_LIMIT_24H,
+  EMAIL_BOOKING_LIMIT_24H,
 } from "@/lib/constants";
+import { createHash } from "crypto";
 import { SHOP_PHONE_DISPLAY } from "@/lib/business-info";
 import type { AppointmentStatus } from "@/lib/types";
 import type {
@@ -44,13 +46,45 @@ import type {
   BarberServiceDoc,
 } from "@/server/types/firestore";
 
-type ActionResult = { success: boolean; error?: string; appointmentId?: string };
+type ActionResult = {
+  success: boolean;
+  error?: string;
+  /** When set, the wizard surfaces the message under the matching field
+   *  in the contact form instead of as a generic banner. */
+  field?: "firstName" | "lastName" | "phone" | "email" | "note";
+  appointmentId?: string;
+  /** True when the customer confirmation email failed to send. The
+   *  booking itself is still committed; the UI surfaces a warning so
+   *  the customer can save the cancel-link or contact the shop. */
+  emailFailed?: boolean;
+};
 
 const PHONE_COUNTER_DOC = (phone: string) => `counters/phone_${phone}`;
 const GLOBAL_COUNTER_DOC = "counters/global_bookings";
+/** Hashed so the doc id doesn't expose the email in plaintext if the
+ *  counters collection ever leaks. The hash is one-way; collisions are
+ *  not a concern at this scale. */
+const EMAIL_COUNTER_DOC = (email: string) =>
+  `counters/email_${createHash("sha256")
+    .update(email.toLowerCase())
+    .digest("hex")
+    .slice(0, 32)}`;
 
 export async function createBooking(input: unknown): Promise<ActionResult> {
   try {
+    // Honeypot: a hidden "website" input that real users never see.
+    // Naive bots that auto-fill every text field will set it; we return
+    // a synthetic success so they don't learn to bypass the trap.
+    if (
+      typeof input === "object" &&
+      input !== null &&
+      typeof (input as { website?: unknown }).website === "string" &&
+      (input as { website: string }).website.trim() !== ""
+    ) {
+      console.warn("[booking] honeypot triggered");
+      return { success: true, appointmentId: "honeypot" };
+    }
+
     const data = bookingInputSchema.parse(input);
     const phone = normalizePhone(data.phone);
 
@@ -162,6 +196,23 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
           throw new Error("PHONE_LIMIT");
         }
 
+        // 1b. Per-email 24h rate limit. Without this, an attacker could
+        // bypass the per-phone cap by registering many disposable emails
+        // with the same number. Counter doc id is a SHA-256 prefix of
+        // the lower-cased email so plaintext addresses don't leak via
+        // the counters collection if it's ever exposed.
+        const emailCounterRef = adminDb.doc(EMAIL_COUNTER_DOC(data.email));
+        const emailCounterSnap = await tx.get(emailCounterRef);
+        const existingEmail: Timestamp[] = emailCounterSnap.exists
+          ? (emailCounterSnap.data()?.bookings ?? [])
+          : [];
+        const recentEmail = existingEmail.filter(
+          (t) => t.toMillis() >= cutoff24h
+        );
+        if (recentEmail.length >= EMAIL_BOOKING_LIMIT_24H) {
+          throw new Error("EMAIL_LIMIT");
+        }
+
         // 2. Global 1h rate limit
         const globalCounterRef = adminDb.doc(GLOBAL_COUNTER_DOC);
         const globalCounterSnap = await tx.get(globalCounterRef);
@@ -251,6 +302,9 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
         tx.set(phoneCounterRef, {
           bookings: [...recentPhone, nowTs],
         });
+        tx.set(emailCounterRef, {
+          bookings: [...recentEmail, nowTs],
+        });
 
         const newHourly: Record<string, number> = { ...hourly };
         newHourly[hKey] = currentHourCount + 1;
@@ -266,7 +320,15 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
         if (e.message === "PHONE_LIMIT") {
           return {
             success: false,
-            error: `Dosiahli ste maximálny počet rezervácií za 24 hodín. Pre ďalšiu rezerváciu zavolajte na ${SHOP_PHONE_DISPLAY}.`,
+            field: "phone",
+            error: `Pre toto telefónne číslo bol dosiahnutý denný limit rezervácií. Pre ďalšiu rezerváciu zavolajte na ${SHOP_PHONE_DISPLAY}.`,
+          };
+        }
+        if (e.message === "EMAIL_LIMIT") {
+          return {
+            success: false,
+            field: "email",
+            error: `Pre tento email bol dosiahnutý denný limit rezervácií. Pre ďalšiu rezerváciu zavolajte na ${SHOP_PHONE_DISPLAY}.`,
           };
         }
         if (e.message === "GLOBAL_LIMIT") {
@@ -332,10 +394,12 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
     }
 
     if (!emailResult.success) {
-      // Booking is committed in Firestore. Tell the customer it succeeded
-      // but warn that the email may not arrive — better than pretending
-      // success when SMTP is misconfigured.
+      // Booking is committed in Firestore — surface the email failure to
+      // the wizard so it can show a "your booking is confirmed but the
+      // confirmation email didn't go through, please screenshot the
+      // details" warning instead of silently pretending all is well.
       console.warn("[booking] email send failed for", appointmentId);
+      return { success: true, appointmentId, emailFailed: true };
     }
 
     return { success: true, appointmentId };
@@ -378,6 +442,11 @@ export async function cancelBooking(input: unknown): Promise<ActionResult> {
 
     const { ref, data: appointment } = found;
 
+    // Re-read status + startTime INSIDE the transaction so a concurrent
+    // admin status change (e.g. → IN_PROGRESS / COMPLETED) can't be
+    // silently overwritten by a customer cancel that started its checks
+    // a moment earlier. The pre-tx checks below still fast-path the
+    // common case to avoid an unnecessary tx round-trip.
     if (!CANCELLABLE_STATUSES.includes(appointment.status)) {
       return { success: false, error: "Táto rezervácia už bola zrušená." };
     }
@@ -390,25 +459,61 @@ export async function cancelBooking(input: unknown): Promise<ActionResult> {
       };
     }
 
-    await adminDb.runTransaction(async (tx) => {
-      tx.update(ref, {
-        status: "CANCELLED",
-        cancellationReason,
-        updatedAt: Timestamp.now(),
-      });
+    let oldStatus: AppointmentStatus = appointment.status;
+    try {
+      await adminDb.runTransaction(async (tx) => {
+        const fresh = await tx.get(ref);
+        if (!fresh.exists) throw new Error("NOT_FOUND");
+        const current = fresh.data() as AppointmentDoc;
 
-      const historyRef = ref.collection("history").doc();
-      tx.create(historyRef, {
-        id: historyRef.id,
-        oldStatus: appointment.status,
-        newStatus: "CANCELLED",
-        changedBy: "customer",
-        reason: cancellationReason
-          ? `Zrušené zákazníkom: ${cancellationReason}`
-          : "Zrušené zákazníkom",
-        changedAt: Timestamp.now(),
+        if (!CANCELLABLE_STATUSES.includes(current.status)) {
+          throw new Error("NOT_CANCELLABLE");
+        }
+        const freshMinCancelTime = addHours(new Date(), MIN_CANCEL_HOURS);
+        if (isBefore(current.startTime.toDate(), freshMinCancelTime)) {
+          throw new Error("TOO_LATE");
+        }
+        oldStatus = current.status;
+
+        tx.update(ref, {
+          status: "CANCELLED",
+          cancellationReason,
+          updatedAt: Timestamp.now(),
+        });
+
+        const historyRef = ref.collection("history").doc();
+        tx.create(historyRef, {
+          id: historyRef.id,
+          oldStatus: current.status,
+          newStatus: "CANCELLED",
+          changedBy: "customer",
+          reason: cancellationReason
+            ? `Zrušené zákazníkom: ${cancellationReason}`
+            : "Zrušené zákazníkom",
+          changedAt: Timestamp.now(),
+        });
       });
-    });
+    } catch (e) {
+      if (e instanceof Error) {
+        if (e.message === "NOT_FOUND") {
+          return { success: false, error: "Neplatný alebo expirovaný odkaz." };
+        }
+        if (e.message === "NOT_CANCELLABLE") {
+          return {
+            success: false,
+            error: "Túto rezerváciu už nie je možné zrušiť.",
+          };
+        }
+        if (e.message === "TOO_LATE") {
+          return {
+            success: false,
+            error: `Rezerváciu je možné zrušiť najneskôr ${MIN_CANCEL_HOURS} hodiny pred termínom.`,
+          };
+        }
+      }
+      throw e;
+    }
+    void oldStatus;
 
     const localCancelStart = toZonedTime(
       appointment.startTime.toDate(),

@@ -21,9 +21,9 @@ export default async function BarberDetailPage({
           <span className="mx-1.5">/</span>
           <Link href="/admin/barbers" className="hover:text-foreground">Barberi</Link>
           <span className="mx-1.5">/</span>
-          <span className="text-foreground">Nový</span>
+          <span className="text-foreground" aria-current="page">Nový</span>
         </nav>
-        <h1 className="mb-6 text-2xl font-bold">Nový barber</h1>
+        <h1 className="mb-6 text-2xl font-bold sm:text-3xl">Nový barber</h1>
         <BarberForm
           allServices={services.map((s) => ({ id: s.id, name: s.name }))}
         />
@@ -45,9 +45,9 @@ export default async function BarberDetailPage({
         <span className="mx-1.5">/</span>
         <Link href="/admin/barbers" className="hover:text-foreground">Barberi</Link>
         <span className="mx-1.5">/</span>
-        <span className="text-foreground">{barber.firstName} {barber.lastName}</span>
+        <span className="text-foreground" aria-current="page">{barber.firstName} {barber.lastName}</span>
       </nav>
-      <h1 className="mb-6 text-2xl font-bold">
+      <h1 className="mb-6 text-2xl font-bold sm:text-3xl">
         Upraviť: {barber.firstName} {barber.lastName}
       </h1>
       <BarberForm

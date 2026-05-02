@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeftIcon } from "lucide-react";
 
+export const revalidate = 86400;
+
 export const metadata: Metadata = {
   title: "Ochrana osobných údajov — Strojček",
   description:

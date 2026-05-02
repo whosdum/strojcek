@@ -33,12 +33,16 @@ export function ClickableTableRow({
     }
   };
 
+  // No `role="link"` on the row — it contains nested <Link>/<Button>
+  // elements (eye icon, edit pencil) and screen readers were announcing
+  // the outer link with inner links nested inside it. The row stays
+  // keyboard-activatable via tabIndex + Enter/Space and is described by
+  // its aria-label; inner links keep their own semantics.
   return (
     <TableRow
       onClick={onClick}
       onKeyDown={onKeyDown}
       tabIndex={0}
-      role="link"
       aria-label={ariaLabel ?? "Otvoriť detail"}
       className="cursor-pointer transition-colors hover:bg-muted/40 focus-visible:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
     >

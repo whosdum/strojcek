@@ -58,26 +58,41 @@ export async function updateService(
   if (!(await getSession())) return UNAUTH;
   try {
     const data = serviceInputSchema.parse(input);
-    await adminDb.doc(`services/${id}`).update({
-      ...toDoc(data),
-      updatedAt: Timestamp.now(),
-    });
+    const newPriceCents = Math.round(Number(data.price) * 100);
 
-    // Sync denormalized fields on BarberService docs that reference this service
-    const barberSnap = await adminDb.collection("barbers").get();
-    await Promise.all(
-      barberSnap.docs.map(async (b) => {
-        const bsRef = adminDb.doc(`barbers/${b.id}/services/${id}`);
-        const bsSnap = await bsRef.get();
-        if (!bsSnap.exists) return;
-        await bsRef.update({
+    // Service doc + denormalized BarberService fields written in one
+    // transaction. Previously a network blip mid-loop could leave
+    // serviceName/defaultDuration/bufferMinutes/defaultPriceCents
+    // inconsistent across barbers — some updated, some stale.
+    //
+    // Firestore transactions cap at 500 ops; one barber rarely has more
+    // than a handful of services, and each barber contributes at most
+    // one BarberService doc here, so we're well under the limit.
+    await adminDb.runTransaction(async (tx) => {
+      // --- READ phase ---
+      const barberSnap = await tx.get(adminDb.collection("barbers"));
+      const bsRefs = barberSnap.docs.map((b) =>
+        adminDb.doc(`barbers/${b.id}/services/${id}`)
+      );
+      const bsSnaps = bsRefs.length
+        ? await tx.getAll(...bsRefs)
+        : [];
+
+      // --- WRITE phase ---
+      tx.update(adminDb.doc(`services/${id}`), {
+        ...toDoc(data),
+        updatedAt: Timestamp.now(),
+      });
+      for (const bsSnap of bsSnaps) {
+        if (!bsSnap.exists) continue;
+        tx.update(bsSnap.ref, {
           serviceName: data.name,
           defaultDuration: data.durationMinutes,
           bufferMinutes: data.bufferMinutes,
-          defaultPriceCents: Math.round(Number(data.price) * 100),
+          defaultPriceCents: newPriceCents,
         });
-      })
-    );
+      }
+    });
 
     invalidate();
     return { success: true };

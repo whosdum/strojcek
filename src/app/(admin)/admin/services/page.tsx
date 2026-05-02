@@ -12,7 +12,7 @@ export default async function ServicesPage() {
       <nav className="mb-2 text-sm text-muted-foreground" aria-label="Breadcrumb">
         <Link href="/admin" className="hover:text-foreground">Dashboard</Link>
         <span className="mx-1.5">/</span>
-        <span className="text-foreground">Služby</span>
+        <span className="text-foreground" aria-current="page">Služby</span>
       </nav>
       <ServicesView services={services} />
     </div>

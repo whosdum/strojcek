@@ -3,6 +3,9 @@ export const SLOT_INTERVAL_MINUTES = 60; // Default fallback — actual value fr
 export const PAGE_SIZE = 25;
 export const GLOBAL_BOOKING_LIMIT = 30;
 export const PHONE_BOOKING_LIMIT_24H = 3;
+/** Per-email cap stops the per-phone limit being trivially bypassed by
+ *  registering with multiple email addresses against the same number. */
+export const EMAIL_BOOKING_LIMIT_24H = 5;
 
 export const SLOT_GROUP_BOUNDARIES = {
   morning: { label: "Dopoludnia", start: 7, end: 12 },
@@ -11,6 +14,17 @@ export const SLOT_GROUP_BOUNDARIES = {
 } as const;
 
 export const TIMEZONE = "Europe/Bratislava";
+
+/**
+ * Centralized `date-fns` format strings so admin pages don't drift into
+ * different shapes (`d.M.yyyy` vs `dd.MM.yyyy` vs full month name). Pass
+ * `{ locale: sk }` at the call site to get Slovak weekdays/months.
+ */
+export const DATE_FORMAT = "d.M.yyyy";
+export const TIME_FORMAT = "HH:mm";
+export const DATETIME_FORMAT = "d.M.yyyy HH:mm";
+export const DATETIME_DAY_FORMAT = "EEEE d.M. HH:mm";
+export const DATE_LONG_FORMAT = "EEEE, d. MMMM yyyy";
 
 export const VALID_STATUS_TRANSITIONS: Record<string, string[]> = {
   PENDING: ["CONFIRMED", "CANCELLED"],

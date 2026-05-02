@@ -29,14 +29,14 @@ function invalidate() {
 }
 
 /**
- * Returns the Bratislava-local "today" key (YYYY-MM-DD). Using local TZ
- * ensures an admin opening the page at 00:30 local time can still create
- * an override for today (UTC midnight has already passed).
+ * Returns the Bratislava-local "today" key (YYYY-MM-DD). Computed via
+ * `toZonedTime` + `format` so the calendar walks through midnight cleanly
+ * even on DST-transition days; `Date#toLocaleDateString` would also work,
+ * but date-fns-tz is the canonical TZ helper used elsewhere in the
+ * project so we stay consistent.
  */
 function todayKey(): string {
-  return new Date().toLocaleDateString("en-CA", {
-    timeZone: "Europe/Bratislava",
-  });
+  return format(toZonedTime(new Date(), TIMEZONE), "yyyy-MM-dd");
 }
 
 /**

@@ -70,7 +70,7 @@ export default async function EditReservationPage({
           Detail
         </Link>
         <span className="mx-1.5">/</span>
-        <span className="text-foreground">Upraviť</span>
+        <span className="text-foreground" aria-current="page">Upraviť</span>
       </nav>
       <h1 className="mb-6 text-2xl font-bold sm:text-3xl">Upraviť rezerváciu</h1>
 

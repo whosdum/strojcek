@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -46,6 +46,14 @@ type ContactFormValues = z.infer<typeof contactSchema>;
 interface ContactFormProps {
   onSubmit: (data: ContactFormValues) => void;
   defaultValues?: Partial<ContactFormValues>;
+  /** When the server rejects the booking with a per-field error (e.g.
+   *  email-rate-limit), the wizard sends the user back to this step
+   *  with `serverError` set so it can be surfaced inline at the right
+   *  field instead of as a generic banner. */
+  serverError?: {
+    field: "firstName" | "lastName" | "phone" | "email" | "note";
+    message: string;
+  } | null;
 }
 
 export function ContactForm(props: ContactFormProps) {
@@ -53,6 +61,7 @@ export function ContactForm(props: ContactFormProps) {
     register,
     handleSubmit,
     watch,
+    setError,
     formState: { errors, touchedFields, isSubmitting },
   } = useForm<ContactFormValues>({
     resolver: zodResolver(contactSchema),
@@ -67,6 +76,15 @@ export function ContactForm(props: ContactFormProps) {
       ...props.defaultValues,
     },
   });
+
+  // When the parent passes a server-side rejection (e.g. email-rate-limit),
+  // surface it on the matching field. The user can fix the value and the
+  // standard onTouched flow clears the error on next interaction.
+  const serverError = props.serverError;
+  useEffect(() => {
+    if (!serverError) return;
+    setError(serverError.field, { type: "server", message: serverError.message });
+  }, [serverError, setError]);
 
   const noteLength = watch("note")?.length ?? 0;
   const [phoneZeroHint, setPhoneZeroHint] = useState(false);

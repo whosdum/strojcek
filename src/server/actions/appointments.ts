@@ -46,6 +46,16 @@ interface CustomerUpsertResult {
   customerId: string;
 }
 
+/**
+ * Bratislava-local "today" key (YYYY-MM-DD). Used to reject admin
+ * appointments dated in the past unless the admin explicitly opts in via
+ * `ignoreSchedule`. Local TZ avoids the late-night UTC drift bug where the
+ * server thought "today" was still yesterday's date until 02:00 CEST.
+ */
+function todayLocalKey(): string {
+  return new Date().toLocaleDateString("en-CA", { timeZone: TIMEZONE });
+}
+
 async function upsertCustomerByPhone(input: {
   phone: string;
   firstName: string;
@@ -228,6 +238,20 @@ export async function createAppointmentAdmin(
   if (!(await getSession())) return UNAUTH;
   try {
     const data = adminAppointmentInputSchema.parse(input);
+
+    // Admins shouldn't be able to backdate brand-new bookings into the
+    // past — that confuses reports, slot logic and customer comms. The
+    // `ignoreSchedule` toggle stays as the explicit escape hatch for
+    // legitimate cases (e.g. recording a walk-in that happened earlier
+    // today, or correcting a missed entry from yesterday).
+    if (!data.ignoreSchedule && data.date < todayLocalKey()) {
+      return {
+        success: false,
+        error:
+          "Dátum nesmie byť v minulosti. Pre historické záznamy zapnite „Ignorovať rozvrh“.",
+      };
+    }
+
     const phone = normalizePhone(data.phone);
 
     const loaded = await loadBarberAndService(data.barberId, data.serviceId);
@@ -390,6 +414,23 @@ export async function updateAppointment(
     const limited =
       existing.status === "IN_PROGRESS" || existing.status === "COMPLETED";
 
+    // Block moving an appointment INTO the past unless the admin opts in
+    // via `ignoreSchedule`. We compare the new date against the existing
+    // startDateKey so editing notes/price on a historical record (where
+    // both the old and new date are already in the past) keeps working.
+    if (
+      !limited &&
+      !data.ignoreSchedule &&
+      data.date < todayLocalKey() &&
+      data.date !== existing.startDateKey
+    ) {
+      return {
+        success: false,
+        error:
+          "Dátum nesmie byť v minulosti. Pre historické záznamy zapnite „Ignorovať rozvrh“.",
+      };
+    }
+
     if (limited) {
       const priceFinal =
         data.priceFinal === "" || data.priceFinal == null
@@ -502,29 +543,36 @@ export async function deleteAppointment(id: string): Promise<ActionResult> {
   if (!(await getSession())) return UNAUTH;
   try {
     const apptRef = adminDb.doc(`appointments/${id}`);
-    const snap = await apptRef.get();
-    if (!snap.exists) {
-      return { success: false, error: "Rezervácia nenájdená." };
-    }
-    const data = snap.data() as AppointmentDoc;
 
-    if (data.status === "COMPLETED" && data.customerId) {
-      await adminDb.doc(`customers/${data.customerId}`).update({
-        visitCount: FieldValue.increment(-1),
-      });
-    }
+    // One transaction across read → visitCount decrement → history wipe →
+    // appointment delete. Previously these were two separate writes, which
+    // could leave visitCount inconsistent with the actual appointment count
+    // if the network failed between the increment call and the batch.
+    await adminDb.runTransaction(async (tx) => {
+      const snap = await tx.get(apptRef);
+      if (!snap.exists) {
+        throw new Error("NOT_FOUND");
+      }
+      const data = snap.data() as AppointmentDoc;
+      const historySnap = await tx.get(apptRef.collection("history"));
 
-    const historySnap = await apptRef.collection("history").get();
-    const batch = adminDb.batch();
-    for (const h of historySnap.docs) batch.delete(h.ref);
-    batch.delete(apptRef);
-    await batch.commit();
+      if (data.status === "COMPLETED" && data.customerId) {
+        tx.update(adminDb.doc(`customers/${data.customerId}`), {
+          visitCount: FieldValue.increment(-1),
+        });
+      }
+      for (const h of historySnap.docs) tx.delete(h.ref);
+      tx.delete(apptRef);
+    });
 
     revalidatePath("/admin/reservations");
     revalidatePath("/admin/calendar");
     revalidatePath("/admin");
     return { success: true };
   } catch (e) {
+    if (e instanceof Error && e.message === "NOT_FOUND") {
+      return { success: false, error: "Rezervácia nenájdená." };
+    }
     console.error("[deleteAppointment]", e);
     return { success: false, error: "Nastala chyba pri mazaní rezervácie." };
   }
