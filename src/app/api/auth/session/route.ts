@@ -3,22 +3,52 @@ import { cookies } from "next/headers";
 import { adminAuth } from "@/server/lib/firebase-admin";
 import { SESSION_COOKIE } from "@/server/lib/auth";
 
-const SITE_ORIGIN = process.env.NEXT_PUBLIC_APP_URL;
+const CONFIGURED_ORIGIN = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const SESSION_DURATION_MS = 60 * 60 * 24 * 7 * 1000; // 7 days
 
+/**
+ * Build the set of origins the server treats as "ourselves" for the
+ * same-origin CSRF guard. We accept:
+ *   - the configured NEXT_PUBLIC_APP_URL (custom domain), and
+ *   - whatever the request claims its host is (the auto-generated
+ *     App Hosting URL, the custom domain, or a preview URL — they
+ *     all reach the same Cloud Run instance).
+ * This avoids 403 when the project is reachable on multiple hosts.
+ */
+function allowedOrigins(req: NextRequest): Set<string> {
+  const allowed = new Set<string>();
+  if (CONFIGURED_ORIGIN) allowed.add(CONFIGURED_ORIGIN);
+
+  const host =
+    req.headers.get("x-forwarded-host") ?? req.headers.get("host");
+  if (host) {
+    const proto =
+      req.headers.get("x-forwarded-proto") ??
+      (req.nextUrl.protocol.replace(/:$/, "") || "https");
+    allowed.add(`${proto}://${host}`);
+  }
+  return allowed;
+}
+
 export async function POST(request: NextRequest) {
-  // Same-origin guard: require Origin matches the configured app URL when one
-  // is set. This blocks login-CSRF where evil.com posts an idToken to our
-  // /api/auth/session and pins a session cookie for the victim's browser.
-  // Skipped only in dev when NEXT_PUBLIC_APP_URL is unset.
-  if (SITE_ORIGIN) {
-    const origin = request.headers.get("origin");
-    if (origin && origin !== SITE_ORIGIN) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  // Same-origin guard. Blocks login-CSRF where evil.com POSTs an idToken
+  // to pin a session cookie in the victim's browser. We accept any
+  // origin that matches our own host or NEXT_PUBLIC_APP_URL.
+  const origin = request.headers.get("origin");
+  if (origin) {
+    const allowed = allowedOrigins(request);
+    if (!allowed.has(origin)) {
+      console.warn(
+        `[auth/session] Origin mismatch: got ${origin}, allowed=${[...allowed].join(",")}`
+      );
+      return NextResponse.json(
+        { error: "origin_mismatch" },
+        { status: 403 }
+      );
     }
   }
 
@@ -42,7 +72,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (decoded.role !== "admin") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "no_admin_claim" }, { status: 403 });
   }
 
   let sessionCookie: string;

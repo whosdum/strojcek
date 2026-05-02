@@ -14,6 +14,21 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2Icon } from "lucide-react";
 
+// Distinguish the server-side 403 reasons so the form shows a useful
+// message instead of always blaming the user's account permissions.
+function messageForFailure(status: number, errorCode?: string): string {
+  if (status === 403 && errorCode === "no_admin_claim") {
+    return "Tento účet nemá administrátorské oprávnenia.";
+  }
+  if (status === 403 && errorCode === "origin_mismatch") {
+    return "Konfigurácia servera odmietla tento pôvod. Kontaktujte administrátora.";
+  }
+  if (status === 401) {
+    return "Neplatný prihlasovací token. Skús to znova.";
+  }
+  return "Nepodarilo sa vytvoriť session. Skús znova.";
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -50,9 +65,8 @@ export default function LoginPage() {
           return;
         }
         await signOut(auth).catch(() => {});
-        if (res.status === 403) {
-          setError("Tento účet nemá administrátorské oprávnenia.");
-        }
+        const body = await res.json().catch(() => ({}));
+        setError(messageForFailure(res.status, body?.error));
         setChecking(false);
       } catch {
         await signOut(auth).catch(() => {});
@@ -86,11 +100,8 @@ export default function LoginPage() {
         // that the useEffect above would later try to "resume" — that's
         // exactly how the /login → /admin → /login loop got started.
         await signOut(auth).catch(() => {});
-        if (res.status === 403) {
-          setError("Tento účet nemá administrátorské oprávnenia.");
-        } else {
-          setError("Nepodarilo sa vytvoriť session. Skús znova.");
-        }
+        const body = await res.json().catch(() => ({}));
+        setError(messageForFailure(res.status, body?.error));
         setLoading(false);
         return;
       }
