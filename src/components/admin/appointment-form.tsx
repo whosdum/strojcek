@@ -454,6 +454,7 @@ export function AppointmentForm({
               onChange={(e) => updateField("firstName", e.target.value)}
               disabled={limited}
               autoComplete="given-name"
+              maxLength={50}
             />
           </div>
           <div className="space-y-1.5">
@@ -464,6 +465,7 @@ export function AppointmentForm({
               onChange={(e) => updateField("lastName", e.target.value)}
               disabled={limited}
               autoComplete="family-name"
+              maxLength={50}
             />
           </div>
         </div>
@@ -519,6 +521,7 @@ export function AppointmentForm({
             onChange={(e) => updateField("email", e.target.value)}
             disabled={limited}
             autoComplete="email"
+            maxLength={254}
           />
           <p className="text-xs text-muted-foreground">
             {mode === "create"

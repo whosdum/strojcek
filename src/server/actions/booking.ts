@@ -1,7 +1,7 @@
 "use server";
 
 import { Timestamp } from "firebase-admin/firestore";
-import { addMinutes, format, addHours, isBefore, subHours } from "date-fns";
+import { addDays, addMinutes, format, addHours, isBefore, parseISO, subHours } from "date-fns";
 import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import { randomUUID } from "crypto";
 
@@ -64,6 +64,24 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
     }
     const barber = barberSnap.data() as BarberDoc;
     const bs = bsSnap.data() as BarberServiceDoc;
+
+    // Booking horizon — public bookings only (admin appointment-form uses
+    // its own action and intentionally has no upper bound). Compare
+    // requested-vs-horizon as Bratislava-local YYYY-MM-DD strings so the
+    // window matches what the customer sees in the wizard, even when the
+    // server runs in UTC and Bratislava midnight has already passed.
+    const horizonWeeks = barber.bookingHorizonWeeks ?? 3;
+    const todayKey = new Date().toLocaleDateString("en-CA", {
+      timeZone: TIMEZONE,
+    });
+    const horizonEnd = addDays(parseISO(todayKey), horizonWeeks * 7);
+    const horizonEndKey = format(horizonEnd, "yyyy-MM-dd");
+    if (data.date > horizonEndKey) {
+      return {
+        success: false,
+        error: `Termín je príliš ďaleko v budúcnosti. Rezervovať je možné najviac ${horizonWeeks} týždňov dopredu.`,
+      };
+    }
     const duration = bs.customDuration ?? bs.defaultDuration;
     const buffer = bs.bufferMinutes;
     const priceCents = bs.customPriceCents ?? bs.defaultPriceCents;
@@ -163,12 +181,22 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
             .where("barberId", "==", data.barberId)
             .where("startDateKey", "==", startKey)
         );
+        // Match the slot-generator's blocking logic: each appointment
+        // reserves [start, end + serviceBufferMinutes], and the new
+        // appointment reserves [newStart, newEnd + newBuffer]. Without
+        // including buffers here, a back-to-back booking that the slot
+        // picker would have hidden could slip through if a stale slot
+        // list is submitted from a client.
+        const newEndWithBuffer = endTime.getTime() + buffer * 60_000;
         const overlap = conflictsSnap.docs.some((d) => {
           const a = d.data() as AppointmentDoc;
           if (a.status === "CANCELLED" || a.status === "NO_SHOW") return false;
+          const aStart = a.startTime.toMillis();
+          const aEndWithBuffer =
+            a.endTime.toMillis() + (a.serviceBufferMinutes ?? 0) * 60_000;
           return (
-            a.startTime.toMillis() < endTime.getTime() &&
-            a.endTime.toMillis() > startTime.getTime()
+            aStart < newEndWithBuffer &&
+            aEndWithBuffer > startTime.getTime()
           );
         });
         if (overlap) throw new Error("SLOT_TAKEN");

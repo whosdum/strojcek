@@ -73,6 +73,7 @@ export function CustomerEditForm({ customer, onClose }: CustomerEditFormProps) {
           <Label htmlFor="firstName">Meno *</Label>
           <Input
             id="firstName"
+            maxLength={50}
             aria-required
             aria-invalid={!!errors.firstName}
             aria-describedby={errors.firstName ? "firstName-error" : undefined}
@@ -84,7 +85,7 @@ export function CustomerEditForm({ customer, onClose }: CustomerEditFormProps) {
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="lastName">Priezvisko</Label>
-          <Input id="lastName" {...register("lastName")} />
+          <Input id="lastName" maxLength={50} {...register("lastName")} />
         </div>
       </div>
 
@@ -104,7 +105,7 @@ export function CustomerEditForm({ customer, onClose }: CustomerEditFormProps) {
 
       <div className="space-y-1.5">
         <Label htmlFor="email">Email</Label>
-        <Input id="email" type="email" {...register("email")} />
+        <Input id="email" type="email" maxLength={254} {...register("email")} />
       </div>
 
       <div className="space-y-1.5">

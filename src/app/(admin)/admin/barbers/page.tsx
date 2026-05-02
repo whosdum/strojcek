@@ -10,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ClickableTableRow } from "@/components/admin/clickable-table-row";
 import { PlusIcon, PencilIcon } from "lucide-react";
 
 export default async function BarbersPage() {
@@ -87,7 +88,11 @@ export default async function BarbersPage() {
           </TableHeader>
           <TableBody>
             {barbers.map((barber) => (
-              <TableRow key={barber.id}>
+              <ClickableTableRow
+                key={barber.id}
+                href={`/admin/barbers/${barber.id}`}
+                ariaLabel={`Upraviť ${barber.firstName} ${barber.lastName}`}
+              >
                 <TableCell className="font-medium">
                   {barber.firstName} {barber.lastName}
                 </TableCell>
@@ -106,13 +111,16 @@ export default async function BarbersPage() {
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <Link href={`/admin/barbers/${barber.id}`}>
+                  <Link
+                    href={`/admin/barbers/${barber.id}`}
+                    aria-label="Upraviť barbera"
+                  >
                     <Button variant="ghost" size="icon-sm">
                       <PencilIcon className="size-4" />
                     </Button>
                   </Link>
                 </TableCell>
-              </TableRow>
+              </ClickableTableRow>
             ))}
           </TableBody>
         </Table>

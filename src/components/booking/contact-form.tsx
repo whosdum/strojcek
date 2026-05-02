@@ -10,19 +10,36 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
+// Length caps mirror the server-side bookingInputSchema so abuse (giant
+// names, RFC-bypassing emails) can't sneak past the form.
+const NAME_MAX_LENGTH = 50;
+const EMAIL_MAX_LENGTH = 254;
+const NOTE_MAX_LENGTH = 500;
+
 const contactSchema = z.object({
-  firstName: z.string().min(1, "Meno je povinné"),
-  lastName: z.string().min(1, "Priezvisko je povinné"),
+  firstName: z
+    .string()
+    .min(1, "Meno je povinné")
+    .max(NAME_MAX_LENGTH, `Meno môže mať najviac ${NAME_MAX_LENGTH} znakov`),
+  lastName: z
+    .string()
+    .min(1, "Priezvisko je povinné")
+    .max(
+      NAME_MAX_LENGTH,
+      `Priezvisko môže mať najviac ${NAME_MAX_LENGTH} znakov`
+    ),
   prefix: z.enum(["+421", "+420"]),
   phone: z
     .string()
     .min(1, "Telefón je povinný")
     .regex(/^[1-9]\d{8}$/, "Číslo bez predvoľby, bez úvodnej nuly (napr. 903123456)"),
-  email: z.string().min(1, "Email je povinný").email("Zadajte platný email"),
-  note: z.string().max(500, "Poznámka môže mať najviac 500 znakov"),
+  email: z
+    .string()
+    .min(1, "Email je povinný")
+    .email("Zadajte platný email")
+    .max(EMAIL_MAX_LENGTH, `Email môže mať najviac ${EMAIL_MAX_LENGTH} znakov`),
+  note: z.string().max(NOTE_MAX_LENGTH, "Poznámka môže mať najviac 500 znakov"),
 });
-
-const NOTE_MAX_LENGTH = 500;
 
 type ContactFormValues = z.infer<typeof contactSchema>;
 
@@ -73,6 +90,7 @@ export function ContactForm(props: ContactFormProps) {
             className="h-11 bg-muted/30 text-foreground placeholder:text-muted-foreground/60"
             placeholder="Ján"
             autoComplete="given-name"
+            maxLength={NAME_MAX_LENGTH}
             aria-required
             aria-invalid={!!errors.firstName}
             aria-describedby={errors.firstName ? "firstName-error" : undefined}
@@ -93,6 +111,7 @@ export function ContactForm(props: ContactFormProps) {
             className="h-11 bg-muted/30 text-foreground placeholder:text-muted-foreground/60"
             placeholder="Novák"
             autoComplete="family-name"
+            maxLength={NAME_MAX_LENGTH}
             aria-required
             aria-invalid={!!errors.lastName}
             aria-describedby={errors.lastName ? "lastName-error" : undefined}
@@ -169,6 +188,7 @@ export function ContactForm(props: ContactFormProps) {
           placeholder="jan.novak@email.sk"
           className="h-11 bg-muted/30 text-foreground placeholder:text-muted-foreground/60"
           autoComplete="email"
+          maxLength={EMAIL_MAX_LENGTH}
           aria-required
           aria-invalid={!!errors.email}
           aria-describedby={errors.email ? "email-error" : undefined}

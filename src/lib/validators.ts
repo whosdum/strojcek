@@ -14,14 +14,28 @@ export const bookingInputSchema = z.object({
   barberId: z.string().uuid(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   time: timeString,
-  firstName: z.string().min(1, "Meno je povinné"),
-  lastName: z.string().min(1, "Priezvisko je povinné"),
+  firstName: z
+    .string()
+    .min(1, "Meno je povinné")
+    .max(50, "Meno môže mať najviac 50 znakov"),
+  lastName: z
+    .string()
+    .min(1, "Priezvisko je povinné")
+    .max(50, "Priezvisko môže mať najviac 50 znakov"),
   phone: z
     .string()
     .min(1, "Telefón je povinný")
     .regex(/^\+4(20|21)\d{9}$/, "Neplatné telefónne číslo"),
-  email: z.string().min(1, "Email je povinný").email("Zadajte platný email"),
-  note: z.string().optional().default(""),
+  email: z
+    .string()
+    .min(1, "Email je povinný")
+    .email("Zadajte platný email")
+    .max(254, "Email môže mať najviac 254 znakov"),
+  note: z
+    .string()
+    .max(500, "Poznámka môže mať najviac 500 znakov")
+    .optional()
+    .default(""),
 });
 
 export type BookingInput = z.infer<typeof bookingInputSchema>;
@@ -59,9 +73,50 @@ export const barberInputSchema = z.object({
   avatarUrl: z.string().url().optional().or(z.literal("")),
   isActive: z.boolean().default(true),
   sortOrder: z.coerce.number().default(0),
+  bookingHorizonWeeks: z.coerce
+    .number()
+    .int("Musí byť celé číslo")
+    .min(1, "Najmenej 1 týždeň")
+    .max(26, "Najviac 26 týždňov")
+    .default(3),
 });
 
 export type BarberInput = z.infer<typeof barberInputSchema>;
+
+export const overrideInputSchema = z
+  .object({
+    barberId: z.string().uuid(),
+    overrideDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Neplatný dátum"),
+    isAvailable: z.boolean(),
+    startTime: timeString.nullable().optional(),
+    endTime: timeString.nullable().optional(),
+    reason: z
+      .string()
+      .trim()
+      .max(200, "Maximálne 200 znakov")
+      .optional()
+      .default(""),
+    force: z.boolean().optional().default(false),
+  })
+  .refine(
+    (d) => !d.isAvailable || (!!d.startTime && !!d.endTime),
+    {
+      message: "Pri vlastných hodinách musia byť zadané obe časy",
+      path: ["endTime"],
+    }
+  )
+  .refine(
+    (d) =>
+      !d.isAvailable ||
+      !d.startTime ||
+      !d.endTime ||
+      d.startTime < d.endTime,
+    { message: "Koniec musí byť po začiatku", path: ["endTime"] }
+  );
+
+export type OverrideInput = z.infer<typeof overrideInputSchema>;
 
 export const scheduleInputSchema = z
   .object({
@@ -94,11 +149,27 @@ export const breakInputSchema = z
 export type BreakInput = z.infer<typeof breakInputSchema>;
 
 export const customerInputSchema = z.object({
-  firstName: z.string().min(1, "Meno je povinné"),
-  lastName: z.string().optional().default(""),
+  firstName: z
+    .string()
+    .min(1, "Meno je povinné")
+    .max(50, "Meno môže mať najviac 50 znakov"),
+  lastName: z
+    .string()
+    .max(50, "Priezvisko môže mať najviac 50 znakov")
+    .optional()
+    .default(""),
   phone: z.string().min(1, "Telefón je povinný").regex(/^\+4(20|21)\d{9}$/, "Neplatné telefónne číslo"),
-  email: z.string().email().optional().or(z.literal("")),
-  notes: z.string().optional().default(""),
+  email: z
+    .string()
+    .email()
+    .max(254, "Email môže mať najviac 254 znakov")
+    .optional()
+    .or(z.literal("")),
+  notes: z
+    .string()
+    .max(1000, "Poznámka môže mať najviac 1000 znakov")
+    .optional()
+    .default(""),
 });
 
 export type CustomerInput = z.infer<typeof customerInputSchema>;
@@ -108,14 +179,29 @@ export const adminAppointmentInputSchema = z.object({
   barberId: z.string().uuid(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Neplatný dátum"),
   time: timeString,
-  firstName: z.string().min(1, "Meno je povinné"),
-  lastName: z.string().optional().default(""),
+  firstName: z
+    .string()
+    .min(1, "Meno je povinné")
+    .max(50, "Meno môže mať najviac 50 znakov"),
+  lastName: z
+    .string()
+    .max(50, "Priezvisko môže mať najviac 50 znakov")
+    .optional()
+    .default(""),
   phone: z
     .string()
     .min(1, "Telefón je povinný")
     .regex(/^\+4(20|21)\d{9}$/, "Neplatné telefónne číslo"),
-  email: z.string().min(1, "Email je povinný").email("Zadajte platný email"),
-  notes: z.string().optional().default(""),
+  email: z
+    .string()
+    .min(1, "Email je povinný")
+    .email("Zadajte platný email")
+    .max(254, "Email môže mať najviac 254 znakov"),
+  notes: z
+    .string()
+    .max(1000, "Poznámka môže mať najviac 1000 znakov")
+    .optional()
+    .default(""),
   ignoreSchedule: z.boolean().default(false),
 });
 

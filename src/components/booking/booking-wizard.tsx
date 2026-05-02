@@ -8,7 +8,7 @@ import {
   useCallback,
   useState,
 } from "react";
-import { format, parseISO } from "date-fns";
+import { addDays, endOfMonth, format, parseISO } from "date-fns";
 import { sk } from "date-fns/locale/sk";
 import {
   CheckCircle2Icon,
@@ -32,7 +32,12 @@ import { TimeSlots } from "./time-slots";
 import { ContactForm } from "./contact-form";
 import { BookingSummary } from "./booking-summary";
 
-import { fetchSlots, fetchWorkingDays, fetchScheduleEndTimes } from "@/server/actions/slots";
+import {
+  fetchSlots,
+  fetchWorkingDays,
+  fetchScheduleEndTimes,
+  fetchUpcomingOverrides,
+} from "@/server/actions/slots";
 import { createBooking } from "@/server/actions/booking";
 
 // ---------------------------------------------------------------------------
@@ -47,6 +52,7 @@ interface BarberWithServices {
   avatarUrl: string | null;
   serviceIds: string[];
   serviceOverrides: Record<string, { price?: string; duration?: number }>;
+  bookingHorizonWeeks: number;
 }
 
 interface ServiceData {
@@ -85,6 +91,12 @@ interface WizardState {
   slots: string[] | null;
   workingDays: number[] | null;
   scheduleEndTimes: Record<number, string> | null;
+  /**
+   * Date-keyed override availability. Set independently of workingDays so an
+   * override can make a normally non-working day (e.g. Sunday) available, or
+   * block a normally working day. Map<"YYYY-MM-DD", isAvailable>.
+   */
+  overrides: Record<string, boolean> | null;
   loadingSlots: boolean;
   submitting: boolean;
   result: {
@@ -104,6 +116,7 @@ const initialState: WizardState = {
   slots: null,
   workingDays: null,
   scheduleEndTimes: null,
+  overrides: null,
   loadingSlots: false,
   submitting: false,
   result: null,
@@ -122,6 +135,7 @@ type WizardAction =
   | { type: "SET_SLOTS"; slots: string[] }
   | { type: "SET_WORKING_DAYS"; workingDays: number[] }
   | { type: "SET_SCHEDULE_END_TIMES"; endTimes: Record<number, string> }
+  | { type: "SET_OVERRIDES"; overrides: Record<string, boolean> }
   | { type: "SET_LOADING_SLOTS"; loading: boolean }
   | { type: "SUBMIT_START" }
   | {
@@ -192,6 +206,9 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
     case "SET_SCHEDULE_END_TIMES":
       return { ...state, scheduleEndTimes: action.endTimes };
 
+    case "SET_OVERRIDES":
+      return { ...state, overrides: action.overrides };
+
     case "SET_LOADING_SLOTS":
       return { ...state, loadingSlots: action.loading };
 
@@ -215,6 +232,7 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
           slots: null,
           workingDays: null,
           scheduleEndTimes: null,
+          overrides: null,
         }),
         ...(s === 2 && {
           barberId: null,
@@ -223,6 +241,7 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
           slots: null,
           workingDays: null,
           scheduleEndTimes: null,
+          overrides: null,
         }),
         ...(s === 3 && {
           date: null,
@@ -298,6 +317,26 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
     return sectionRefCallbacks.current[step];
   }, []);
 
+  // Defined here (above useEffects that depend on it) so the deps array
+  // doesn't read it through the temporal dead zone on first render.
+  const loadBarberCalendar = useCallback((barberId: string) => {
+    startTransition(async () => {
+      const [days, endTimes, dateOverrides] = await Promise.all([
+        fetchWorkingDays(barberId),
+        fetchScheduleEndTimes(barberId),
+        fetchUpcomingOverrides(barberId),
+      ]);
+      dispatch({ type: "SET_WORKING_DAYS", workingDays: days });
+      dispatch({ type: "SET_SCHEDULE_END_TIMES", endTimes });
+      dispatch({
+        type: "SET_OVERRIDES",
+        overrides: Object.fromEntries(
+          dateOverrides.map((o) => [o.date, o.isAvailable])
+        ),
+      });
+    });
+  }, []);
+
   // Restore draft from sessionStorage on mount
   useEffect(() => {
     if (draftRestored.current) return;
@@ -308,18 +347,10 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
       dispatch({ type: "SELECT_SERVICE", serviceId: draft.serviceId });
       if (draft.barberId && barbers.some((b) => b.id === draft.barberId)) {
         dispatch({ type: "SELECT_BARBER", barberId: draft.barberId });
-        // Fetch working days so the calendar isn't stuck loading
-        startTransition(async () => {
-          const [days, endTimes] = await Promise.all([
-            fetchWorkingDays(draft.barberId!),
-            fetchScheduleEndTimes(draft.barberId!),
-          ]);
-          dispatch({ type: "SET_WORKING_DAYS", workingDays: days });
-          dispatch({ type: "SET_SCHEDULE_END_TIMES", endTimes });
-        });
+        loadBarberCalendar(draft.barberId);
       }
     }
-  }, [services, barbers]);
+  }, [services, barbers, loadBarberCalendar]);
 
   // Save draft to sessionStorage on relevant state changes
   useEffect(() => {
@@ -377,7 +408,7 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
     if (state.step === TOTAL_STEPS) {
       const timer = setTimeout(() => {
         setShowTermsHint(true);
-      }, 3000);
+      }, 10000);
       return () => clearTimeout(timer);
     }
     setShowTermsHint(false);
@@ -432,30 +463,19 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
       if (available.length === 1) {
         const barberId = available[0].id;
         dispatch({ type: "SELECT_BARBER", barberId });
-        startTransition(async () => {
-          const [days, endTimes] = await Promise.all([
-            fetchWorkingDays(barberId),
-            fetchScheduleEndTimes(barberId),
-          ]);
-          dispatch({ type: "SET_WORKING_DAYS", workingDays: days });
-          dispatch({ type: "SET_SCHEDULE_END_TIMES", endTimes });
-        });
+        loadBarberCalendar(barberId);
       }
     },
-    [barbers]
+    [barbers, loadBarberCalendar]
   );
 
-  const handleSelectBarber = useCallback((barberId: string) => {
-    dispatch({ type: "SELECT_BARBER", barberId });
-    startTransition(async () => {
-      const [days, endTimes] = await Promise.all([
-        fetchWorkingDays(barberId),
-        fetchScheduleEndTimes(barberId),
-      ]);
-      dispatch({ type: "SET_WORKING_DAYS", workingDays: days });
-      dispatch({ type: "SET_SCHEDULE_END_TIMES", endTimes });
-    });
-  }, []);
+  const handleSelectBarber = useCallback(
+    (barberId: string) => {
+      dispatch({ type: "SELECT_BARBER", barberId });
+      loadBarberCalendar(barberId);
+    },
+    [loadBarberCalendar]
+  );
 
   const handleSelectDate = useCallback(
     (date: Date | undefined) => {
@@ -649,10 +669,27 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
   todayStart.setHours(0, 0, 0, 0);
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
+  // Booking horizon — read from selected barber, fallback to 3 weeks if barber
+  // hasn't been selected yet (matches server-side default in createBooking).
+  const horizonWeeks = selectedBarber?.bookingHorizonWeeks ?? 3;
+  const horizonEnd = addDays(todayStart, horizonWeeks * 7);
+  const calendarToMonth = endOfMonth(horizonEnd);
+
   const calendarDisabledMatcher = (date: Date) => {
     if (date < todayStart) return true;
+    if (date > horizonEnd) return true;
     // Block ALL days until working days are loaded from the server
     if (!state.workingDays) return true;
+
+    // Per-date override wins over the weekly schedule. This makes a
+    // normally non-working day (e.g. Sunday) selectable when the barber
+    // explicitly added a custom-hours override for it, and conversely
+    // blocks a normally working day marked as a "day off".
+    const dateKey = format(date, "yyyy-MM-dd");
+    const override = state.overrides?.[dateKey];
+    if (override === false) return true;       // explicit day off
+    if (override === true) return false;       // custom-hours override
+
     const dayOfWeek = date.getDay();
     if (!state.workingDays.includes(dayOfWeek)) return true;
     // Disable today if current time is past the barber's schedule end
@@ -664,14 +701,6 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
         .split(":")
         .map(Number);
       if (currentMinutes >= endH * 60 + endM) return true;
-    }
-    return false;
-  };
-
-  const calendarAvailableMatcher = (date: Date) => {
-    if (calendarDisabledMatcher(date)) return false;
-    if (state.workingDays) {
-      return state.workingDays.includes(date.getDay());
     }
     return false;
   };
@@ -821,8 +850,8 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
               selected={state.date ? parseISO(state.date) : undefined}
               onSelect={handleSelectDate}
               disabled={calendarDisabledMatcher}
-              modifiers={{ available: calendarAvailableMatcher }}
-              modifiersClassNames={{ available: "calendar-day-available" }}
+              startMonth={todayStart}
+              endMonth={calendarToMonth}
             />
           </div>
         )}
@@ -897,20 +926,37 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
               contactEmail={state.contact?.email || undefined}
             />
 
-            {/* Terms checkbox */}
-            <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-xl border border-border/40 bg-muted/20 p-4">
+            {/* Terms checkbox — visually emphasised so users notice the
+                consent gate before tapping the disabled submit button. */}
+            <label
+              className={cn(
+                "mt-5 flex cursor-pointer items-start gap-3 rounded-xl border-2 p-4 transition-colors",
+                termsAccepted
+                  ? "border-primary/50 bg-primary/5"
+                  : "border-primary/40 bg-primary/5 ring-2 ring-primary/15",
+                showTermsHint &&
+                  !termsAccepted &&
+                  "border-destructive/60 bg-destructive/5 ring-destructive/20 animate-pulse"
+              )}
+            >
               <Checkbox
                 checked={termsAccepted}
                 onCheckedChange={(checked) => setTermsAccepted(checked === true)}
                 aria-label="Súhlasím s obchodnými podmienkami a zásadami ochrany osobných údajov"
+                aria-required="true"
                 className="mt-0.5 size-5 shrink-0"
               />
-              <span className="text-[15px] leading-snug text-muted-foreground">
+              <span
+                className={cn(
+                  "text-[15px] font-medium leading-snug",
+                  termsAccepted ? "text-foreground" : "text-foreground"
+                )}
+              >
                 Súhlasím s{" "}
                 <Link
                   href="/vop"
                   target="_blank"
-                  className="font-medium text-primary underline underline-offset-2"
+                  className="font-semibold text-primary underline underline-offset-2"
                 >
                   obchodnými podmienkami
                 </Link>{" "}
@@ -918,15 +964,23 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
                 <Link
                   href="/ochrana-udajov"
                   target="_blank"
-                  className="font-medium text-primary underline underline-offset-2"
+                  className="font-semibold text-primary underline underline-offset-2"
                 >
                   zásadami ochrany osobných údajov
                 </Link>
-                .
+                .{!termsAccepted && (
+                  <span className="ml-1 text-destructive">*</span>
+                )}
               </span>
             </label>
             {showTermsHint && !termsAccepted && state.step === TOTAL_STEPS && (
-              <p className="text-xs text-destructive mt-1">Pre pokračovanie musíte súhlasiť s podmienkami.</p>
+              <p
+                role="alert"
+                className="mt-2 flex items-center gap-1.5 text-sm font-medium text-destructive"
+              >
+                <AlertCircleIcon className="size-4" />
+                Pred potvrdením musíte zaškrtnúť súhlas vyššie.
+              </p>
             )}
 
             {errorBlock}

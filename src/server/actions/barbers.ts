@@ -19,6 +19,7 @@ const UNAUTH: ActionResult = {
 function invalidate() {
   revalidatePath("/");
   revalidatePath("/admin/barbers");
+  revalidatePath("/admin/schedule");
 }
 
 function toBarberData(data: ReturnType<typeof barberInputSchema.parse>) {
@@ -31,6 +32,7 @@ function toBarberData(data: ReturnType<typeof barberInputSchema.parse>) {
     avatarUrl: data.avatarUrl || null,
     isActive: data.isActive,
     sortOrder: data.sortOrder,
+    bookingHorizonWeeks: data.bookingHorizonWeeks,
   });
 }
 
@@ -73,6 +75,27 @@ export async function updateBarber(
   }
 }
 
+export async function updateBarberBookingHorizon(
+  barberId: string,
+  weeks: number
+): Promise<ActionResult> {
+  if (!(await getSession())) return UNAUTH;
+  if (!Number.isInteger(weeks) || weeks < 1 || weeks > 26) {
+    return { success: false, error: "Horizont musí byť 1–26 týždňov." };
+  }
+  try {
+    await adminDb.doc(`barbers/${barberId}`).update({
+      bookingHorizonWeeks: weeks,
+      updatedAt: Timestamp.now(),
+    });
+    invalidate();
+    return { success: true };
+  } catch (e) {
+    console.error("[updateBarberBookingHorizon]", e);
+    return { success: false, error: "Nastala chyba." };
+  }
+}
+
 export async function updateBarberServices(
   barberId: string,
   serviceIds: string[]
@@ -81,22 +104,30 @@ export async function updateBarberServices(
   try {
     const subColl = adminDb.collection(`barbers/${barberId}/services`);
 
-    // Wipe existing
-    const existing = await subColl.get();
-    const wipeBatch = adminDb.batch();
-    for (const d of existing.docs) wipeBatch.delete(d.ref);
-    if (!existing.empty) await wipeBatch.commit();
+    // One transaction: wipe existing sub-docs, write new ones, update the
+    // denormalized parent. Avoids the previous wipe-then-write window where
+    // a network failure between the two batches would leave the barber
+    // with zero assigned services until the next save. Firestore allows
+    // up to 500 ops per transaction; a barber realistically has < 50
+    // services so we're well under the limit.
+    await adminDb.runTransaction(async (tx) => {
+      // --- READ phase (must come before any write in a Firestore tx) ---
+      const existingSnap = await tx.get(subColl);
+      const newServiceSnaps =
+        serviceIds.length > 0
+          ? await tx.getAll(
+              ...serviceIds.map((id) => adminDb.doc(`services/${id}`))
+            )
+          : [];
 
-    if (serviceIds.length > 0) {
-      // Fetch services for denormalization
-      const refs = serviceIds.map((id) => adminDb.doc(`services/${id}`));
-      const snaps = await adminDb.getAll(...refs);
-
-      const writeBatch = adminDb.batch();
-      for (const s of snaps) {
+      // --- WRITE phase ---
+      for (const d of existingSnap.docs) {
+        tx.delete(d.ref);
+      }
+      for (const s of newServiceSnaps) {
         if (!s.exists) continue;
         const data = s.data() as ServiceDoc;
-        writeBatch.set(subColl.doc(s.id), {
+        tx.set(subColl.doc(s.id), {
           serviceId: s.id,
           customPriceCents: null,
           customDuration: null,
@@ -106,13 +137,10 @@ export async function updateBarberServices(
           defaultPriceCents: data.priceCents,
         });
       }
-      await writeBatch.commit();
-    }
-
-    // Update denormalized barber.serviceIds for fast querying
-    await adminDb.doc(`barbers/${barberId}`).update({
-      serviceIds,
-      updatedAt: Timestamp.now(),
+      tx.update(adminDb.doc(`barbers/${barberId}`), {
+        serviceIds,
+        updatedAt: Timestamp.now(),
+      });
     });
 
     invalidate();

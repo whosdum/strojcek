@@ -256,6 +256,27 @@ export function AdminCalendar() {
         .fc .fc-event-main {
           padding: 0.125rem 0.25rem;
         }
+        /* Make it obvious that calendar events are clickable. FullCalendar
+           sets cursor:pointer on dragable events but our scheduled
+           appointments aren't draggable, so the default cursor stayed. */
+        .fc .fc-event,
+        .fc .fc-event:hover {
+          cursor: pointer;
+        }
+        .fc .fc-event {
+          transition: transform 80ms ease, filter 80ms ease;
+        }
+        .fc .fc-event:hover {
+          transform: translateY(-1px);
+          filter: brightness(1.08);
+        }
+        .fc .fc-event:active {
+          transform: translateY(0);
+        }
+        .fc .fc-event:focus-visible {
+          outline: 2px solid hsl(var(--ring));
+          outline-offset: 2px;
+        }
         @media (max-width: 767px) {
           .fc .fc-toolbar-title {
             font-size: 0.95rem;

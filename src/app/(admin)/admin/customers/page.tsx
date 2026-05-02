@@ -10,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ClickableTableRow } from "@/components/admin/clickable-table-row";
 import { ChevronRightIcon, EyeIcon, SearchIcon } from "lucide-react";
 
 export default async function CustomersPage({
@@ -96,26 +97,28 @@ export default async function CustomersPage({
           </TableHeader>
           <TableBody>
             {items.map((customer) => (
-              <TableRow key={customer.id}>
-                <TableCell>
-                  <Link
-                    href={`/admin/customers/${customer.id}`}
-                    className="font-medium hover:underline"
-                  >
-                    {customer.firstName} {customer.lastName}
-                  </Link>
+              <ClickableTableRow
+                key={customer.id}
+                href={`/admin/customers/${customer.id}`}
+                ariaLabel={`Detail zákazníka ${customer.firstName} ${customer.lastName ?? ""}`.trim()}
+              >
+                <TableCell className="font-medium">
+                  {customer.firstName} {customer.lastName}
                 </TableCell>
                 <TableCell>{customer.phone}</TableCell>
                 <TableCell>{customer.email || "—"}</TableCell>
                 <TableCell>{customer.visitCount}</TableCell>
                 <TableCell>
-                  <Link href={`/admin/customers/${customer.id}`}>
+                  <Link
+                    href={`/admin/customers/${customer.id}`}
+                    aria-label="Detail zákazníka"
+                  >
                     <Button variant="ghost" size="icon-sm">
                       <EyeIcon className="size-4" />
                     </Button>
                   </Link>
                 </TableCell>
-              </TableRow>
+              </ClickableTableRow>
             ))}
           </TableBody>
         </Table>

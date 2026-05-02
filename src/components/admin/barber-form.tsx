@@ -31,6 +31,7 @@ interface BarberFormProps {
     avatarUrl: string | null;
     isActive: boolean;
     sortOrder: number;
+    bookingHorizonWeeks: number;
     services: { serviceId: string }[];
   };
   allServices: Service[];
@@ -59,6 +60,7 @@ export function BarberForm({ barber, allServices }: BarberFormProps) {
       avatarUrl: barber?.avatarUrl ?? "",
       isActive: barber?.isActive ?? true,
       sortOrder: barber?.sortOrder ?? 0,
+      bookingHorizonWeeks: barber?.bookingHorizonWeeks ?? 3,
     },
   });
 
@@ -110,6 +112,7 @@ export function BarberForm({ barber, allServices }: BarberFormProps) {
           <Label htmlFor="firstName">Meno *</Label>
           <Input
             id="firstName"
+            maxLength={50}
             aria-required
             aria-invalid={!!errors.firstName}
             aria-describedby={errors.firstName ? "firstName-error" : undefined}
@@ -123,6 +126,7 @@ export function BarberForm({ barber, allServices }: BarberFormProps) {
           <Label htmlFor="lastName">Priezvisko *</Label>
           <Input
             id="lastName"
+            maxLength={50}
             aria-required
             aria-invalid={!!errors.lastName}
             aria-describedby={errors.lastName ? "lastName-error" : undefined}
@@ -136,7 +140,7 @@ export function BarberForm({ barber, allServices }: BarberFormProps) {
 
       <div className="space-y-1.5">
         <Label htmlFor="email">Email</Label>
-        <Input id="email" type="email" {...register("email")} />
+        <Input id="email" type="email" maxLength={254} {...register("email")} />
       </div>
 
       <div className="space-y-1.5">
@@ -161,6 +165,40 @@ export function BarberForm({ barber, allServices }: BarberFormProps) {
           type="number"
           {...register("sortOrder")}
         />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="bookingHorizonWeeks">
+          Horizont rezervácií (týždne)
+        </Label>
+        <Input
+          id="bookingHorizonWeeks"
+          type="number"
+          min={1}
+          max={26}
+          aria-invalid={!!errors.bookingHorizonWeeks}
+          aria-describedby={
+            errors.bookingHorizonWeeks
+              ? "bookingHorizonWeeks-error"
+              : "bookingHorizonWeeks-hint"
+          }
+          {...register("bookingHorizonWeeks")}
+        />
+        <p
+          id="bookingHorizonWeeks-hint"
+          className="text-xs text-muted-foreground"
+        >
+          Zákazníci uvidia voľné termíny na najbližších N týždňov.
+          Predvolené: 3. Rozsah: 1–26.
+        </p>
+        {errors.bookingHorizonWeeks && (
+          <p
+            id="bookingHorizonWeeks-error"
+            className="text-xs text-destructive"
+          >
+            {errors.bookingHorizonWeeks.message}
+          </p>
+        )}
       </div>
 
       <div className="flex items-center gap-2">

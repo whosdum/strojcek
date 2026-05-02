@@ -22,6 +22,7 @@ export type BarberView = {
   avatarUrl: string | null;
   isActive: boolean;
   sortOrder: number;
+  bookingHorizonWeeks: number;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -133,6 +134,7 @@ export type BarberWithServicesView = BarberView & {
 export type BarberWithSchedulesView = BarberView & {
   schedules: ScheduleView[];
   scheduleBreaks: ScheduleBreakView[];
+  overrides: ScheduleOverrideView[];
 };
 
 export type BarberFullView = BarberView & {
@@ -181,4 +183,5 @@ export type ActiveBarberWithServiceIdsView = {
   avatarUrl: string | null;
   serviceIds: string[];
   serviceOverrides: Record<string, { price?: string; duration?: number }>;
+  bookingHorizonWeeks: number;
 };

@@ -11,6 +11,7 @@ import type {
   ServiceView,
   ScheduleView,
   ScheduleBreakView,
+  ScheduleOverrideView,
 } from "@/lib/types";
 import type {
   BarberDoc,
@@ -18,7 +19,10 @@ import type {
   ServiceDoc,
   ScheduleDoc,
   ScheduleBreakDoc,
+  ScheduleOverrideDoc,
 } from "@/server/types/firestore";
+
+const DEFAULT_BOOKING_HORIZON_WEEKS = 3;
 
 function mapBarberBase(
   doc: FirebaseFirestore.DocumentSnapshot
@@ -34,8 +38,27 @@ function mapBarberBase(
     avatarUrl: d.avatarUrl ?? null,
     isActive: d.isActive,
     sortOrder: d.sortOrder,
+    bookingHorizonWeeks: d.bookingHorizonWeeks ?? DEFAULT_BOOKING_HORIZON_WEEKS,
     createdAt: tsToDate(d.createdAt),
     updatedAt: tsToDate(d.updatedAt),
+  };
+}
+
+function mapOverrideDoc(
+  barberId: string,
+  doc: FirebaseFirestore.QueryDocumentSnapshot
+): ScheduleOverrideView {
+  const d = doc.data() as ScheduleOverrideDoc;
+  // overrideDate is stored as YYYY-MM-DD; parse as local-noon to avoid TZ drift
+  const [y, m, day] = d.overrideDate.split("-").map(Number);
+  return {
+    id: doc.id,
+    barberId,
+    overrideDate: new Date(y, m - 1, day, 12, 0, 0),
+    isAvailable: d.isAvailable,
+    startTime: d.startTime ?? null,
+    endTime: d.endTime ?? null,
+    reason: d.reason ?? null,
   };
 }
 
@@ -135,6 +158,28 @@ async function loadSchedulesAndBreaks(barberId: string): Promise<{
   return { schedules, scheduleBreaks };
 }
 
+/**
+ * Returns upcoming overrides (today and onwards) for a single barber,
+ * sorted by date ascending. Past overrides stay in Firestore as audit
+ * trail but are hidden from admin UIs.
+ */
+export async function getUpcomingOverrides(
+  barberId: string
+): Promise<ScheduleOverrideView[]> {
+  // Use Bratislava-local "today" key so an admin opening the page at 00:30
+  // local time still sees today's override (UTC midnight has already passed).
+  const todayKey = new Date().toLocaleDateString("en-CA", {
+    timeZone: "Europe/Bratislava",
+  });
+  const snap = await adminDb
+    .collection(`barbers/${barberId}/overrides`)
+    .where("overrideDate", ">=", todayKey)
+    .orderBy("overrideDate", "asc")
+    .limit(120)
+    .get();
+  return snap.docs.map((d) => mapOverrideDoc(barberId, d));
+}
+
 export async function getAllBarbers(): Promise<BarberWithServicesView[]> {
   const snap = await adminDb
     .collection("barbers")
@@ -158,8 +203,11 @@ export async function getAllBarbersWithSchedules(): Promise<
   return Promise.all(
     snap.docs.map(async (b) => {
       const base = mapBarberBase(b);
-      const { schedules, scheduleBreaks } = await loadSchedulesAndBreaks(b.id);
-      return { ...base, schedules, scheduleBreaks };
+      const [{ schedules, scheduleBreaks }, overrides] = await Promise.all([
+        loadSchedulesAndBreaks(b.id),
+        getUpcomingOverrides(b.id),
+      ]);
+      return { ...base, schedules, scheduleBreaks, overrides };
     })
   );
 }
@@ -199,6 +247,7 @@ export async function getActiveBarbersWithServices(): Promise<
         avatarUrl: base.avatarUrl,
         serviceIds,
         serviceOverrides: overrides,
+        bookingHorizonWeeks: base.bookingHorizonWeeks,
       };
     })
   );

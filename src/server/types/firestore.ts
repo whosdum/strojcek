@@ -23,6 +23,7 @@ export type BarberDoc = {
   isActive: boolean;
   sortOrder: number;
   serviceIds: string[];
+  bookingHorizonWeeks: number;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 };

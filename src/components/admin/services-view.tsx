@@ -132,7 +132,24 @@ export function ServicesView({ services }: ServicesViewProps) {
           </TableHeader>
           <TableBody>
             {services.map((service) => (
-              <TableRow key={service.id}>
+              <TableRow
+                key={service.id}
+                tabIndex={0}
+                role="button"
+                aria-label={`Upraviť službu ${service.name}`}
+                onClick={(e) => {
+                  if ((e.target as HTMLElement).closest("button,a")) return;
+                  handleEdit(service);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    if ((e.target as HTMLElement).closest("button,a")) return;
+                    e.preventDefault();
+                    handleEdit(service);
+                  }
+                }}
+                className="cursor-pointer transition-colors hover:bg-muted/40 focus-visible:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+              >
                 <TableCell>
                   <div className="min-w-0">
                     <p className="truncate font-medium">{service.name}</p>
@@ -155,6 +172,7 @@ export function ServicesView({ services }: ServicesViewProps) {
                   <Button
                     variant="ghost"
                     size="icon-sm"
+                    aria-label="Upraviť službu"
                     onClick={() => handleEdit(service)}
                   >
                     <PencilIcon className="size-4" />

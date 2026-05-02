@@ -10,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ClickableTableRow } from "@/components/admin/clickable-table-row";
 import { format } from "date-fns";
 import { sk } from "date-fns/locale";
 import { EyeIcon, ChevronRightIcon, PlusIcon } from "lucide-react";
@@ -112,7 +113,11 @@ export default async function ReservationsPage({
           </TableHeader>
           <TableBody>
             {items.map((appt) => (
-              <TableRow key={appt.id}>
+              <ClickableTableRow
+                key={appt.id}
+                href={`/admin/reservations/${appt.id}`}
+                ariaLabel="Otvoriť detail rezervácie"
+              >
                 <TableCell>
                   {format(appt.startTime, "d.M.yyyy")}
                 </TableCell>
@@ -132,13 +137,16 @@ export default async function ReservationsPage({
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <Link href={`/admin/reservations/${appt.id}`}>
+                  <Link
+                    href={`/admin/reservations/${appt.id}`}
+                    aria-label="Detail rezervácie"
+                  >
                     <Button variant="ghost" size="icon-sm">
                       <EyeIcon className="size-4" />
                     </Button>
                   </Link>
                 </TableCell>
-              </TableRow>
+              </ClickableTableRow>
             ))}
           </TableBody>
         </Table>
