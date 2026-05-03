@@ -108,6 +108,12 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
     const todayKey = new Date().toLocaleDateString("en-CA", {
       timeZone: TIMEZONE,
     });
+    if (data.date < todayKey) {
+      return {
+        success: false,
+        error: "Termín v minulosti nie je možné rezervovať.",
+      };
+    }
     const horizonEnd = addDays(parseISO(todayKey), horizonWeeks * 7);
     const horizonEndKey = format(horizonEnd, "yyyy-MM-dd");
     if (data.date > horizonEndKey) {
@@ -123,6 +129,17 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
     const startTime = fromZonedTime(`${data.date}T${data.time}:00`, TIMEZONE);
     const endTime = addMinutes(startTime, duration);
     const startKey = dateKey(startTime);
+
+    // The wizard's slot generator already filters past slots, so a
+    // submission with startTime < now arrives only via stale state or a
+    // hand-crafted POST. Reject explicitly rather than relying on the
+    // overlap check (which doesn't inspect time-vs-now).
+    if (startTime.getTime() < Date.now()) {
+      return {
+        success: false,
+        error: "Termín v minulosti nie je možné rezervovať.",
+      };
+    }
 
     // Customer upsert is intentionally OUTSIDE the booking transaction
     // (cross-collection get-or-create is hard to do atomically and not race-sensitive
