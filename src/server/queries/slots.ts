@@ -119,8 +119,12 @@ export async function getAvailableSlots(
 
     const fitsInWorkingHours = !isAfter(slotEnd, workingEndUtc);
     const notInPast = candidate.getTime() >= earliestStartMs;
+    // A slot whose post-service buffer extends into a break shouldn't be
+    // offered — the booking transaction wouldn't notice (it only checks
+    // appointment overlap), and the customer would arrive to find the
+    // barber already on a scheduled break.
     const noBreakOverlap = !breaks.some(
-      (b) => isBefore(candidate, b.end) && isAfter(slotEnd, b.start)
+      (b) => isBefore(candidate, b.end) && isAfter(blockEnd, b.start)
     );
     const noAppointmentOverlap = !bookedRanges.some(
       (a) => isBefore(candidate, a.end) && isAfter(blockEnd, a.start)
