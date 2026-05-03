@@ -139,6 +139,13 @@
       "collectionGroup": "customers",
       "fieldPath": "lastName",
       "indexes": []
+    },
+    {
+      "collectionGroup": "customers",
+      "fieldPath": "searchTokens",
+      "indexes": [
+        { "queryScope": "COLLECTION", "arrayConfig": "CONTAINS" }
+      ]
     }
   ]
 }
