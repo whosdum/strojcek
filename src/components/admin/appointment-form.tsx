@@ -142,6 +142,12 @@ export function AppointmentForm({
 
   const [form, setForm] = useState<FormState>(() => {
     const phoneSplit = initial?.phone ? splitPhone(initial.phone) : { prefix: "+421" as const, digits: "" };
+    // Walk-ins are typically created with ignoreSchedule on (custom time
+    // outside the slot grid, custom duration). Re-opening one for edit
+    // should keep that mode active — otherwise the time input gets
+    // replaced by the slot picker, which doesn't show the saved off-grid
+    // time and silently drops it on save.
+    const editingWalkIn = mode === "edit" && initialIsWalkIn;
     return {
       serviceId: initial?.serviceId ?? services[0]?.id ?? "",
       barberId: initial?.barberId ?? "",
@@ -153,7 +159,7 @@ export function AppointmentForm({
       phoneDigits: phoneSplit.digits,
       email: initial?.email ?? "",
       notes: initial?.notes ?? "",
-      ignoreSchedule: false,
+      ignoreSchedule: editingWalkIn,
       priceFinal: initial?.priceFinal != null ? String(initial.priceFinal) : "",
       walkIn: initialIsWalkIn,
       label: initialIsWalkIn ? initial?.customerName ?? "" : "",
