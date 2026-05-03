@@ -96,6 +96,8 @@ export default async function EditReservationPage({
             priceFinal:
               appointment.priceFinal != null ? Number(appointment.priceFinal) : null,
             status: appointment.status,
+            source: appointment.source,
+            customerName: appointment.customerName,
           }}
         />
       </div>

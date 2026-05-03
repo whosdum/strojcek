@@ -32,7 +32,7 @@ import {
   STATUS_LABELS,
   TIMEZONE,
 } from "@/lib/constants";
-import type { AppointmentStatus } from "@/lib/types";
+import type { AppointmentSource, AppointmentStatus } from "@/lib/types";
 
 interface BarberOption {
   id: string;
@@ -59,6 +59,10 @@ interface AppointmentInitial {
   notes: string;
   priceFinal: number | null;
   status: AppointmentStatus;
+  source: AppointmentSource;
+  /** Used as the label seed when source === "walk-in" — the appointment
+   *  has no customer doc, so the customerName field IS the label. */
+  customerName: string | null;
 }
 
 interface AppointmentFormProps {
@@ -81,6 +85,8 @@ interface FormState {
   notes: string;
   ignoreSchedule: boolean;
   priceFinal: string;
+  walkIn: boolean;
+  label: string;
 }
 
 function todayIso() {
@@ -111,6 +117,8 @@ export function AppointmentForm({
 
   const limited = !!initial && (initial.status === "IN_PROGRESS" || initial.status === "COMPLETED");
 
+  const initialIsWalkIn = initial?.source === "walk-in";
+
   const [form, setForm] = useState<FormState>(() => {
     const phoneSplit = initial?.phone ? splitPhone(initial.phone) : { prefix: "+421" as const, digits: "" };
     return {
@@ -126,6 +134,8 @@ export function AppointmentForm({
       notes: initial?.notes ?? "",
       ignoreSchedule: false,
       priceFinal: initial?.priceFinal != null ? String(initial.priceFinal) : "",
+      walkIn: initialIsWalkIn,
+      label: initialIsWalkIn ? initial?.customerName ?? "" : "",
     };
   });
 
@@ -220,35 +230,41 @@ export function AppointmentForm({
         setError("Vyberte dátum a čas.");
         return;
       }
-      if (!form.firstName.trim()) {
-        setError("Zadajte meno zákazníka.");
-        return;
-      }
-      if (!/^[1-9]\d{8}$/.test(form.phoneDigits)) {
-        setError("Zadajte 9-miestne telefónne číslo bez úvodnej nuly (napr. 903123456).");
-        return;
-      }
-      // Email is required for create (so customer gets confirmation + reminder).
-      // For edit it stays optional — legacy reservations may not have one.
-      if (mode === "create" && !form.email.trim()) {
-        setError("Email je povinný — zákazník dostane potvrdenie a pripomienku.");
-        return;
+      if (!form.walkIn) {
+        if (!form.firstName.trim()) {
+          setError("Zadajte meno zákazníka.");
+          return;
+        }
+        if (!/^[1-9]\d{8}$/.test(form.phoneDigits)) {
+          setError("Zadajte 9-miestne telefónne číslo bez úvodnej nuly (napr. 903123456).");
+          return;
+        }
+        // Email is required for create (so customer gets confirmation + reminder).
+        // For edit it stays optional — legacy reservations may not have one.
+        if (mode === "create" && !form.email.trim()) {
+          setError("Email je povinný — zákazník dostane potvrdenie a pripomienku.");
+          return;
+        }
       }
     }
 
     startTransition(async () => {
-      const fullPhone = `${form.phonePrefix}${form.phoneDigits}`;
+      const fullPhone = form.walkIn
+        ? ""
+        : `${form.phonePrefix}${form.phoneDigits}`;
       const payload = {
         serviceId: form.serviceId,
         barberId: effectiveBarberId,
         date: form.date,
         time: form.time,
-        firstName: form.firstName.trim(),
-        lastName: form.lastName.trim(),
+        firstName: form.walkIn ? "" : form.firstName.trim(),
+        lastName: form.walkIn ? "" : form.lastName.trim(),
         phone: fullPhone,
-        email: form.email.trim(),
+        email: form.walkIn ? "" : form.email.trim(),
         notes: form.notes.trim(),
         ignoreSchedule: form.ignoreSchedule,
+        walkIn: form.walkIn,
+        label: form.walkIn ? form.label.trim() : "",
       };
 
       let result: { success: boolean; error?: string; appointmentId?: string };
@@ -294,6 +310,28 @@ export function AppointmentForm({
           {error}
         </div>
       )}
+
+      {/* Walk-in toggle — disabled in edit mode so admin can't flip an
+          existing reservation in or out of walk-in (would orphan the
+          customer record / invent a fake one). */}
+      <div className="flex items-start gap-3 rounded-xl border border-border/60 bg-muted/30 p-3">
+        <Switch
+          id="walkIn"
+          checked={form.walkIn}
+          onCheckedChange={(v) => updateField("walkIn", v)}
+          disabled={limited || mode === "edit"}
+        />
+        <div className="flex-1">
+          <Label htmlFor="walkIn" className="cursor-pointer">
+            Walk-in / blokovaný čas
+          </Label>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Bez kontaktných údajov — žiadny email, žiadna SMS pripomienka.
+            Použite pre zákazníka bez čísla, ktorý príde osobne, alebo na
+            zablokovanie vlastného času (obed, výjazd).
+          </p>
+        </div>
+      </div>
 
       {/* Služba a barber */}
       <div className="space-y-4">
@@ -442,94 +480,115 @@ export function AppointmentForm({
         </div>
       </div>
 
-      {/* Zákazník */}
-      <div className="space-y-4">
-        <h3 className="text-sm font-semibold text-muted-foreground">Zákazník</h3>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="firstName">Meno *</Label>
-            <Input
-              id="firstName"
-              value={form.firstName}
-              onChange={(e) => updateField("firstName", e.target.value)}
-              disabled={limited}
-              autoComplete="given-name"
-              maxLength={50}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="lastName">Priezvisko</Label>
-            <Input
-              id="lastName"
-              value={form.lastName}
-              onChange={(e) => updateField("lastName", e.target.value)}
-              disabled={limited}
-              autoComplete="family-name"
-              maxLength={50}
-            />
-          </div>
-        </div>
+      {/* Zákazník — for walk-ins, the whole contact fieldset is replaced
+          with a single optional label input. */}
+      {form.walkIn ? (
         <div className="space-y-1.5">
-          <Label htmlFor="phoneDigits">Telefón *</Label>
-          <div className="flex gap-2">
-            <Select
-              items={{ "+421": "+421 SK", "+420": "+420 CZ" }}
-              value={form.phonePrefix}
-              onValueChange={(v) =>
-                updateField("phonePrefix", (v ?? "+421") as "+421" | "+420")
-              }
-              disabled={limited}
-            >
-              <SelectTrigger className="w-[112px] shrink-0">
-                <SelectValue placeholder="+421" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="+421">+421 SK</SelectItem>
-                <SelectItem value="+420">+420 CZ</SelectItem>
-              </SelectContent>
-            </Select>
-            <Input
-              id="phoneDigits"
-              type="tel"
-              inputMode="numeric"
-              maxLength={9}
-              placeholder="9XX XXX XXX"
-              value={form.phoneDigits}
-              onChange={(e) => {
-                const digits = e.target.value.replace(/\D/g, "").slice(0, 9);
-                // Strip leading zero — prefix is selected separately
-                const cleaned = digits.startsWith("0") ? digits.slice(1) : digits;
-                updateField("phoneDigits", cleaned);
-              }}
-              disabled={limited}
-              autoComplete="tel-national"
-              className="flex-1"
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">
-            9-miestne číslo bez úvodnej nuly (napr. 903123456). Telefón
-            identifikuje zákazníka — existujúci sa automaticky priradí.
-          </p>
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="email">Email {mode === "create" && "*"}</Label>
+          <Label htmlFor="label">Popis (voliteľné)</Label>
           <Input
-            id="email"
-            type="email"
-            placeholder={mode === "create" ? "klient@email.sk" : "voliteľný"}
-            value={form.email}
-            onChange={(e) => updateField("email", e.target.value)}
+            id="label"
+            value={form.label}
+            onChange={(e) => updateField("label", e.target.value)}
+            placeholder={'napr. „Walk-in", „Mimo prevádzky", „Pán Novák"'}
             disabled={limited}
-            autoComplete="email"
-            maxLength={254}
+            maxLength={100}
           />
           <p className="text-xs text-muted-foreground">
-            {mode === "create"
-              ? "Klient dostane potvrdzujúci email a pripomienku deň pred termínom."
-              : "Email môže byť prázdny pri starších rezerváciách bez emailu."}
+            Zobrazí sa v zozname rezervácií namiesto mena zákazníka. Ak
+            nezadáte popis, použije sa „Walk-in&quot;.
           </p>
         </div>
-      </div>
+      ) : (
+        <div className="space-y-4">
+          <h3 className="text-sm font-semibold text-muted-foreground">
+            Zákazník
+          </h3>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="firstName">Meno *</Label>
+              <Input
+                id="firstName"
+                value={form.firstName}
+                onChange={(e) => updateField("firstName", e.target.value)}
+                disabled={limited}
+                autoComplete="given-name"
+                maxLength={50}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="lastName">Priezvisko</Label>
+              <Input
+                id="lastName"
+                value={form.lastName}
+                onChange={(e) => updateField("lastName", e.target.value)}
+                disabled={limited}
+                autoComplete="family-name"
+                maxLength={50}
+              />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="phoneDigits">Telefón *</Label>
+            <div className="flex gap-2">
+              <Select
+                items={{ "+421": "+421 SK", "+420": "+420 CZ" }}
+                value={form.phonePrefix}
+                onValueChange={(v) =>
+                  updateField("phonePrefix", (v ?? "+421") as "+421" | "+420")
+                }
+                disabled={limited}
+              >
+                <SelectTrigger className="w-[112px] shrink-0">
+                  <SelectValue placeholder="+421" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="+421">+421 SK</SelectItem>
+                  <SelectItem value="+420">+420 CZ</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input
+                id="phoneDigits"
+                type="tel"
+                inputMode="numeric"
+                maxLength={9}
+                placeholder="9XX XXX XXX"
+                value={form.phoneDigits}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/\D/g, "").slice(0, 9);
+                  // Strip leading zero — prefix is selected separately
+                  const cleaned = digits.startsWith("0") ? digits.slice(1) : digits;
+                  updateField("phoneDigits", cleaned);
+                }}
+                disabled={limited}
+                autoComplete="tel-national"
+                className="flex-1"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              9-miestne číslo bez úvodnej nuly (napr. 903123456). Telefón
+              identifikuje zákazníka — existujúci sa automaticky priradí.
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="email">Email {mode === "create" && "*"}</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder={mode === "create" ? "klient@email.sk" : "voliteľný"}
+              value={form.email}
+              onChange={(e) => updateField("email", e.target.value)}
+              disabled={limited}
+              autoComplete="email"
+              maxLength={254}
+            />
+            <p className="text-xs text-muted-foreground">
+              {mode === "create"
+                ? "Klient dostane potvrdzujúci email a pripomienku deň pred termínom."
+                : "Email môže byť prázdny pri starších rezerváciách bez emailu."}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Cena a poznámka */}
       {mode === "edit" && (
