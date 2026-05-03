@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { Timestamp } from "firebase-admin/firestore";
 import { adminDb } from "@/server/lib/firebase-admin";
 import { verifyCronAuth } from "@/server/lib/cron-auth";
+import { hourKey } from "@/server/lib/firestore-utils";
 import { subHours, subMonths } from "date-fns";
 
 /**
  * Periodic cleanup:
  * 1. AppointmentStatusHistory subcollection entries older than 12 months
- * 2. Phone rate-limit counters where every booking entry is older than 24h
+ * 2. Per-phone / per-email rate-limit counters where every booking entry is older than 24h
+ * 3. Trim counters/global_bookings.hourly map of buckets older than 24h
  *
  * Firebase Auth sessions expire automatically, no cleanup needed.
  */
@@ -18,7 +20,7 @@ export async function GET(request: NextRequest) {
   const unauthorized = verifyCronAuth(request);
   if (unauthorized) return unauthorized;
 
-  let phase: "history" | "counters" = "history";
+  let phase: "history" | "counters" | "global" = "history";
   try {
     const historyCutoff = Timestamp.fromDate(subMonths(new Date(), 12));
 
@@ -64,7 +66,7 @@ export async function GET(request: NextRequest) {
 
     let deletedCounters = 0;
     for (const d of allCountersSnap.docs) {
-      if (!d.id.startsWith("phone_")) continue;
+      if (!d.id.startsWith("phone_") && !d.id.startsWith("email_")) continue;
       const data = d.data() as { bookings?: Timestamp[] };
       const bookings = data.bookings ?? [];
       const allStale = bookings.every((t) => t.toMillis() < cutoff24hMs);
@@ -74,10 +76,36 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    phase = "global";
+
+    // 3. Trim counters/global_bookings.hourly. The map grows once per
+    //    hour of operation forever — booking.ts GC's it inline at write
+    //    time but only when a write happens. A quiet day or rate-limit
+    //    block prevents the inline GC from running, so the doc creeps
+    //    toward Firestore's 1MiB cap. Belt-and-suspenders cleanup here.
+    const globalRef = adminDb.doc("counters/global_bookings");
+    const globalSnap = await globalRef.get();
+    let trimmedHourlyKeys = 0;
+    if (globalSnap.exists) {
+      const hourly = (globalSnap.data() as {
+        hourly?: Record<string, number>;
+      }).hourly ?? {};
+      const cutoffHourKey = hourKey(subHours(new Date(), 24));
+      const trimmed: Record<string, number> = {};
+      for (const [k, v] of Object.entries(hourly)) {
+        if (k >= cutoffHourKey) trimmed[k] = v;
+        else trimmedHourlyKeys++;
+      }
+      if (trimmedHourlyKeys > 0) {
+        await globalRef.set({ hourly: trimmed });
+      }
+    }
+
     return NextResponse.json({
       ok: true,
       deletedHistory,
-      deletedPhoneCounters: deletedCounters,
+      deletedRateCounters: deletedCounters,
+      trimmedHourlyKeys,
     });
   } catch (e) {
     const err = e instanceof Error ? e : new Error(String(e));
