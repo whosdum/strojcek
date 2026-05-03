@@ -341,6 +341,14 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
   );
   const setSectionRef = (step: number) => sectionRefCallbacks[step];
 
+  // Per-fetch sequence ids so a fast user (barber A → barber B before
+  // A's response landed, or date A → date B before A's slots came back)
+  // can't have the late response overwrite the active selection's
+  // freshly-loaded data. Bumped on every entry; the async block discards
+  // its result if the ref has moved on.
+  const calendarFetchIdRef = useRef(0);
+  const slotsFetchIdRef = useRef(0);
+
   // Defined here (above useEffects that depend on it) so the deps array
   // doesn't read it through the temporal dead zone on first render.
   // Errors are explicitly caught and surfaced via SET_CALENDAR_ERROR — a
@@ -348,6 +356,7 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
   // any of the three parallel server actions failed (network blip, cold
   // start, transient Firestore error).
   const loadBarberCalendar = useCallback((barberId: string) => {
+    const myId = ++calendarFetchIdRef.current;
     dispatch({ type: "SET_CALENDAR_ERROR", error: false });
     startTransition(async () => {
       try {
@@ -356,6 +365,7 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
           fetchScheduleEndTimes(barberId),
           fetchUpcomingOverrides(barberId),
         ]);
+        if (calendarFetchIdRef.current !== myId) return; // superseded
         dispatch({ type: "SET_WORKING_DAYS", workingDays: days });
         dispatch({ type: "SET_SCHEDULE_END_TIMES", endTimes });
         dispatch({
@@ -365,11 +375,18 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
           ),
         });
       } catch (err) {
+        if (calendarFetchIdRef.current !== myId) return;
         console.error("[booking-wizard] schedule fetch failed", err);
         dispatch({ type: "SET_CALENDAR_ERROR", error: true });
       }
     });
   }, []);
+
+  // Date stash — set during the initial draft restore, consumed by
+  // the post-schedule effect below once the barber's working days +
+  // overrides are known so we can validate the saved date is still
+  // bookable before re-selecting it.
+  const pendingDraftDateRef = useRef<string | null>(null);
 
   // Restore draft from sessionStorage on mount. Validates that both
   // serviceId AND the matching barber for that service still exist —
@@ -400,8 +417,59 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
     );
     if (!barber) return; // barber gone or no longer offers this service
     dispatch({ type: "SELECT_BARBER", barberId: barber.id });
+    if (draft.date) pendingDraftDateRef.current = draft.date;
     loadBarberCalendar(barber.id);
   }, [services, barbers, loadBarberCalendar]);
+
+  // Once the schedule loads, validate any stashed draft date and
+  // re-select it. CLAUDE.md promises "refresh restores draft" — the
+  // previous restore only re-selected service + barber and silently
+  // dropped date and step, so users who refreshed in step 4 lost
+  // their slot pick. Inline the slot-fetch (rather than calling the
+  // click handler) to avoid the temporal-dead-zone reference.
+  useEffect(() => {
+    const dateStr = pendingDraftDateRef.current;
+    if (!dateStr) return;
+    if (!state.workingDays || !state.barberId || !state.serviceId) return;
+    pendingDraftDateRef.current = null;
+
+    const date = parseISO(dateStr);
+    if (Number.isNaN(date.getTime())) return;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (date < today) return; // draft expired during the gap
+    const horizonWeeks =
+      barbers.find((b) => b.id === state.barberId)?.bookingHorizonWeeks ?? 3;
+    if (date > addDays(today, horizonWeeks * 7)) return;
+
+    const override = state.overrides?.[dateStr];
+    if (override === false) return;
+    if (override !== true && !state.workingDays.includes(date.getDay())) return;
+
+    const myId = ++slotsFetchIdRef.current;
+    const barberId = state.barberId;
+    const serviceId = state.serviceId;
+    dispatch({ type: "SELECT_DATE", date: dateStr });
+    dispatch({ type: "SET_LOADING_SLOTS", loading: true });
+    startTransition(async () => {
+      try {
+        const slots = await fetchSlots(barberId, serviceId, dateStr);
+        if (slotsFetchIdRef.current !== myId) return;
+        dispatch({ type: "SET_SLOTS", slots });
+      } catch (err) {
+        if (slotsFetchIdRef.current !== myId) return;
+        console.error("[booking-wizard] draft slot fetch failed", err);
+        dispatch({ type: "SET_SLOTS", slots: [] });
+      }
+    });
+  }, [
+    state.workingDays,
+    state.overrides,
+    state.barberId,
+    state.serviceId,
+    barbers,
+  ]);
 
   // Save draft to sessionStorage on relevant state changes
   useEffect(() => {
@@ -471,21 +539,16 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
     setShowTermsHint(false);
   }, [state.step]);
 
-  // Force re-render at midnight so calendar disabled dates stay fresh
+  // Refresh calendar/slot disabled-state once a minute. Previously a
+  // single midnight setTimeout fired once per page-life; after the
+  // first midnight the timer was never rescheduled and the calendar
+  // showed yesterday as bookable for any tab kept open across two
+  // midnights. The `currentMinutes` derivation also stayed stuck, so
+  // "today is past end-of-day" stopped updating during a long session.
   const [, forceRender] = useState(0);
   useEffect(() => {
-    const now = new Date();
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(0, 0, 0, 0);
-    const msUntilMidnight = tomorrow.getTime() - now.getTime();
-
-    const timer = setTimeout(() => {
-      forceRender((n) => n + 1);
-    }, msUntilMidnight + 500); // 500ms buffer after midnight
-
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const interval = setInterval(() => forceRender((n) => n + 1), 60_000);
+    return () => clearInterval(interval);
   }, []);
 
   // ---------------------------------------------------------------------------
@@ -538,15 +601,23 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
     (date: Date | undefined) => {
       if (!date || !state.barberId || !state.serviceId) return;
       const dateStr = format(date, "yyyy-MM-dd");
+      const myId = ++slotsFetchIdRef.current;
       dispatch({ type: "SELECT_DATE", date: dateStr });
       dispatch({ type: "SET_LOADING_SLOTS", loading: true });
       startTransition(async () => {
-        const slots = await fetchSlots(
-          state.barberId!,
-          state.serviceId!,
-          dateStr
-        );
-        dispatch({ type: "SET_SLOTS", slots });
+        try {
+          const slots = await fetchSlots(
+            state.barberId!,
+            state.serviceId!,
+            dateStr
+          );
+          if (slotsFetchIdRef.current !== myId) return; // superseded
+          dispatch({ type: "SET_SLOTS", slots });
+        } catch (err) {
+          if (slotsFetchIdRef.current !== myId) return;
+          console.error("[booking-wizard] slot fetch failed", err);
+          dispatch({ type: "SET_SLOTS", slots: [] });
+        }
       });
     },
     [state.barberId, state.serviceId]
@@ -560,6 +631,13 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
     dispatch({ type: "SET_CONTACT", contact: data });
   }, []);
 
+  // Synchronous lock against double-submit. React state updates are
+  // batched, so two rapid clicks on the retry button could both pass
+  // the `disabled={state.submitting}` check before the next render set
+  // it to true. A ref flips synchronously and prevents the second call
+  // from issuing a duplicate booking POST.
+  const inFlightRef = useRef(false);
+
   const handleSubmitBooking = useCallback(async () => {
     if (
       !state.serviceId ||
@@ -569,22 +647,28 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
       !state.contact
     )
       return;
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
 
     dispatch({ type: "SUBMIT_START" });
     startTransition(async () => {
-      const result = await createBooking({
-        serviceId: state.serviceId,
-        barberId: state.barberId,
-        date: state.date,
-        time: state.time,
-        firstName: state.contact!.firstName,
-        lastName: state.contact!.lastName,
-        phone: `${state.contact!.prefix}${state.contact!.phone}`,
-        email: state.contact!.email,
-        note: state.contact!.note,
-        website: honeypotRef.current?.value ?? "",
-      });
-      dispatch({ type: "SUBMIT_RESULT", result });
+      try {
+        const result = await createBooking({
+          serviceId: state.serviceId,
+          barberId: state.barberId,
+          date: state.date,
+          time: state.time,
+          firstName: state.contact!.firstName,
+          lastName: state.contact!.lastName,
+          phone: `${state.contact!.prefix}${state.contact!.phone}`,
+          email: state.contact!.email,
+          note: state.contact!.note,
+          website: honeypotRef.current?.value ?? "",
+        });
+        dispatch({ type: "SUBMIT_RESULT", result });
+      } finally {
+        inFlightRef.current = false;
+      }
     });
   }, [
     state.serviceId,
@@ -735,7 +819,7 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
             size="sm"
             className="mt-2"
             onClick={handleSubmitBooking}
-            disabled={state.submitting}
+            disabled={state.submitting || isPending}
           >
             Skúsiť znova
           </Button>
