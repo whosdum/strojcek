@@ -98,7 +98,15 @@ export type AppointmentDoc = {
 
   notes: string | null;
   source: AppointmentSource;
-  reminderSentAt: Timestamp | null;
+  /** @deprecated Use reminderEmailSentAt / reminderSmsSentAt. Kept for
+   *  legacy data; if set, the appointment is treated as fully reminded. */
+  reminderSentAt?: Timestamp | null;
+  /** Per-channel reminder state — set after a successful send. */
+  reminderEmailSentAt?: Timestamp | null;
+  reminderSmsSentAt?: Timestamp | null;
+  /** Two-phase lock for the cron worker. Cleared on success or release. */
+  reminderEmailLockedAt?: Timestamp | null;
+  reminderSmsLockedAt?: Timestamp | null;
 
   createdAt: Timestamp;
   updatedAt: Timestamp;
