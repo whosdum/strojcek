@@ -201,13 +201,55 @@ async function seed() {
   console.log(`  - shopSettings/default (interval 60min)`);
 }
 
+function hasFlag(name: string): boolean {
+  return process.argv.slice(2).includes(name);
+}
+
+function getFlagValue(name: string): string | undefined {
+  const prefix = `${name}=`;
+  return process.argv
+    .slice(2)
+    .find((a) => a.startsWith(prefix))
+    ?.slice(prefix.length);
+}
+
+async function confirmDestructiveRun(): Promise<void> {
+  const isProduction = /prod/i.test(projectId);
+  const confirmToken = getFlagValue("--confirm-wipe");
+
+  if (isProduction && !hasFlag("--allow-production")) {
+    throw new Error(
+      `Refusing to wipe production-like project "${projectId}". ` +
+        `Pass --allow-production AND --confirm-wipe=${projectId} if you really mean it.`
+    );
+  }
+
+  if (confirmToken !== projectId) {
+    throw new Error(
+      `Confirmation required: this will WIPE all Firestore data in project "${projectId}". ` +
+        `Re-run with --confirm-wipe=${projectId} to proceed.`
+    );
+  }
+
+  console.warn(
+    `\n⚠  About to WIPE and re-seed Firestore in project "${projectId}".\n` +
+      `   Press Ctrl+C in the next 5 seconds to abort.\n`
+  );
+  for (let i = 5; i > 0; i--) {
+    process.stdout.write(`   ${i}...`);
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  process.stdout.write("\n\n");
+}
+
 async function main() {
+  await confirmDestructiveRun();
   await wipe();
   await seed();
   console.log("Done.");
 }
 
 main().catch((err) => {
-  console.error(err);
+  console.error(err.message ?? err);
   process.exit(1);
 });
