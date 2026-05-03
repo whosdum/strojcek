@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
       barberId: appt.barberId,
       barberName: `${appt.barber.firstName} ${appt.barber.lastName}`,
       status: appt.status,
+      source: appt.source,
     },
   }));
 

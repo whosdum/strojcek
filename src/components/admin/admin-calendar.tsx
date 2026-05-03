@@ -124,24 +124,36 @@ export function AdminCalendar() {
             title: string;
             start: string;
             end: string;
-            extendedProps: { barberId: string; barberName: string; status: string };
+            extendedProps: {
+              barberId: string;
+              barberName: string;
+              status: string;
+              source?: string;
+            };
           }) => {
             const color = getBarberColor(
               evt.extendedProps.barberId,
               evt.extendedProps.barberName
             );
             const status = evt.extendedProps.status;
+            const isWalkIn = evt.extendedProps.source === "walk-in";
 
             return {
               id: evt.id,
-              title: evt.title,
+              title: isWalkIn ? `🔒 ${evt.title}` : evt.title,
               start: evt.start,
               end: evt.end,
-              backgroundColor: color.bg,
-              borderColor: color.border,
+              // Walk-in events use a muted neutral so they read as
+              // "blocked time / no customer" instead of competing with
+              // real bookings for the barber's color.
+              backgroundColor: isWalkIn ? "#6b7280" : color.bg,
+              borderColor: isWalkIn ? "#4b5563" : color.border,
               textColor: "#fff",
               extendedProps: evt.extendedProps,
-              classNames: [`cal-status-${status.toLowerCase()}`],
+              classNames: [
+                `cal-status-${status.toLowerCase()}`,
+                ...(isWalkIn ? ["cal-walk-in"] : []),
+              ],
             };
           }
         );

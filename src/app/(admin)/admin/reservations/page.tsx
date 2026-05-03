@@ -13,7 +13,7 @@ import {
 import { ClickableTableRow } from "@/components/admin/clickable-table-row";
 import { format } from "date-fns";
 import { sk } from "date-fns/locale";
-import { EyeIcon, ChevronRightIcon, PlusIcon } from "lucide-react";
+import { EyeIcon, ChevronRightIcon, PlusIcon, UserMinusIcon } from "lucide-react";
 import type { AppointmentStatus } from "@/lib/types";
 import {
   STATUS_LABELS,
@@ -85,7 +85,15 @@ export default async function ReservationsPage({
           >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="font-medium">{appt.customerName}</p>
+                <p className="flex items-center gap-1.5 font-medium">
+                  {appt.source === "walk-in" && (
+                    <UserMinusIcon
+                      className="size-4 shrink-0 text-muted-foreground"
+                      aria-label="Walk-in"
+                    />
+                  )}
+                  <span>{appt.customerName}</span>
+                </p>
                 <p className="mt-1 text-sm text-muted-foreground">
                   {format(appt.startTime, DATETIME_DAY_FORMAT, { locale: sk })}
                 </p>
@@ -131,7 +139,15 @@ export default async function ReservationsPage({
                   {format(appt.startTime, TIME_FORMAT)}
                 </TableCell>
                 <TableCell className="font-medium">
-                  {appt.customerName}
+                  <span className="inline-flex items-center gap-1.5">
+                    {appt.source === "walk-in" && (
+                      <UserMinusIcon
+                        className="size-4 shrink-0 text-muted-foreground"
+                        aria-label="Walk-in"
+                      />
+                    )}
+                    <span>{appt.customerName}</span>
+                  </span>
                 </TableCell>
                 <TableCell>
                   {appt.barber.firstName} {appt.barber.lastName}

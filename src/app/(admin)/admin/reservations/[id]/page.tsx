@@ -72,7 +72,7 @@ export default async function ReservationDetailPage({
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
               <span className="text-muted-foreground">Telefón</span>
               <span className="break-words sm:text-right">
-                {appointment.customerPhone}
+                {appointment.customerPhone || "—"}
               </span>
             </div>
             <Separator />
@@ -134,7 +134,13 @@ export default async function ReservationDetailPage({
             <Separator />
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
               <span className="text-muted-foreground">Zdroj</span>
-              <span className="break-words sm:text-right">{appointment.source}</span>
+              <span className="break-words sm:text-right">
+                {appointment.source === "walk-in"
+                  ? "Walk-in / blokovaný čas"
+                  : appointment.source === "admin"
+                  ? "Admin"
+                  : "Online"}
+              </span>
             </div>
             {(appointment.status === "CANCELLED" || appointment.cancellationReason) && (
               <>
