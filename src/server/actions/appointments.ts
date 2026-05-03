@@ -620,6 +620,12 @@ export async function updateAppointment(
   }
 }
 
+const TERMINAL_STATUSES: AppointmentStatus[] = [
+  "CANCELLED",
+  "NO_SHOW",
+  "COMPLETED",
+];
+
 export async function deleteAppointment(id: string): Promise<ActionResult> {
   if (!(await getSession())) return UNAUTH;
   try {
@@ -635,6 +641,24 @@ export async function deleteAppointment(id: string): Promise<ActionResult> {
         throw new Error("NOT_FOUND");
       }
       const data = snap.data() as AppointmentDoc;
+
+      // Refuse to hard-delete an active reservation that has a real
+      // customer attached. The customer would just show up to a slot
+      // that no longer exists, with no notification, and no record we
+      // could investigate when they call to ask. Force the admin to go
+      // through CANCELLED first (which sends the cancellation email
+      // and writes a status-change history entry); after that, this
+      // delete works because the status is terminal.
+      //
+      // Walk-ins / blocked-time entries (no customer contact) bypass
+      // this rule — there's no one to notify and the audit trail risk
+      // is minimal.
+      const isTerminal = TERMINAL_STATUSES.includes(data.status);
+      const hasCustomerContact = !!(data.customerEmail || data.customerPhone);
+      if (!isTerminal && hasCustomerContact) {
+        throw new Error("NOT_TERMINAL");
+      }
+
       const historySnap = await tx.get(apptRef.collection("history"));
 
       if (data.status === "COMPLETED" && data.customerId) {
@@ -653,6 +677,13 @@ export async function deleteAppointment(id: string): Promise<ActionResult> {
   } catch (e) {
     if (e instanceof Error && e.message === "NOT_FOUND") {
       return { success: false, error: "Rezervácia nenájdená." };
+    }
+    if (e instanceof Error && e.message === "NOT_TERMINAL") {
+      return {
+        success: false,
+        error:
+          "Aktívnu rezerváciu so zákazníckymi kontaktmi nemožno mazať priamo. Najprv ju zrušte (Status → Zrušená), aby zákazník dostal notifikáciu, potom môžete záznam zmazať.",
+      };
     }
     console.error("[deleteAppointment]", e);
     return { success: false, error: "Nastala chyba pri mazaní rezervácie." };
