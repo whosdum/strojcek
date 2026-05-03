@@ -229,63 +229,31 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
       }
     }
 
-    // Customer upsert is intentionally OUTSIDE the booking transaction
-    // (cross-collection get-or-create is hard to do atomically and not race-sensitive
-    // for booking — duplicate customer rows are not the failure mode we care about).
-    const phoneIdxRef = adminDb.doc(`customerPhones/${phone}`);
-    const idxSnap = await phoneIdxRef.get();
-    let customerId: string;
-
-    if (idxSnap.exists) {
-      customerId = (idxSnap.data() as { customerId: string }).customerId;
-      await adminDb.doc(`customers/${customerId}`).update({
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email,
-        emailSearch: data.email.toLowerCase(),
-        searchTokens: generateSearchTokens([
-          data.firstName,
-          data.lastName,
-          phone,
-          data.email,
-        ]),
-        updatedAt: Timestamp.now(),
-      });
-    } else {
-      customerId = randomUUID();
-      const batch = adminDb.batch();
-      batch.create(adminDb.doc(`customers/${customerId}`), {
-        id: customerId,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        phone,
-        phoneSearch: phone.slice(-9),
-        email: data.email,
-        emailSearch: data.email.toLowerCase(),
-        notes: null,
-        visitCount: 0,
-        searchTokens: generateSearchTokens([
-          data.firstName,
-          data.lastName,
-          phone,
-          data.email,
-        ]),
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
-      });
-      batch.create(phoneIdxRef, { customerId });
-      await batch.commit();
-    }
-
     const rawToken = generateToken();
     const tokenHash = hashToken(rawToken);
     const appointmentId = randomUUID();
+    const phoneIdxRef = adminDb.doc(`customerPhones/${phone}`);
 
-    // === Atomic transaction: rate limits + slot conflict + create + counters ===
+    // === Atomic transaction ===
+    // Reads must all run before any writes (Firestore tx invariant).
+    // Customer get-or-create lives in this same tx so two concurrent
+    // bookings with the same phone resolve to one customerId, and so
+    // a failed booking doesn't leave an orphan customer + phone index.
+    let customerId = "";
     try {
       await adminDb.runTransaction(async (tx) => {
         const now = new Date();
         const nowTs = Timestamp.fromDate(now);
+
+        // === READS ===
+        // 0. Customer phone index
+        const phoneIdxSnap = await tx.get(phoneIdxRef);
+        const existingCustomerId = phoneIdxSnap.exists
+          ? (phoneIdxSnap.data() as { customerId: string }).customerId
+          : null;
+        const existingCustomerSnap = existingCustomerId
+          ? await tx.get(adminDb.doc(`customers/${existingCustomerId}`))
+          : null;
 
         // 1. Per-phone 24h rate limit
         const phoneCounterRef = adminDb.doc(PHONE_COUNTER_DOC(phone));
@@ -357,7 +325,57 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
         });
         if (overlap) throw new Error("SLOT_TAKEN");
 
-        // 4. Create appointment
+        // === WRITES ===
+        // 4. Customer upsert (in the same tx as appointment + counters
+        // so a failed booking can't leave an orphan customer or phone
+        // index, and so two concurrent bookings with the same phone
+        // can't both fall into the "create" branch).
+        const newSearchTokens = generateSearchTokens([
+          data.firstName,
+          data.lastName,
+          phone,
+          data.email,
+        ]);
+        if (existingCustomerId && existingCustomerSnap?.exists) {
+          customerId = existingCustomerId;
+          tx.update(adminDb.doc(`customers/${customerId}`), {
+            firstName: data.firstName,
+            lastName: data.lastName,
+            email: data.email,
+            emailSearch: data.email.toLowerCase(),
+            searchTokens: newSearchTokens,
+            updatedAt: nowTs,
+          });
+        } else {
+          // Either no phone index, or the index points to a deleted
+          // customer (data corruption — recreate). Both branches mint a
+          // fresh customerId; create() on the index throws if it raced
+          // with another writer, which fails the whole tx and prompts
+          // the customer to retry rather than booking against an
+          // incorrect customer.
+          customerId = randomUUID();
+          tx.create(adminDb.doc(`customers/${customerId}`), {
+            id: customerId,
+            firstName: data.firstName,
+            lastName: data.lastName,
+            phone,
+            phoneSearch: phone.slice(-9),
+            email: data.email,
+            emailSearch: data.email.toLowerCase(),
+            notes: null,
+            visitCount: 0,
+            searchTokens: newSearchTokens,
+            createdAt: nowTs,
+            updatedAt: nowTs,
+          });
+          if (existingCustomerId) {
+            tx.set(phoneIdxRef, { customerId });
+          } else {
+            tx.create(phoneIdxRef, { customerId });
+          }
+        }
+
+        // 5. Create appointment
         const apptRef = adminDb.doc(`appointments/${appointmentId}`);
         tx.create(
           apptRef,
