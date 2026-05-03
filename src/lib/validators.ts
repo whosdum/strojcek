@@ -248,6 +248,20 @@ const adminAppointmentBaseSchema = z.object({
     .max(100, "Popis môže mať najviac 100 znakov")
     .optional()
     .default(""),
+  /** Walk-in only: override the service's default duration. Lets admin
+   *  block arbitrary stretches of time (3h30 = 210) without having to
+   *  pick a matching service. Ignored when walkIn=false. */
+  customDurationMinutes: z
+    .union([
+      z.coerce
+        .number()
+        .int("Musí byť celé číslo")
+        .min(5, "Najmenej 5 minút")
+        .max(480, "Najviac 8 hodín (480 minút)"),
+      z.literal(""),
+      z.null(),
+    ])
+    .optional(),
 });
 
 const E164_PHONE_RE = /^\+4(20|21)\d{9}$/;

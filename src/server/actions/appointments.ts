@@ -285,9 +285,22 @@ export async function createAppointmentAdmin(
     }
     const { barber, bs } = loaded;
 
-    const duration = bs.customDuration ?? bs.defaultDuration;
-    const buffer = bs.bufferMinutes;
-    const priceCents = bs.customPriceCents ?? bs.defaultPriceCents;
+    // Walk-in mode supports a duration override so admin can block any
+    // length of time (e.g. 3h 30min = 210) without having to pick a
+    // service that happens to match. Buffer is also zeroed for
+    // walk-ins — there's no service-level transition to honour for a
+    // self-imposed block.
+    const customDuration =
+      data.walkIn &&
+      typeof data.customDurationMinutes === "number" &&
+      data.customDurationMinutes > 0
+        ? data.customDurationMinutes
+        : null;
+    const duration = customDuration ?? bs.customDuration ?? bs.defaultDuration;
+    const buffer = data.walkIn ? 0 : bs.bufferMinutes;
+    const priceCents = data.walkIn
+      ? 0
+      : (bs.customPriceCents ?? bs.defaultPriceCents);
 
     const startTime = fromZonedTime(`${data.date}T${data.time}:00`, TIMEZONE);
     const endTime = addMinutes(startTime, duration);
@@ -524,9 +537,22 @@ export async function updateAppointment(
         return { success: false, error: "Barber neponúka túto službu." };
       }
       const { barber, bs } = loaded;
-      const duration = bs.customDuration ?? bs.defaultDuration;
-      const buffer = bs.bufferMinutes;
-      const priceCents = bs.customPriceCents ?? bs.defaultPriceCents;
+
+      // Same walk-in duration override + buffer/price zeroing as in
+      // createAppointmentAdmin. Sticky walk-in mode means re-saves
+      // honour customDurationMinutes if admin tweaks the block length.
+      const customDuration =
+        isWalkIn &&
+        typeof data.customDurationMinutes === "number" &&
+        data.customDurationMinutes > 0
+          ? data.customDurationMinutes
+          : null;
+      const duration =
+        customDuration ?? bs.customDuration ?? bs.defaultDuration;
+      const buffer = isWalkIn ? 0 : bs.bufferMinutes;
+      const priceCents = isWalkIn
+        ? 0
+        : (bs.customPriceCents ?? bs.defaultPriceCents);
 
       const startTime = fromZonedTime(`${data.date}T${data.time}:00`, TIMEZONE);
       const endTime = addMinutes(startTime, duration);

@@ -87,7 +87,28 @@ interface FormState {
   priceFinal: string;
   walkIn: boolean;
   label: string;
+  /** Walk-in only: minutes the block should occupy. Empty string falls
+   *  back to the selected service's default duration on the server. */
+  customDurationMinutes: string;
 }
+
+interface WalkInTemplate {
+  id: string;
+  label: string;
+  /** Empty string = "let the service decide" (admin still enters
+   *  duration manually if needed). */
+  durationMinutes: string;
+  /** When true, also flips the ignoreSchedule switch on click — the
+   *  slot picker doesn't know about custom durations, and these
+   *  templates are typically used for free-time blocks anyway. */
+  forceIgnoreSchedule: boolean;
+}
+
+const WALK_IN_TEMPLATES: WalkInTemplate[] = [
+  { id: "out", label: "Mimo prevádzky", durationMinutes: "60", forceIgnoreSchedule: true },
+  { id: "lunch", label: "Obed", durationMinutes: "30", forceIgnoreSchedule: true },
+  { id: "break", label: "Krátka pauza", durationMinutes: "15", forceIgnoreSchedule: true },
+];
 
 function todayIso() {
   const now = toZonedTime(new Date(), TIMEZONE);
@@ -136,8 +157,22 @@ export function AppointmentForm({
       priceFinal: initial?.priceFinal != null ? String(initial.priceFinal) : "",
       walkIn: initialIsWalkIn,
       label: initialIsWalkIn ? initial?.customerName ?? "" : "",
+      customDurationMinutes: "",
     };
   });
+
+  const applyWalkInTemplate = (tpl: WalkInTemplate) => {
+    setForm((s) => ({
+      ...s,
+      walkIn: true,
+      label: tpl.label,
+      customDurationMinutes: tpl.durationMinutes,
+      ignoreSchedule: tpl.forceIgnoreSchedule || s.ignoreSchedule,
+      // Clear the time when forcing schedule-ignore so admin types a
+      // fresh start time instead of keeping a stale slot pick.
+      time: tpl.forceIgnoreSchedule ? "" : s.time,
+    }));
+  };
 
   // Filter barbers offering the selected service
   const eligibleBarbers = useMemo(
@@ -265,6 +300,10 @@ export function AppointmentForm({
         ignoreSchedule: form.ignoreSchedule,
         walkIn: form.walkIn,
         label: form.walkIn ? form.label.trim() : "",
+        customDurationMinutes:
+          form.walkIn && form.customDurationMinutes.trim() !== ""
+            ? Number(form.customDurationMinutes)
+            : null,
       };
 
       let result: { success: boolean; error?: string; appointmentId?: string };
@@ -314,23 +353,46 @@ export function AppointmentForm({
       {/* Walk-in toggle — disabled in edit mode so admin can't flip an
           existing reservation in or out of walk-in (would orphan the
           customer record / invent a fake one). */}
-      <div className="flex items-start gap-3 rounded-xl border border-border/60 bg-muted/30 p-3">
-        <Switch
-          id="walkIn"
-          checked={form.walkIn}
-          onCheckedChange={(v) => updateField("walkIn", v)}
-          disabled={limited || mode === "edit"}
-        />
-        <div className="flex-1">
-          <Label htmlFor="walkIn" className="cursor-pointer">
-            Walk-in / blokovaný čas
-          </Label>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            Bez kontaktných údajov — žiadny email, žiadna SMS pripomienka.
-            Použite pre zákazníka bez čísla, ktorý príde osobne, alebo na
-            zablokovanie vlastného času (obed, výjazd).
-          </p>
+      <div className="space-y-3 rounded-xl border border-border/60 bg-muted/30 p-3">
+        <div className="flex items-start gap-3">
+          <Switch
+            id="walkIn"
+            checked={form.walkIn}
+            onCheckedChange={(v) => updateField("walkIn", v)}
+            disabled={limited || mode === "edit"}
+          />
+          <div className="flex-1">
+            <Label htmlFor="walkIn" className="cursor-pointer">
+              Walk-in / blokovaný čas
+            </Label>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Bez kontaktných údajov — žiadny email, žiadna SMS pripomienka.
+              Použite pre zákazníka bez čísla, ktorý príde osobne, alebo na
+              zablokovanie vlastného času (obed, výjazd).
+            </p>
+          </div>
         </div>
+
+        {/* Quick templates — pre-fill label + duration + ignoreSchedule
+            for the most common blocking scenarios. Visible in create
+            mode only (edit mode disallows changing walkIn anyway). */}
+        {mode === "create" && !limited && (
+          <div className="flex flex-wrap items-center gap-2 pl-[3.25rem]">
+            <span className="text-xs text-muted-foreground">Rýchle:</span>
+            {WALK_IN_TEMPLATES.map((tpl) => (
+              <Button
+                key={tpl.id}
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => applyWalkInTemplate(tpl)}
+                className="h-7 px-2 text-xs"
+              >
+                {tpl.label} · {tpl.durationMinutes}min
+              </Button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Služba a barber */}
@@ -481,22 +543,49 @@ export function AppointmentForm({
       </div>
 
       {/* Zákazník — for walk-ins, the whole contact fieldset is replaced
-          with a single optional label input. */}
+          with a label + optional duration override. */}
       {form.walkIn ? (
-        <div className="space-y-1.5">
-          <Label htmlFor="label">Popis (voliteľné)</Label>
-          <Input
-            id="label"
-            value={form.label}
-            onChange={(e) => updateField("label", e.target.value)}
-            placeholder={'napr. „Walk-in", „Mimo prevádzky", „Pán Novák"'}
-            disabled={limited}
-            maxLength={100}
-          />
-          <p className="text-xs text-muted-foreground">
-            Zobrazí sa v zozname rezervácií namiesto mena zákazníka. Ak
-            nezadáte popis, použije sa „Walk-in&quot;.
-          </p>
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="label">Popis (voliteľné)</Label>
+            <Input
+              id="label"
+              value={form.label}
+              onChange={(e) => updateField("label", e.target.value)}
+              placeholder={'napr. „Walk-in", „Mimo prevádzky", „Pán Novák"'}
+              disabled={limited}
+              maxLength={100}
+            />
+            <p className="text-xs text-muted-foreground">
+              Zobrazí sa v zozname rezervácií namiesto mena zákazníka. Ak
+              nezadáte popis, použije sa „Walk-in&quot;.
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="customDurationMinutes">
+              Vlastné trvanie (min)
+            </Label>
+            <Input
+              id="customDurationMinutes"
+              type="number"
+              inputMode="numeric"
+              min={5}
+              max={480}
+              step={5}
+              placeholder="napr. 210 pre 3h 30min"
+              value={form.customDurationMinutes}
+              onChange={(e) =>
+                updateField("customDurationMinutes", e.target.value)
+              }
+              disabled={limited}
+            />
+            <p className="text-xs text-muted-foreground">
+              Override pre dĺžku rezervácie 5–480 min. Prázdne = použije sa
+              trvanie vybranej služby. Pre voľne zadaný čas zapnite
+              „Ignorovať rozvrh&quot; — slot-picker nevie o vlastnom trvaní.
+            </p>
+          </div>
         </div>
       ) : (
         <div className="space-y-4">
