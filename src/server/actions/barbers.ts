@@ -104,6 +104,42 @@ export async function updateBarberServices(
   try {
     const subColl = adminDb.collection(`barbers/${barberId}/services`);
 
+    // Pre-flight: refuse to remove a service that has active future
+    // appointments. Otherwise loadBarberAndService() returns null on the
+    // appointment edit form afterwards, soft-bricking the appointment
+    // until someone re-attaches the service.
+    const newSet = new Set(serviceIds);
+    const existingForRemoval = await subColl.get();
+    const removedServiceIds = existingForRemoval.docs
+      .map((d) => d.id)
+      .filter((id) => !newSet.has(id));
+
+    if (removedServiceIds.length > 0) {
+      const activeSnap = await adminDb
+        .collection("appointments")
+        .where("barberId", "==", barberId)
+        .where("status", "in", ["PENDING", "CONFIRMED", "IN_PROGRESS"])
+        .get();
+
+      const blockedNames = new Map<string, string>();
+      for (const d of activeSnap.docs) {
+        const a = d.data() as {
+          serviceId: string;
+          serviceName: string;
+        };
+        if (removedServiceIds.includes(a.serviceId)) {
+          blockedNames.set(a.serviceId, a.serviceName);
+        }
+      }
+      if (blockedNames.size > 0) {
+        const list = [...blockedNames.values()].join(", ");
+        return {
+          success: false,
+          error: `Tieto služby majú aktívne rezervácie a nedajú sa odstrániť: ${list}. Najprv ich zrušte alebo presuňte na inú službu.`,
+        };
+      }
+    }
+
     // One transaction: wipe existing sub-docs, write new ones, update the
     // denormalized parent. Avoids the previous wipe-then-write window where
     // a network failure between the two batches would leave the barber
