@@ -44,6 +44,9 @@ import type {
   AppointmentDoc,
   BarberDoc,
   BarberServiceDoc,
+  ScheduleDoc,
+  ScheduleBreakDoc,
+  ScheduleOverrideDoc,
 } from "@/server/types/firestore";
 
 type ActionResult = {
@@ -88,11 +91,26 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
     const data = bookingInputSchema.parse(input);
     const phone = normalizePhone(data.phone);
 
-    // Pre-load barber + barber-service (outside the transaction; not race-sensitive)
-    const [barberSnap, bsSnap] = await Promise.all([
-      adminDb.doc(`barbers/${data.barberId}`).get(),
-      adminDb.doc(`barbers/${data.barberId}/services/${data.serviceId}`).get(),
-    ]);
+    // Pre-load barber + barber-service + schedule context (outside the
+    // transaction; schedule mutations are admin-only and rare, so a
+    // ~ms race window is acceptable).
+    const localDateForDay = toZonedTime(
+      fromZonedTime(`${data.date}T00:00:00`, TIMEZONE),
+      TIMEZONE
+    );
+    const dayOfWeek = localDateForDay.getDay();
+
+    const [barberSnap, bsSnap, overrideSnap, scheduleSnap, breaksSnap] =
+      await Promise.all([
+        adminDb.doc(`barbers/${data.barberId}`).get(),
+        adminDb.doc(`barbers/${data.barberId}/services/${data.serviceId}`).get(),
+        adminDb.doc(`barbers/${data.barberId}/overrides/${data.date}`).get(),
+        adminDb.doc(`barbers/${data.barberId}/schedules/${dayOfWeek}`).get(),
+        adminDb
+          .collection(`barbers/${data.barberId}/breaks`)
+          .where("dayOfWeek", "==", dayOfWeek)
+          .get(),
+      ]);
     if (!barberSnap.exists || !bsSnap.exists) {
       return { success: false, error: "Barber neponúka túto službu." };
     }
@@ -139,6 +157,76 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
         success: false,
         error: "Termín v minulosti nie je možné rezervovať.",
       };
+    }
+
+    // Re-derive the schedule window the slot generator would have used —
+    // override beats schedule. This catches submissions of slots that
+    // were valid when the wizard fetched them but became invalid before
+    // submit (admin disabled the day, set custom hours, added a break).
+    let workStart: string;
+    let workEnd: string;
+    let usingOverride = false;
+
+    if (overrideSnap.exists) {
+      const o = overrideSnap.data() as ScheduleOverrideDoc;
+      if (!o.isAvailable || !o.startTime || !o.endTime) {
+        return {
+          success: false,
+          error: "Tento deň je zatvorený. Vyberte iný termín.",
+        };
+      }
+      workStart = o.startTime;
+      workEnd = o.endTime;
+      usingOverride = true;
+    } else {
+      if (!scheduleSnap.exists) {
+        return {
+          success: false,
+          error: "Tento deň je zatvorený. Vyberte iný termín.",
+        };
+      }
+      const s = scheduleSnap.data() as ScheduleDoc;
+      if (!s.isActive) {
+        return {
+          success: false,
+          error: "Tento deň je zatvorený. Vyberte iný termín.",
+        };
+      }
+      workStart = s.startTime;
+      workEnd = s.endTime;
+    }
+
+    const workingStartUtc = fromZonedTime(`${data.date}T${workStart}:00`, TIMEZONE);
+    const workingEndUtc = fromZonedTime(`${data.date}T${workEnd}:00`, TIMEZONE);
+    if (
+      startTime.getTime() < workingStartUtc.getTime() ||
+      endTime.getTime() > workingEndUtc.getTime()
+    ) {
+      return {
+        success: false,
+        error: "Tento termín je mimo pracovných hodín.",
+      };
+    }
+
+    // Breaks apply on regular schedule days only — overrides take a
+    // single explicit window and ignore the recurring breaks.
+    if (!usingOverride) {
+      const newBlockEndMs = endTime.getTime() + buffer * 60_000;
+      const breakConflict = breaksSnap.docs.some((d) => {
+        const b = d.data() as ScheduleBreakDoc;
+        const bStart = fromZonedTime(
+          `${data.date}T${b.startTime}:00`,
+          TIMEZONE
+        );
+        const bEnd = fromZonedTime(`${data.date}T${b.endTime}:00`, TIMEZONE);
+        return startTime.getTime() < bEnd.getTime() && newBlockEndMs > bStart.getTime();
+      });
+      if (breakConflict) {
+        return {
+          success: false,
+          error: "Tento termín zasahuje do prestávky. Vyberte iný čas.",
+        };
+      }
     }
 
     // Customer upsert is intentionally OUTSIDE the booking transaction
