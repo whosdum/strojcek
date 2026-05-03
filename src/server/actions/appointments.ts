@@ -309,23 +309,27 @@ export async function createAppointmentAdmin(
     try {
       await adminDb.runTransaction(async (tx) => {
         if (!data.ignoreSchedule) {
-          const startTs = Timestamp.fromDate(startTime);
-          const endTs = Timestamp.fromDate(endTime);
+          // Match the public booking action: query by (barberId,
+          // startDateKey) so cross-midnight long bookings can't slip
+          // past the previous startTime-range filter, and include
+          // service buffers on both sides of the comparison so a new
+          // appointment can't eat the buffer of an adjacent one.
           const overlapping = await tx.get(
             adminDb
               .collection("appointments")
               .where("barberId", "==", data.barberId)
-              .where("startTime", "<", endTs)
-              .where("startTime", ">=", Timestamp.fromMillis(
-                startTs.toMillis() - 24 * 60 * 60 * 1000
-              ))
+              .where("startDateKey", "==", startKey)
           );
+          const newEndWithBuffer = endTime.getTime() + buffer * 60_000;
           const conflict = overlapping.docs.some((d) => {
             const a = d.data() as AppointmentDoc;
             if (a.status === "CANCELLED" || a.status === "NO_SHOW") return false;
             const aStart = a.startTime.toMillis();
-            const aEnd = a.endTime.toMillis();
-            return aStart < endTime.getTime() && aEnd > startTime.getTime();
+            const aEndWithBuffer =
+              a.endTime.toMillis() + (a.serviceBufferMinutes ?? 0) * 60_000;
+            return (
+              aStart < newEndWithBuffer && aEndWithBuffer > startTime.getTime()
+            );
           });
           if (conflict) throw new Error("SLOT_TAKEN");
         }
