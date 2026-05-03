@@ -36,8 +36,14 @@ function allowedOrigins(req: NextRequest): Set<string> {
 
 export async function POST(request: NextRequest) {
   // Same-origin guard. Blocks login-CSRF where evil.com POSTs an idToken
-  // to pin a session cookie in the victim's browser. We accept any
-  // origin that matches our own host or NEXT_PUBLIC_APP_URL.
+  // to pin a session cookie in the victim's browser.
+  //
+  // Browsers may legitimately omit Origin on certain navigations / form
+  // submissions, so when it's absent we fall back to Sec-Fetch-Site —
+  // a header browsers always populate and which forged cross-origin
+  // requests can't spoof. If neither header is present (pre-Fetch
+  // Metadata clients, ancient browsers, curl), we refuse rather than
+  // accepting unconditionally.
   const origin = request.headers.get("origin");
   if (origin) {
     const allowed = allowedOrigins(request);
@@ -47,6 +53,17 @@ export async function POST(request: NextRequest) {
       );
       return NextResponse.json(
         { error: "origin_mismatch" },
+        { status: 403 }
+      );
+    }
+  } else {
+    const fetchSite = request.headers.get("sec-fetch-site");
+    if (fetchSite !== "same-origin" && fetchSite !== "same-site") {
+      console.warn(
+        `[auth/session] Origin missing and sec-fetch-site=${fetchSite ?? "<absent>"}`
+      );
+      return NextResponse.json(
+        { error: "origin_required" },
         { status: 403 }
       );
     }
