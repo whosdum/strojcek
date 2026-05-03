@@ -468,11 +468,28 @@ export async function updateAppointment(
           ? null
           : Math.round(Number(data.priceFinal) * 100);
 
-      await apptRef.update({
+      const changedFields: string[] = [];
+      if ((existing.notes ?? null) !== (data.notes || null)) changedFields.push("notes");
+      if ((existing.priceFinalCents ?? null) !== priceFinal) changedFields.push("priceFinalCents");
+
+      const batch = adminDb.batch();
+      batch.update(apptRef, {
         notes: data.notes || null,
         priceFinalCents: priceFinal,
         updatedAt: Timestamp.now(),
       });
+      if (changedFields.length > 0) {
+        const historyRef = apptRef.collection("history").doc();
+        batch.create(historyRef, {
+          id: historyRef.id,
+          oldStatus: existing.status,
+          newStatus: existing.status,
+          changedBy: "admin",
+          reason: `Upravené polia: ${changedFields.join(", ")}`,
+          changedAt: Timestamp.now(),
+        });
+      }
+      await batch.commit();
     } else {
       const phone = normalizePhone(data.phone);
       const loaded = await loadBarberAndService(data.barberId, data.serviceId);
@@ -548,6 +565,33 @@ export async function updateAppointment(
               updatedAt: Timestamp.now(),
             })
           );
+
+          // Audit trail for field-level edits. Status stays the same on
+          // an edit (status changes flow through updateAppointmentStatus),
+          // so we record old=new and stash the changed-field list in the
+          // reason string so the admin can see what was touched.
+          const changedFields: string[] = [];
+          if (existing.barberId !== data.barberId) changedFields.push("barberId");
+          if (existing.serviceId !== data.serviceId) changedFields.push("serviceId");
+          if (existing.startTime.toMillis() !== startTime.getTime()) changedFields.push("startTime");
+          if (existing.priceExpectedCents !== priceCents) changedFields.push("priceExpectedCents");
+          if ((existing.priceFinalCents ?? null) !== priceFinal) changedFields.push("priceFinalCents");
+          if ((existing.customerPhone ?? null) !== phone) changedFields.push("customerPhone");
+          if ((existing.customerEmail ?? null) !== (data.email || null)) changedFields.push("customerEmail");
+          if ((existing.customerName ?? null) !== `${data.firstName} ${data.lastName || ""}`.trim()) changedFields.push("customerName");
+          if ((existing.notes ?? null) !== (data.notes || null)) changedFields.push("notes");
+
+          if (changedFields.length > 0) {
+            const historyRef = apptRef.collection("history").doc();
+            tx.create(historyRef, {
+              id: historyRef.id,
+              oldStatus: existing.status,
+              newStatus: existing.status,
+              changedBy: "admin",
+              reason: `Upravené polia: ${changedFields.join(", ")}`,
+              changedAt: Timestamp.now(),
+            });
+          }
         });
       } catch (e: unknown) {
         if (e instanceof Error && e.message === "SLOT_TAKEN") {
