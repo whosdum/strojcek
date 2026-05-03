@@ -120,6 +120,26 @@ export async function updateBarberServices(
             )
           : [];
 
+      // Preserve per-barber custom price/duration overrides for services
+      // that remain in the new list. The previous wipe-and-recreate
+      // unconditionally cleared customPriceCents/customDuration, which
+      // silently destroyed premium pricing the moment HR edited which
+      // services a barber offered.
+      const existingOverrides = new Map<
+        string,
+        { customPriceCents: number | null; customDuration: number | null }
+      >();
+      for (const d of existingSnap.docs) {
+        const data = d.data() as {
+          customPriceCents?: number | null;
+          customDuration?: number | null;
+        };
+        existingOverrides.set(d.id, {
+          customPriceCents: data.customPriceCents ?? null,
+          customDuration: data.customDuration ?? null,
+        });
+      }
+
       // --- WRITE phase ---
       for (const d of existingSnap.docs) {
         tx.delete(d.ref);
@@ -127,10 +147,11 @@ export async function updateBarberServices(
       for (const s of newServiceSnaps) {
         if (!s.exists) continue;
         const data = s.data() as ServiceDoc;
+        const prev = existingOverrides.get(s.id);
         tx.set(subColl.doc(s.id), {
           serviceId: s.id,
-          customPriceCents: null,
-          customDuration: null,
+          customPriceCents: prev?.customPriceCents ?? null,
+          customDuration: prev?.customDuration ?? null,
           serviceName: data.name,
           defaultDuration: data.durationMinutes,
           bufferMinutes: data.bufferMinutes,
