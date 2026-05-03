@@ -47,7 +47,7 @@ export function BookingSummary({
     <div className="rounded-xl bg-muted/40 p-4">
       <div className="space-y-3">
         {rows.map((row, i) => (
-          <div key={row.label}>
+          <div key={i}>
             <div className="flex items-center gap-3 text-[15px]">
               <row.icon className="size-4 shrink-0 text-muted-foreground" />
               <span className="text-muted-foreground">{row.label}</span>

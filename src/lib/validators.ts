@@ -99,7 +99,19 @@ export const barberInputSchema = z.object({
   ),
   phone: z.string().optional().default(""),
   bio: z.string().optional().default(""),
-  avatarUrl: z.string().url().optional().or(z.literal("")),
+  // Allow either an absolute URL (https://cdn.example.com/x.png) or a
+  // root-relative path served from /public ("/barbers/martin.png").
+  // The previous z.string().url() silently rejected /public assets,
+  // making the form un-savable for any barber whose avatar lived there.
+  avatarUrl: z
+    .string()
+    .max(2048, "URL je príliš dlhá")
+    .refine(
+      (v) => v === "" || /^\//.test(v) || /^https?:\/\//i.test(v),
+      "Zadajte URL (https://…) alebo cestu od „/"
+    )
+    .optional()
+    .or(z.literal("")),
   isActive: z.boolean().default(true),
   sortOrder: z.coerce.number().default(0),
   bookingHorizonWeeks: z.coerce

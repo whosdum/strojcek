@@ -102,13 +102,13 @@ export function Sidebar() {
               href={item.href}
               onClick={() => setOpen(false)}
               className={cn(
-                "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                "flex items-center gap-3 rounded-lg px-3.5 py-3 text-base font-medium transition-colors md:gap-2.5 md:px-3 md:py-2 md:text-sm",
                 isActive
                   ? "bg-primary/10 text-primary"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >
-              <item.icon className="size-4" />
+              <item.icon className="size-5 md:size-4" />
               {item.label}
             </Link>
           );
@@ -117,9 +117,9 @@ export function Sidebar() {
       <div className="border-t p-2">
         <button
           onClick={() => setShowLogoutConfirm(true)}
-          className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className="flex w-full items-center gap-3 rounded-lg px-3.5 py-3 text-base font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:gap-2.5 md:px-3 md:py-2 md:text-sm"
         >
-          <LogOutIcon className="size-4" />
+          <LogOutIcon className="size-5 md:size-4" />
           Odhlásiť sa
         </button>
       </div>
@@ -142,13 +142,14 @@ export function Sidebar() {
               render={
                 <Button
                   variant="outline"
-                  size="icon-sm"
+                  size="icon"
+                  className="size-11"
                   aria-expanded={open}
                   aria-controls="admin-mobile-nav"
                 />
               }
             >
-              <MenuIcon className="size-4" />
+              <MenuIcon className="size-5" />
               <span className="sr-only">Otvoriť menu</span>
             </SheetTrigger>
             <SheetContent

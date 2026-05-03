@@ -62,6 +62,7 @@ export function ContactForm(props: ContactFormProps) {
     handleSubmit,
     watch,
     setError,
+    setValue,
     formState: { errors, touchedFields, isSubmitting },
   } = useForm<ContactFormValues>({
     resolver: zodResolver(contactSchema),
@@ -89,12 +90,24 @@ export function ContactForm(props: ContactFormProps) {
   const noteLength = watch("note")?.length ?? 0;
   const [phoneZeroHint, setPhoneZeroHint] = useState(false);
 
-  // Lightweight check for button — required fields have content
+  // Lightweight check for button — only enabled when required fields are
+  // present and there are no Zod validation errors. Earlier we kept a
+  // separate regex for the email shape here, which silently drifted from
+  // the server-side `z.email()` rule and could either lock the user out of
+  // a valid address or let an invalid one through to the API.
   const firstName = watch("firstName");
   const lastName = watch("lastName");
   const phone = watch("phone");
   const email = watch("email");
-  const canSubmit = !!firstName && !!lastName && phone.length === 9 && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
+  const hasFieldErrors = Boolean(
+    errors.firstName || errors.lastName || errors.phone || errors.email
+  );
+  const canSubmit =
+    !!firstName &&
+    !!lastName &&
+    phone.length === 9 &&
+    email.length > 0 &&
+    !hasFieldErrors;
 
   return (
     <form onSubmit={handleSubmit(props.onSubmit)} className="space-y-4">
@@ -170,16 +183,18 @@ export function ContactForm(props: ContactFormProps) {
             aria-invalid={!!errors.phone}
             aria-describedby={errors.phone ? "phone-error" : undefined}
             {...register("phone", {
+              // Use setValue (not e.target.value mutation) so RHF's internal
+              // value stays in sync with the DOM — direct mutation only
+              // updates the input visually and leaves form.getValues().phone
+              // pointing at the unstripped string.
               onChange: (e) => {
-                let val = e.target.value.replace(/\D/g, "");
-                // Strip leading 0 — prefix is already selected
-                if (val.startsWith("0")) {
-                  val = val.slice(1);
-                  setPhoneZeroHint(true);
-                } else {
-                  setPhoneZeroHint(false);
-                }
-                e.target.value = val.slice(0, 9);
+                const raw = e.target.value.replace(/\D/g, "");
+                const stripped = raw.startsWith("0") ? raw.slice(1) : raw;
+                setPhoneZeroHint(raw.startsWith("0"));
+                setValue("phone", stripped.slice(0, 9), {
+                  shouldValidate: true,
+                  shouldDirty: true,
+                });
               },
             })}
           />

@@ -285,7 +285,9 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
 
 const TOTAL_STEPS = 6;
 const DRAFT_KEY = "strojcek-draft";
-const DRAFT_MAX_AGE_MS = 30 * 60 * 1000; // 30 minutes
+// 25 min — sits under page.tsx's 30-min revalidate so the draft never
+// expires at exactly the moment public data is refetched.
+const DRAFT_MAX_AGE_MS = 25 * 60 * 1000;
 
 /** Format phone for display: "+421 903123456" → "+421 903 123 456" */
 function formatPhoneDisplay(prefix: string, phone: string): string {
@@ -505,9 +507,12 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
         const rect = el.getBoundingClientRect();
         const margin = 24;
         if (rect.top < 0 || rect.top > window.innerHeight * 0.4) {
+          const prefersReducedMotion = window.matchMedia(
+            "(prefers-reduced-motion: reduce)"
+          ).matches;
           window.scrollTo({
             top: window.scrollY + rect.top - margin,
-            behavior: "smooth",
+            behavior: prefersReducedMotion ? "auto" : "smooth",
           });
         }
       });
@@ -1056,7 +1061,7 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
               onClick={() => state.barberId && loadBarberCalendar(state.barberId)}
               disabled={!state.barberId}
             >
-              Skúsiť znova
+              Skúsiť znova načítať rozvrh
             </Button>
           </div>
         ) : !state.workingDays ? (
@@ -1166,7 +1171,7 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
                   : "border-primary/40 bg-primary/5 ring-2 ring-primary/15",
                 showTermsHint &&
                   !termsAccepted &&
-                  "border-destructive/60 bg-destructive/5 ring-destructive/20 animate-pulse"
+                  "border-destructive/60 bg-destructive/5 ring-destructive/20 motion-safe:animate-pulse"
               )}
             >
               <Checkbox

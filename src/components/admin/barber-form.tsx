@@ -140,22 +140,77 @@ export function BarberForm({ barber, allServices }: BarberFormProps) {
 
       <div className="space-y-1.5">
         <Label htmlFor="email">Email</Label>
-        <Input id="email" type="email" maxLength={254} {...register("email")} />
+        <Input
+          id="email"
+          type="email"
+          maxLength={254}
+          aria-invalid={!!errors.email}
+          aria-describedby={errors.email ? "email-error" : undefined}
+          {...register("email")}
+        />
+        {errors.email && (
+          <p id="email-error" className="text-xs text-destructive">
+            {errors.email.message}
+          </p>
+        )}
       </div>
 
       <div className="space-y-1.5">
         <Label htmlFor="phone">Telefón</Label>
-        <Input id="phone" {...register("phone")} />
+        <Input
+          id="phone"
+          aria-invalid={!!errors.phone}
+          aria-describedby={errors.phone ? "phone-error" : undefined}
+          {...register("phone")}
+        />
+        {errors.phone && (
+          <p id="phone-error" className="text-xs text-destructive">
+            {errors.phone.message}
+          </p>
+        )}
       </div>
 
       <div className="space-y-1.5">
         <Label htmlFor="bio">Bio</Label>
-        <Textarea id="bio" rows={3} {...register("bio")} />
+        <Textarea
+          id="bio"
+          rows={3}
+          maxLength={500}
+          aria-invalid={!!errors.bio}
+          aria-describedby={errors.bio ? "bio-error" : "bio-hint"}
+          {...register("bio")}
+        />
+        {errors.bio ? (
+          <p id="bio-error" className="text-xs text-destructive">
+            {errors.bio.message}
+          </p>
+        ) : (
+          <p id="bio-hint" className="text-xs text-muted-foreground">
+            Max 500 znakov.
+          </p>
+        )}
       </div>
 
       <div className="space-y-1.5">
         <Label htmlFor="avatarUrl">Avatar URL</Label>
-        <Input id="avatarUrl" {...register("avatarUrl")} />
+        <Input
+          id="avatarUrl"
+          aria-invalid={!!errors.avatarUrl}
+          aria-describedby={
+            errors.avatarUrl ? "avatarUrl-error" : "avatarUrl-hint"
+          }
+          {...register("avatarUrl")}
+        />
+        {errors.avatarUrl ? (
+          <p id="avatarUrl-error" className="text-xs text-destructive">
+            {errors.avatarUrl.message}
+          </p>
+        ) : (
+          <p id="avatarUrl-hint" className="text-xs text-muted-foreground">
+            Absolútna URL (https://…) alebo cesta od „/“ (napr.
+            /barbers/martin.png).
+          </p>
+        )}
       </div>
 
       <div className="space-y-1.5">
@@ -163,8 +218,15 @@ export function BarberForm({ barber, allServices }: BarberFormProps) {
         <Input
           id="sortOrder"
           type="number"
+          aria-invalid={!!errors.sortOrder}
+          aria-describedby={errors.sortOrder ? "sortOrder-error" : undefined}
           {...register("sortOrder")}
         />
+        {errors.sortOrder && (
+          <p id="sortOrder-error" className="text-xs text-destructive">
+            {errors.sortOrder.message}
+          </p>
+        )}
       </div>
 
       <div className="space-y-1.5">

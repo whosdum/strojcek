@@ -92,6 +92,7 @@ export const SectionWrapper = forwardRef<HTMLDivElement, SectionWrapperProps>(
         {isCompleted ? (
           <button
             type="button"
+            aria-label={`Upraviť krok ${stepNumber}: ${title}`}
             className="flex w-full items-center gap-3 rounded-xl p-4 outline-none cursor-pointer active:bg-muted/30 focus-visible:ring-2 focus-visible:ring-primary/50"
             onClick={onEdit}
           >
