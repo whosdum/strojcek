@@ -509,13 +509,19 @@ export async function updateAppointment(
                 .where("barberId", "==", data.barberId)
                 .where("startDateKey", "==", startKey)
             );
+            // Buffered comparison — match the public booking path so an
+            // admin re-time can't pretend the next service has zero
+            // transition time.
+            const newEndWithBuffer = endTime.getTime() + buffer * 60_000;
             const conflict = overlapping.docs.some((d) => {
               if (d.id === id) return false;
               const a = d.data() as AppointmentDoc;
               if (a.status === "CANCELLED" || a.status === "NO_SHOW") return false;
+              const aStart = a.startTime.toMillis();
+              const aEndWithBuffer =
+                a.endTime.toMillis() + (a.serviceBufferMinutes ?? 0) * 60_000;
               return (
-                a.startTime.toMillis() < endTime.getTime() &&
-                a.endTime.toMillis() > startTime.getTime()
+                aStart < newEndWithBuffer && aEndWithBuffer > startTime.getTime()
               );
             });
             if (conflict) throw new Error("SLOT_TAKEN");
