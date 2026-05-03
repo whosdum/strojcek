@@ -10,7 +10,10 @@ import {
   useState,
 } from "react";
 import { addDays, endOfMonth, format, parseISO } from "date-fns";
+import { formatInTimeZone, toZonedTime } from "date-fns-tz";
 import { sk } from "date-fns/locale/sk";
+
+const TIMEZONE = "Europe/Bratislava";
 import {
   CheckCircle2Icon,
   Loader2Icon,
@@ -832,21 +835,35 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
   // Calendar helpers
   // ---------------------------------------------------------------------------
 
-  // Pre-compute once per render instead of per-day-cell
-  const now = new Date();
-  const todayStart = new Date(now);
-  todayStart.setHours(0, 0, 0, 0);
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  // All "today / now" comparisons run against Europe/Bratislava — the
+  // server stores startDateKey in that zone and the override map is
+  // keyed the same way, so a customer browsing from a different TZ at
+  // 23:30 their time would otherwise see the calendar disagree with
+  // what the server is willing to book.
+  const todayKey = formatInTimeZone(new Date(), TIMEZONE, "yyyy-MM-dd");
+  const todayStart = parseISO(todayKey); // UTC-midnight stand-in for the calendar's startMonth prop
+  const nowBratislava = toZonedTime(new Date(), TIMEZONE);
+  const currentMinutes =
+    nowBratislava.getHours() * 60 + nowBratislava.getMinutes();
 
   // Booking horizon — read from selected barber, fallback to 3 weeks if barber
   // hasn't been selected yet (matches server-side default in createBooking).
   const horizonWeeks = selectedBarber?.bookingHorizonWeeks ?? 3;
-  const horizonEnd = addDays(todayStart, horizonWeeks * 7);
-  const calendarToMonth = endOfMonth(horizonEnd);
+  const horizonEndKey = formatInTimeZone(
+    addDays(parseISO(todayKey), horizonWeeks * 7),
+    TIMEZONE,
+    "yyyy-MM-dd"
+  );
+  const calendarToMonth = endOfMonth(parseISO(horizonEndKey));
 
   const calendarDisabledMatcher = (date: Date) => {
-    if (date < todayStart) return true;
-    if (date > horizonEnd) return true;
+    // The Date received from react-day-picker is local-midnight of the
+    // user's clicked day; format() in the user's TZ gives us the
+    // YYYY-MM-DD of what they actually picked, which is what the server
+    // will see as `data.date`.
+    const dateKey = format(date, "yyyy-MM-dd");
+    if (dateKey < todayKey) return true;
+    if (dateKey > horizonEndKey) return true;
     // Block ALL days until working days are loaded from the server
     if (!state.workingDays) return true;
 
@@ -854,18 +871,14 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
     // normally non-working day (e.g. Sunday) selectable when the barber
     // explicitly added a custom-hours override for it, and conversely
     // blocks a normally working day marked as a "day off".
-    const dateKey = format(date, "yyyy-MM-dd");
     const override = state.overrides?.[dateKey];
     if (override === false) return true;       // explicit day off
     if (override === true) return false;       // custom-hours override
 
     const dayOfWeek = date.getDay();
     if (!state.workingDays.includes(dayOfWeek)) return true;
-    // Disable today if current time is past the barber's schedule end
-    if (
-      date.getTime() === todayStart.getTime() &&
-      state.scheduleEndTimes?.[dayOfWeek]
-    ) {
+    // Disable today if current time (in Bratislava) is past the barber's schedule end.
+    if (dateKey === todayKey && state.scheduleEndTimes?.[dayOfWeek]) {
       const [endH, endM] = state.scheduleEndTimes[dayOfWeek]
         .split(":")
         .map(Number);
