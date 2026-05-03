@@ -6,7 +6,7 @@ export type AppointmentStatus =
   | "CANCELLED"
   | "NO_SHOW";
 
-export type AppointmentSource = "online" | "admin";
+export type AppointmentSource = "online" | "admin" | "walk-in";
 
 export type SlotInterval = 15 | 30 | 60;
 

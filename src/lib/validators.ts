@@ -206,31 +206,33 @@ export const customerInputSchema = z.object({
 
 export type CustomerInput = z.infer<typeof customerInputSchema>;
 
-export const adminAppointmentInputSchema = z.object({
+/** Walk-in / blocked-time appointments don't have a customer record
+ *  attached — admin uses them for in-person walk-ups whose contact
+ *  details aren't known, or to block their own time on the calendar.
+ *  Contact fields are skipped; only an optional label survives. */
+const adminAppointmentBaseSchema = z.object({
   serviceId: fkId(),
   barberId: fkId(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Neplatný dátum"),
   time: timeString,
   firstName: z
     .string()
-    .min(1, "Meno je povinné")
-    .max(50, "Meno môže mať najviac 50 znakov"),
+    .max(50, "Meno môže mať najviac 50 znakov")
+    .optional()
+    .default(""),
   lastName: z
     .string()
     .max(50, "Priezvisko môže mať najviac 50 znakov")
     .optional()
     .default(""),
-  phone: z
-    .string()
-    .min(1, "Telefón je povinný")
-    .regex(/^\+4(20|21)\d{9}$/, "Neplatné telefónne číslo"),
+  phone: z.string().optional().default(""),
   email: z.preprocess(
     normalizeEmail,
     z
       .string()
-      .min(1, "Email je povinný")
-      .email("Zadajte platný email")
       .max(254, "Email môže mať najviac 254 znakov")
+      .optional()
+      .or(z.literal(""))
   ),
   notes: z
     .string()
@@ -238,17 +240,63 @@ export const adminAppointmentInputSchema = z.object({
     .optional()
     .default(""),
   ignoreSchedule: z.boolean().default(false),
+  walkIn: z.boolean().default(false),
+  /** Free-form label shown in admin lists when walkIn=true. Empty
+   *  defaults to "Walk-in" at the action layer. */
+  label: z
+    .string()
+    .max(100, "Popis môže mať najviac 100 znakov")
+    .optional()
+    .default(""),
 });
+
+const E164_PHONE_RE = /^\+4(20|21)\d{9}$/;
+
+/** Refine: contact fields are required only when walkIn is false.
+ *  Walk-in entries store no PII so the booking action can short-circuit
+ *  notifications, customer upsert, and rate-limit counters. */
+function requireContactWhenNotWalkIn(
+  data: { walkIn: boolean; firstName?: string; phone?: string; email?: string | undefined },
+  ctx: z.RefinementCtx,
+  emailRequired: boolean
+) {
+  if (data.walkIn) return;
+  if (!data.firstName || data.firstName.trim().length === 0) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["firstName"],
+      message: "Meno je povinné",
+    });
+  }
+  if (!data.phone || !E164_PHONE_RE.test(data.phone)) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["phone"],
+      message: "Neplatné telefónne číslo",
+    });
+  }
+  if (emailRequired) {
+    if (!data.email || data.email.length === 0) {
+      ctx.addIssue({ code: "custom", path: ["email"], message: "Email je povinný" });
+    }
+  }
+}
+
+export const adminAppointmentInputSchema = adminAppointmentBaseSchema.superRefine(
+  (data, ctx) => requireContactWhenNotWalkIn(data, ctx, true)
+);
 
 export type AdminAppointmentInput = z.infer<typeof adminAppointmentInputSchema>;
 
-export const adminAppointmentEditSchema = adminAppointmentInputSchema.extend({
-  // Email may be empty for legacy reservations that pre-date the required-email rule.
-  email: z.preprocess(
-    normalizeEmail,
-    z.string().email("Neplatný email").optional().or(z.literal(""))
-  ),
-  priceFinal: z.union([z.coerce.number().min(0), z.literal(""), z.null()]).optional(),
-});
+export const adminAppointmentEditSchema = adminAppointmentBaseSchema
+  .extend({
+    priceFinal: z
+      .union([z.coerce.number().min(0), z.literal(""), z.null()])
+      .optional(),
+  })
+  // Edit allows empty email — legacy reservations that pre-date the
+  // required-email rule shouldn't fail validation just because admin
+  // is saving a notes change.
+  .superRefine((data, ctx) => requireContactWhenNotWalkIn(data, ctx, false));
 
 export type AdminAppointmentEditInput = z.infer<typeof adminAppointmentEditSchema>;

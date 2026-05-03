@@ -279,8 +279,6 @@ export async function createAppointmentAdmin(
       };
     }
 
-    const phone = normalizePhone(data.phone);
-
     const loaded = await loadBarberAndService(data.barberId, data.serviceId);
     if (!loaded) {
       return { success: false, error: "Barber neponúka túto službu." };
@@ -295,15 +293,31 @@ export async function createAppointmentAdmin(
     const endTime = addMinutes(startTime, duration);
     const startKey = dateKey(startTime);
 
-    const { customerId } = await upsertCustomerByPhone({
-      phone,
-      firstName: data.firstName,
-      lastName: data.lastName || null,
-      email: data.email,
-    });
+    // Walk-in / blocked-time: no customer record, no notifications, no
+    // cancellation token (there's no one to send the link to). Customer
+    // upsert and email send are skipped entirely.
+    let customerId: string | null = null;
+    let phone: string | null = null;
+    let customerEmail: string | null = null;
+    let customerName: string;
 
-    const rawToken = generateToken();
-    const tokenHash = hashToken(rawToken);
+    if (data.walkIn) {
+      customerName = data.label?.trim() || "Walk-in";
+    } else {
+      phone = normalizePhone(data.phone);
+      customerEmail = data.email || null;
+      const upserted = await upsertCustomerByPhone({
+        phone,
+        firstName: data.firstName,
+        lastName: data.lastName || null,
+        email: customerEmail,
+      });
+      customerId = upserted.customerId;
+      customerName = `${data.firstName} ${data.lastName || ""}`.trim();
+    }
+
+    const rawToken = data.walkIn ? null : generateToken();
+    const tokenHash = rawToken ? hashToken(rawToken) : null;
     const appointmentId = randomUUID();
 
     try {
@@ -345,9 +359,9 @@ export async function createAppointmentAdmin(
             barberName: `${barber.firstName} ${barber.lastName}`,
             serviceName: bs.serviceName,
             serviceBufferMinutes: buffer,
-            customerName: `${data.firstName} ${data.lastName || ""}`.trim(),
+            customerName,
             customerPhone: phone,
-            customerEmail: data.email,
+            customerEmail,
             startTime: Timestamp.fromDate(startTime),
             endTime: Timestamp.fromDate(endTime),
             startDateKey: startKey,
@@ -359,7 +373,7 @@ export async function createAppointmentAdmin(
             cancellationTokenFallback: null,
             cancellationReason: null,
             notes: data.notes || null,
-            source: "admin",
+            source: data.walkIn ? "walk-in" : "admin",
             reminderSentAt: null,
             createdAt: Timestamp.now(),
             updatedAt: Timestamp.now(),
@@ -387,28 +401,36 @@ export async function createAppointmentAdmin(
       throw e;
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const cancelUrl = `${appUrl}/cancel?token=${rawToken}`;
-    const localStart = toZonedTime(startTime, TIMEZONE);
+    // Walk-in / blocked-time entries don't notify anyone — there's no
+    // customer email, no rawToken (cancel link), and no SMS phone.
+    // The booking is committed; the operator can see it on the calendar.
+    if (!data.walkIn && customerEmail && rawToken) {
+      const appUrl =
+        process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      const cancelUrl = `${appUrl}/cancel?token=${rawToken}`;
+      const localStart = toZonedTime(startTime, TIMEZONE);
 
-    // Await the customer-facing confirmation email so a misconfigured
-    // SMTP surfaces as a real failure path rather than disappearing
-    // when Cloud Run shuts down the response.
-    await sendEmail({
-      to: data.email,
-      subject: "Potvrdenie rezervácie - Strojček",
-      html: bookingConfirmationHtml({
-        customerName: data.firstName,
-        serviceName: bs.serviceName,
-        barberName: `${barber.firstName} ${barber.lastName}`,
-        date: format(localStart, "d.M.yyyy"),
-        time: format(localStart, "HH:mm"),
-        price: (priceCents / 100).toString(),
-        cancelUrl,
-        startTimeUtc: startTime.toISOString(),
-        endTimeUtc: endTime.toISOString(),
-      }),
-    }).catch((err) => console.error("[createAppointmentAdmin][email]", err));
+      // Await the customer-facing confirmation email so a misconfigured
+      // SMTP surfaces as a real failure path rather than disappearing
+      // when Cloud Run shuts down the response.
+      await sendEmail({
+        to: customerEmail,
+        subject: "Potvrdenie rezervácie - Strojček",
+        html: bookingConfirmationHtml({
+          customerName: data.firstName || customerName,
+          serviceName: bs.serviceName,
+          barberName: `${barber.firstName} ${barber.lastName}`,
+          date: format(localStart, "d.M.yyyy"),
+          time: format(localStart, "HH:mm"),
+          price: (priceCents / 100).toString(),
+          cancelUrl,
+          startTimeUtc: startTime.toISOString(),
+          endTimeUtc: endTime.toISOString(),
+        }),
+      }).catch((err) =>
+        console.error("[createAppointmentAdmin][email]", err)
+      );
+    }
 
     revalidatePath("/admin/reservations");
     revalidatePath("/admin/calendar");
@@ -491,7 +513,12 @@ export async function updateAppointment(
       }
       await batch.commit();
     } else {
-      const phone = normalizePhone(data.phone);
+      // Walk-in mode is sticky — once an appointment is created without
+      // a customer, the form sends back walkIn=true on every save and
+      // we never invent a customer record on edit. Prevents accidental
+      // role flip when admin edits a walk-in to add a label.
+      const isWalkIn = data.walkIn || existing.source === "walk-in";
+
       const loaded = await loadBarberAndService(data.barberId, data.serviceId);
       if (!loaded) {
         return { success: false, error: "Barber neponúka túto službu." };
@@ -505,12 +532,25 @@ export async function updateAppointment(
       const endTime = addMinutes(startTime, duration);
       const startKey = dateKey(startTime);
 
-      const { customerId } = await upsertCustomerByPhone({
-        phone,
-        firstName: data.firstName,
-        lastName: data.lastName || null,
-        email: data.email || null,
-      });
+      let customerId: string | null = null;
+      let phone: string | null = null;
+      let customerEmail: string | null = null;
+      let customerName: string;
+
+      if (isWalkIn) {
+        customerName = data.label?.trim() || existing.customerName || "Walk-in";
+      } else {
+        phone = normalizePhone(data.phone);
+        customerEmail = data.email || null;
+        const upserted = await upsertCustomerByPhone({
+          phone,
+          firstName: data.firstName,
+          lastName: data.lastName || null,
+          email: customerEmail,
+        });
+        customerId = upserted.customerId;
+        customerName = `${data.firstName} ${data.lastName || ""}`.trim();
+      }
 
       const priceFinal =
         data.priceFinal === "" || data.priceFinal == null
@@ -558,9 +598,9 @@ export async function updateAppointment(
               startDateKey: startKey,
               priceExpectedCents: priceCents,
               priceFinalCents: priceFinal,
-              customerName: `${data.firstName} ${data.lastName || ""}`.trim(),
+              customerName,
               customerPhone: phone,
-              customerEmail: data.email || null,
+              customerEmail,
               notes: data.notes || null,
               updatedAt: Timestamp.now(),
             })
@@ -577,8 +617,8 @@ export async function updateAppointment(
           if (existing.priceExpectedCents !== priceCents) changedFields.push("priceExpectedCents");
           if ((existing.priceFinalCents ?? null) !== priceFinal) changedFields.push("priceFinalCents");
           if ((existing.customerPhone ?? null) !== phone) changedFields.push("customerPhone");
-          if ((existing.customerEmail ?? null) !== (data.email || null)) changedFields.push("customerEmail");
-          if ((existing.customerName ?? null) !== `${data.firstName} ${data.lastName || ""}`.trim()) changedFields.push("customerName");
+          if ((existing.customerEmail ?? null) !== customerEmail) changedFields.push("customerEmail");
+          if ((existing.customerName ?? null) !== customerName) changedFields.push("customerName");
           if ((existing.notes ?? null) !== (data.notes || null)) changedFields.push("notes");
 
           if (changedFields.length > 0) {
