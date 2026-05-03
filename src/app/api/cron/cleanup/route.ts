@@ -3,6 +3,10 @@ import { Timestamp } from "firebase-admin/firestore";
 import { adminDb } from "@/server/lib/firebase-admin";
 import { verifyCronAuth } from "@/server/lib/cron-auth";
 import { hourKey } from "@/server/lib/firestore-utils";
+import {
+  escapeTelegramHtml,
+  sendTelegramNotification,
+} from "@/server/lib/telegram";
 import { subHours, subMonths } from "date-fns";
 
 /**
@@ -110,6 +114,26 @@ export async function GET(request: NextRequest) {
   } catch (e) {
     const err = e instanceof Error ? e : new Error(String(e));
     console.error(`[cron/cleanup] Failed in phase=${phase}:`, err);
+
+    // Cleanup failures used to silently 500 into GitHub Actions logs
+    // and no one noticed for weeks (history accrued, hourly map crept
+    // toward the 1MiB cap). Telegram is the operator's pager — the
+    // most common cause is a missing composite index, which is fixable
+    // in seconds once you know about it.
+    const chatId = process.env.TELEGRAM_CHAT_ID;
+    if (chatId) {
+      sendTelegramNotification({
+        chatId,
+        message:
+          `<b>Cleanup cron zlyhal</b>\n` +
+          `Fáza: ${escapeTelegramHtml(phase)}\n` +
+          `Chyba: ${escapeTelegramHtml(err.message)}\n` +
+          `Skontroluj logy a deploy Firestore indexov, ak query potrebuje composite.`,
+      }).catch((alertErr) =>
+        console.error("[cron/cleanup] alert send failed:", alertErr)
+      );
+    }
+
     return NextResponse.json(
       {
         ok: false,
