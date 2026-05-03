@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+/** Lowercase + trim emails before validation so casing/whitespace cannot
+ *  produce duplicate customer records. */
+const normalizeEmail = (val: unknown): unknown =>
+  typeof val === "string" ? val.trim().toLowerCase() : val;
+
 /** HH:MM format, validates hours 00-23 and minutes 00-59 */
 const timeString = z
   .string()
@@ -26,11 +31,14 @@ export const bookingInputSchema = z.object({
     .string()
     .min(1, "Telefón je povinný")
     .regex(/^\+4(20|21)\d{9}$/, "Neplatné telefónne číslo"),
-  email: z
-    .string()
-    .min(1, "Email je povinný")
-    .email("Zadajte platný email")
-    .max(254, "Email môže mať najviac 254 znakov"),
+  email: z.preprocess(
+    normalizeEmail,
+    z
+      .string()
+      .min(1, "Email je povinný")
+      .email("Zadajte platný email")
+      .max(254, "Email môže mať najviac 254 znakov")
+  ),
   note: z
     .string()
     .max(500, "Poznámka môže mať najviac 500 znakov")
@@ -73,7 +81,10 @@ export type ServiceInput = z.infer<typeof serviceInputSchema>;
 export const barberInputSchema = z.object({
   firstName: z.string().min(1, "Meno je povinné"),
   lastName: z.string().min(1, "Priezvisko je povinné"),
-  email: z.string().email().optional().or(z.literal("")),
+  email: z.preprocess(
+    normalizeEmail,
+    z.string().email().optional().or(z.literal(""))
+  ),
   phone: z.string().optional().default(""),
   bio: z.string().optional().default(""),
   avatarUrl: z.string().url().optional().or(z.literal("")),
@@ -165,12 +176,15 @@ export const customerInputSchema = z.object({
     .optional()
     .default(""),
   phone: z.string().min(1, "Telefón je povinný").regex(/^\+4(20|21)\d{9}$/, "Neplatné telefónne číslo"),
-  email: z
-    .string()
-    .email()
-    .max(254, "Email môže mať najviac 254 znakov")
-    .optional()
-    .or(z.literal("")),
+  email: z.preprocess(
+    normalizeEmail,
+    z
+      .string()
+      .email()
+      .max(254, "Email môže mať najviac 254 znakov")
+      .optional()
+      .or(z.literal(""))
+  ),
   notes: z
     .string()
     .max(1000, "Poznámka môže mať najviac 1000 znakov")
@@ -198,11 +212,14 @@ export const adminAppointmentInputSchema = z.object({
     .string()
     .min(1, "Telefón je povinný")
     .regex(/^\+4(20|21)\d{9}$/, "Neplatné telefónne číslo"),
-  email: z
-    .string()
-    .min(1, "Email je povinný")
-    .email("Zadajte platný email")
-    .max(254, "Email môže mať najviac 254 znakov"),
+  email: z.preprocess(
+    normalizeEmail,
+    z
+      .string()
+      .min(1, "Email je povinný")
+      .email("Zadajte platný email")
+      .max(254, "Email môže mať najviac 254 znakov")
+  ),
   notes: z
     .string()
     .max(1000, "Poznámka môže mať najviac 1000 znakov")
@@ -215,7 +232,10 @@ export type AdminAppointmentInput = z.infer<typeof adminAppointmentInputSchema>;
 
 export const adminAppointmentEditSchema = adminAppointmentInputSchema.extend({
   // Email may be empty for legacy reservations that pre-date the required-email rule.
-  email: z.string().email("Neplatný email").optional().or(z.literal("")),
+  email: z.preprocess(
+    normalizeEmail,
+    z.string().email("Neplatný email").optional().or(z.literal(""))
+  ),
   priceFinal: z.union([z.coerce.number().min(0), z.literal(""), z.null()]).optional(),
 });
 
