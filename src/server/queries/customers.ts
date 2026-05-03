@@ -1,7 +1,7 @@
 import "server-only";
 import { Timestamp } from "firebase-admin/firestore";
 import { adminDb } from "@/server/lib/firebase-admin";
-import { tsToDate } from "@/server/lib/firestore-utils";
+import { tsToDate, normalizeSearchInput } from "@/server/lib/firestore-utils";
 import { PAGE_SIZE } from "@/lib/constants";
 import type {
   CustomerView,
@@ -29,7 +29,7 @@ export async function getCustomers(
   cursor: string | undefined,
   search?: string
 ): Promise<{ items: CustomerView[]; nextCursor: string | null }> {
-  const trimmed = search?.toLowerCase().trim() ?? "";
+  const trimmed = search ? normalizeSearchInput(search) : "";
 
   if (trimmed) {
     // Search path: array-contains on prefix tokens. Cap the result so a

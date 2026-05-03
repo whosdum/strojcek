@@ -2,6 +2,7 @@ import "server-only";
 import { Timestamp } from "firebase-admin/firestore";
 import { format } from "date-fns-tz";
 import { TIMEZONE } from "@/lib/constants";
+import { stripDiacritics } from "@/server/lib/strings";
 
 export function tsToDate(value: Timestamp | Date | undefined | null): Date {
   if (value instanceof Timestamp) return value.toDate();
@@ -37,21 +38,39 @@ export function stripUndefined<T extends Record<string, unknown>>(obj: T): T {
   return result as T;
 }
 
-/** Generate prefix tokens for customer text search. */
+/** Normalize a search input for token matching: lowercase + strip diacritics. */
+export function normalizeSearchInput(input: string): string {
+  return stripDiacritics(input.toLowerCase().trim());
+}
+
+/**
+ * Generate prefix tokens for customer text search.
+ *
+ * For every word we emit BOTH the original (with diacritics) and the
+ * ASCII-folded version, so an admin who types "stefan" hits a customer
+ * stored as "Štefan" — and vice versa.
+ */
 export function generateSearchTokens(values: Array<string | null | undefined>): string[] {
   const tokens = new Set<string>();
+
+  function addPrefixes(word: string) {
+    for (let i = 1; i <= word.length && i <= 30; i++) {
+      tokens.add(word.slice(0, i));
+    }
+  }
+
   for (const raw of values) {
     if (!raw) continue;
     const lower = raw.toLowerCase().trim();
     if (!lower) continue;
 
-    // Word-level prefixes
     for (const word of lower.split(/\s+/)) {
-      for (let i = 1; i <= word.length && i <= 20; i++) {
-        tokens.add(word.slice(0, i));
-      }
+      if (!word) continue;
+      addPrefixes(word);
+      const folded = stripDiacritics(word);
+      if (folded !== word) addPrefixes(folded);
     }
-    // Phone digits
+    // Phone digits — diacritic-insensitive by definition.
     const digits = lower.replace(/\D/g, "");
     if (digits) {
       for (let i = 1; i <= digits.length && i <= 15; i++) {
