@@ -134,18 +134,6 @@
       "collectionGroup": "customers",
       "fieldPath": "notes",
       "indexes": []
-    },
-    {
-      "collectionGroup": "customers",
-      "fieldPath": "lastName",
-      "indexes": []
-    },
-    {
-      "collectionGroup": "customers",
-      "fieldPath": "searchTokens",
-      "indexes": [
-        { "queryScope": "COLLECTION", "arrayConfig": "CONTAINS" }
-      ]
     }
   ]
 }
