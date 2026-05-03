@@ -73,10 +73,15 @@ export async function getCustomerById(
   if (!snap.exists) return null;
   const base = mapCustomer(snap);
 
+  // Bounded read — a long-tenured customer's full history was previously
+  // pulled in one go, which scales linearly with usage. 100 most-recent
+  // appointments is enough for the customer detail page; older entries
+  // can be paginated in once the UI grows that far.
   const apptsSnap = await adminDb
     .collection("appointments")
     .where("customerId", "==", id)
     .orderBy("startTime", "desc")
+    .limit(100)
     .get();
 
   const appointments = apptsSnap.docs.map((d) => {
