@@ -1,40 +1,41 @@
+const E164_SK_CZ = /^\+4(20|21)\d{9}$/;
+
 /**
- * Normalize phone number to E.164 format (+421XXXXXXXXX or +420XXXXXXXXX)
- * - Strips spaces, dashes, parentheses
- * - Handles Slovak and Czech input formats
+ * Normalize phone number to E.164 format (+421XXXXXXXXX or +420XXXXXXXXX).
+ * Strips spaces, dashes, parentheses; handles Slovak and Czech input formats.
+ *
+ * Throws if the input cannot be normalized to a valid E.164 number — the
+ * Zod validators upstream already enforce the strict shape, so this only
+ * fires for callers that bypass validation.
  */
 export function normalizePhone(phone: string): string {
-  // Strip everything except digits and leading +
   const cleaned = phone.replace(/[^\d+]/g, "");
 
   // Already in E.164 format: +421... or +420...
-  if (/^\+4(20|21)\d{9}$/.test(cleaned)) {
-    return cleaned;
-  }
+  if (E164_SK_CZ.test(cleaned)) return cleaned;
 
-  // Strip everything except digits
   const digits = cleaned.replace(/\D/g, "");
+  let result: string | null = null;
 
   // International dial-out prefix: 00421... or 00420... → +421... / +420...
-  if (digits.startsWith("00421") || digits.startsWith("00420")) {
-    return "+" + digits.slice(2);
+  if ((digits.startsWith("00421") || digits.startsWith("00420")) && digits.length === 14) {
+    result = "+" + digits.slice(2);
+  }
+  // Full prefix without +: 421903XXXXXXX or 420603XXXXXXX (exactly 12 digits)
+  else if ((digits.startsWith("421") || digits.startsWith("420")) && digits.length === 12) {
+    result = "+" + digits;
+  }
+  // Leading 0: 0903XXXXXXX → +421903XXXXXXX
+  else if (digits.startsWith("0") && digits.length === 10) {
+    result = "+421" + digits.slice(1);
+  }
+  // Bare 9-digit number → assume +421
+  else if (digits.length === 9) {
+    result = "+421" + digits;
   }
 
-  // Full prefix with country code: 421903... or 420603...
-  if ((digits.startsWith("421") || digits.startsWith("420")) && digits.length >= 12) {
-    return "+" + digits;
+  if (!result || !E164_SK_CZ.test(result)) {
+    throw new Error(`Invalid phone number: cannot normalize "${phone}" to E.164`);
   }
-
-  // Leading 0: 0903... → +421903...
-  if (digits.startsWith("0") && digits.length === 10) {
-    return "+421" + digits.slice(1);
-  }
-
-  // Just the 9-digit number: 903... (default to +421)
-  if (digits.length === 9) {
-    return "+421" + digits;
-  }
-
-  // Fallback: return with + prefix
-  return "+" + digits;
+  return result;
 }
