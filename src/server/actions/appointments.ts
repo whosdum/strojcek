@@ -68,12 +68,39 @@ async function upsertCustomerByPhone(input: {
 
   if (idxSnap.exists) {
     const customerId = (idxSnap.data() as { customerId: string }).customerId;
+    // Re-read the existing customer so we can preserve PII the admin
+    // didn't re-type. A blank field in the form means "I'm not editing
+    // this", not "wipe it" — admin creating a follow-up appointment
+    // for a returning customer must not destroy their email/lastName
+    // just because those fields weren't refilled.
+    const existingSnap = await adminDb.doc(`customers/${customerId}`).get();
+    const existing = existingSnap.exists
+      ? (existingSnap.data() as {
+          firstName?: string;
+          lastName?: string | null;
+          email?: string | null;
+        })
+      : {};
+
+    const finalFirstName = firstName.trim() || existing.firstName || firstName;
+    const finalLastName =
+      lastName && lastName.trim().length > 0
+        ? lastName
+        : (existing.lastName ?? null);
+    const finalEmail =
+      email && email.trim().length > 0 ? email : (existing.email ?? null);
+
     await adminDb.doc(`customers/${customerId}`).update({
-      firstName,
-      lastName: lastName ?? null,
-      email: email ?? null,
-      emailSearch: email ? email.toLowerCase() : null,
-      searchTokens: generateSearchTokens([firstName, lastName, phone, email]),
+      firstName: finalFirstName,
+      lastName: finalLastName,
+      email: finalEmail,
+      emailSearch: finalEmail ? finalEmail.toLowerCase() : null,
+      searchTokens: generateSearchTokens([
+        finalFirstName,
+        finalLastName,
+        phone,
+        finalEmail,
+      ]),
       updatedAt: Timestamp.now(),
     });
     return { customerId };
