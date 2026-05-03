@@ -134,6 +134,11 @@
       "collectionGroup": "customers",
       "fieldPath": "notes",
       "indexes": []
+    },
+    {
+      "collectionGroup": "customers",
+      "fieldPath": "lastName",
+      "indexes": []
     }
   ]
 }
