@@ -5,6 +5,18 @@ import { z } from "zod";
 const normalizeEmail = (val: unknown): unknown =>
   typeof val === "string" ? val.trim().toLowerCase() : val;
 
+/** Foreign-key id validator. Firestore generates 20-char auto-IDs;
+ *  scripts use crypto.randomUUID() (RFC-4122 v4). Existence is verified
+ *  by Firestore reads, not by structural format, so we just bound the
+ *  shape. Slashes are forbidden because they would path-traverse into a
+ *  subcollection when interpolated into doc paths. */
+const fkId = () =>
+  z
+    .string()
+    .min(1, "ID je povinné")
+    .max(64, "ID je príliš dlhé")
+    .regex(/^[A-Za-z0-9_-]+$/, "Neplatné ID");
+
 /** HH:MM format, validates hours 00-23 and minutes 00-59 */
 const timeString = z
   .string()
@@ -15,8 +27,8 @@ const timeString = z
   }, "Neplatný čas");
 
 export const bookingInputSchema = z.object({
-  serviceId: z.string().uuid(),
-  barberId: z.string().uuid(),
+  serviceId: fkId(),
+  barberId: fkId(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   time: timeString,
   firstName: z
@@ -102,7 +114,7 @@ export type BarberInput = z.infer<typeof barberInputSchema>;
 
 export const overrideInputSchema = z
   .object({
-    barberId: z.string().uuid(),
+    barberId: fkId(),
     overrideDate: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/, "Neplatný dátum"),
@@ -137,7 +149,7 @@ export type OverrideInput = z.infer<typeof overrideInputSchema>;
 
 export const scheduleInputSchema = z
   .object({
-    barberId: z.string().uuid(),
+    barberId: fkId(),
     dayOfWeek: z.coerce.number().min(0).max(6),
     startTime: timeString,
     endTime: timeString,
@@ -152,7 +164,7 @@ export type ScheduleInput = z.infer<typeof scheduleInputSchema>;
 
 export const breakInputSchema = z
   .object({
-    barberId: z.string().uuid(),
+    barberId: fkId(),
     dayOfWeek: z.coerce.number().min(0).max(6),
     startTime: timeString,
     endTime: timeString,
@@ -195,8 +207,8 @@ export const customerInputSchema = z.object({
 export type CustomerInput = z.infer<typeof customerInputSchema>;
 
 export const adminAppointmentInputSchema = z.object({
-  serviceId: z.string().uuid(),
-  barberId: z.string().uuid(),
+  serviceId: fkId(),
+  barberId: fkId(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Neplatný dátum"),
   time: timeString,
   firstName: z
