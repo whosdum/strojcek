@@ -29,18 +29,25 @@ export async function GET(request: NextRequest) {
     barberId
   );
 
-  const events = appointments.map((appt) => ({
-    id: appt.id,
-    title: `${appt.barber.firstName} — ${appt.service.name} — ${appt.customerName}`,
-    start: appt.startTime.toISOString(),
-    end: appt.endTime.toISOString(),
-    extendedProps: {
-      barberId: appt.barberId,
-      barberName: `${appt.barber.firstName} ${appt.barber.lastName}`,
-      status: appt.status,
-      source: appt.source,
-    },
-  }));
+  const events = appointments.map((appt) => {
+    const isWalkIn = appt.source === "walk-in";
+    const customer = appt.customerName?.trim() || (isWalkIn ? "Walk-in" : "");
+    const title = isWalkIn
+      ? customer
+      : `${customer} — ${appt.service.name}`;
+    return {
+      id: appt.id,
+      title,
+      start: appt.startTime.toISOString(),
+      end: appt.endTime.toISOString(),
+      extendedProps: {
+        barberId: appt.barberId,
+        barberName: `${appt.barber.firstName} ${appt.barber.lastName}`,
+        status: appt.status,
+        source: appt.source,
+      },
+    };
+  });
 
   return NextResponse.json(events);
 }

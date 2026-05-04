@@ -162,7 +162,7 @@ export function AppointmentForm({
       ignoreSchedule: editingWalkIn,
       priceFinal: initial?.priceFinal != null ? String(initial.priceFinal) : "",
       walkIn: initialIsWalkIn,
-      label: initialIsWalkIn ? initial?.customerName ?? "" : "",
+      label: initialIsWalkIn ? initial?.customerName?.trim() || "Walk-in" : "",
       customDurationMinutes: "",
     };
   });
@@ -364,7 +364,13 @@ export function AppointmentForm({
           <Switch
             id="walkIn"
             checked={form.walkIn}
-            onCheckedChange={(v) => updateField("walkIn", v)}
+            onCheckedChange={(v) =>
+              setForm((s) => ({
+                ...s,
+                walkIn: v,
+                label: v && !s.label.trim() ? "Walk-in" : s.label,
+              }))
+            }
             disabled={limited || mode === "edit"}
           />
           <div className="flex-1">
