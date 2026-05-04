@@ -28,6 +28,7 @@ import {
 } from "@/server/lib/telegram";
 import { bookingConfirmationHtml } from "@/emails/booking-confirmation";
 import { bookingCancellationHtml } from "@/emails/booking-cancellation";
+import { recordNotification } from "@/server/lib/notification-log";
 import { format as formatDate } from "date-fns";
 import type { AppointmentStatus } from "@/lib/types";
 import type {
@@ -388,6 +389,14 @@ export async function createAppointmentAdmin(
             notes: data.notes || null,
             source: data.walkIn ? "walk-in" : "admin",
             reminderSentAt: null,
+            confirmationEmailSentAt: null,
+            confirmationEmailError: null,
+            confirmationEmailAttempts: 0,
+            cancellationEmailSentAt: null,
+            cancellationEmailError: null,
+            cancellationEmailAttempts: 0,
+            telegramAlertSentAt: null,
+            telegramAlertError: null,
             createdAt: Timestamp.now(),
             updatedAt: Timestamp.now(),
           })
@@ -432,7 +441,8 @@ export async function createAppointmentAdmin(
         // Await the customer-facing confirmation email so a misconfigured
         // SMTP surfaces as a real failure path rather than disappearing
         // when Cloud Run shuts down the response.
-        await sendEmail({
+        const emailStart = Date.now();
+        const emailResult = await sendEmail({
           to: customerEmail,
           subject: "Potvrdenie rezervácie - Strojček",
           html: bookingConfirmationHtml({
@@ -446,9 +456,18 @@ export async function createAppointmentAdmin(
             startTimeUtc: startTime.toISOString(),
             endTimeUtc: endTime.toISOString(),
           }),
-        }).catch((err) =>
-          console.error("[createAppointmentAdmin][email]", err)
-        );
+        }).catch((err) => {
+          console.error("[createAppointmentAdmin][email]", err);
+          return { success: false } as const;
+        });
+        await recordNotification({
+          kind: "email-confirmation",
+          status: emailResult.success ? "sent" : "failed",
+          appointmentId,
+          recipient: customerEmail,
+          error: emailResult.success ? null : "send failed",
+          durationMs: Date.now() - emailStart,
+        });
       }
 
       // Mirror booking.ts: fire-and-forget Telegram alert to the admin
@@ -457,6 +476,7 @@ export async function createAppointmentAdmin(
       // suppress the operator notification.
       const chatId = process.env.TELEGRAM_CHAT_ID;
       if (chatId) {
+        const tgStart = Date.now();
         sendTelegramNotification({
           chatId,
           message:
@@ -466,9 +486,27 @@ export async function createAppointmentAdmin(
             `Dátum: ${escapeTelegramHtml(formattedDate)} o ${escapeTelegramHtml(formattedTime)}\n` +
             (phone ? `Tel: ${escapeTelegramHtml(phone)}\n` : "") +
             (customerEmail ? `Email: ${escapeTelegramHtml(customerEmail)}` : ""),
-        }).catch((err) =>
-          console.error("[createAppointmentAdmin][telegram]", err)
-        );
+        })
+          .then(() =>
+            recordNotification({
+              kind: "telegram-alert",
+              status: "sent",
+              appointmentId,
+              recipient: chatId,
+              durationMs: Date.now() - tgStart,
+            })
+          )
+          .catch((err) => {
+            console.error("[createAppointmentAdmin][telegram]", err);
+            return recordNotification({
+              kind: "telegram-alert",
+              status: "failed",
+              appointmentId,
+              recipient: chatId,
+              error: err instanceof Error ? err.message : String(err),
+              durationMs: Date.now() - tgStart,
+            });
+          });
       }
     }
 
