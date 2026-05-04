@@ -218,6 +218,7 @@ export async function updateAppointmentStatus(
         result.prev.status !== "CANCELLED" &&
         result.prev.customerEmail
       ) {
+        const emailStart = Date.now();
         sendEmail({
           to: result.prev.customerEmail,
           subject: "Vaša rezervácia bola zrušená — Strojček",
@@ -229,14 +230,34 @@ export async function updateAppointmentStatus(
             time: timeStr,
             bookUrl: PUBLIC_SITE_URL,
           }),
-        }).catch((err) =>
-          console.error("[updateAppointmentStatus][email]", err)
-        );
+        })
+          .then((r) =>
+            recordNotification({
+              kind: "email-cancellation",
+              status: r.success ? "sent" : "failed",
+              appointmentId: id,
+              recipient: result.prev.customerEmail,
+              error: r.success ? null : "send failed",
+              durationMs: Date.now() - emailStart,
+            })
+          )
+          .catch((err) => {
+            console.error("[updateAppointmentStatus][email]", err);
+            return recordNotification({
+              kind: "email-cancellation",
+              status: "failed",
+              appointmentId: id,
+              recipient: result.prev.customerEmail,
+              error: err instanceof Error ? err.message : String(err),
+              durationMs: Date.now() - emailStart,
+            });
+          });
       }
 
       // Telegram audit ping for the admin's records on every transition.
       const chatId = process.env.TELEGRAM_CHAT_ID;
       if (chatId) {
+        const tgStart = Date.now();
         sendTelegramNotification({
           chatId,
           message:
@@ -247,9 +268,27 @@ export async function updateAppointmentStatus(
             (result.prev.customerName
               ? `Zákazník: ${escapeTelegramHtml(result.prev.customerName)}`
               : ""),
-        }).catch((err) =>
-          console.error("[updateAppointmentStatus][telegram]", err)
-        );
+        })
+          .then(() =>
+            recordNotification({
+              kind: "telegram-alert",
+              status: "sent",
+              appointmentId: id,
+              recipient: chatId,
+              durationMs: Date.now() - tgStart,
+            })
+          )
+          .catch((err) => {
+            console.error("[updateAppointmentStatus][telegram]", err);
+            return recordNotification({
+              kind: "telegram-alert",
+              status: "failed",
+              appointmentId: id,
+              recipient: chatId,
+              error: err instanceof Error ? err.message : String(err),
+              durationMs: Date.now() - tgStart,
+            });
+          });
       }
     }
 
