@@ -225,6 +225,24 @@ export interface ProblemsSnapshotView {
   globalBookingsCurrentHourLimit: number;
 }
 
+export interface LastCronRunView {
+  /** Timestamp of the most recent notificationLog entry with trigger="cron".
+   *  null when no cron has ever run (or all entries already TTL-expired). */
+  lastRunAt: Date | null;
+  /** Was the latest run successful (status=sent), or did it fail? */
+  lastRunStatus: "sent" | "failed" | null;
+  /** Milliseconds since lastRunAt (computed server-side so the render
+   *  function stays pure for the React Compiler). */
+  ageMs: number | null;
+}
+
+export interface TomorrowRemindersPreviewView {
+  /** Tomorrow's date in Bratislava local "YYYY-MM-DD" form. */
+  dateKey: string;
+  emailPending: number;
+  smsPending: number;
+}
+
 export interface AppointmentNotificationStatusView {
   confirmation: {
     sentAt: Date | null;

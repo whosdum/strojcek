@@ -13,7 +13,13 @@ import { bookingConfirmationHtml } from "@/emails/booking-confirmation";
 import { bookingCancellationHtml } from "@/emails/booking-cancellation";
 import { bookingReminderHtml } from "@/emails/booking-reminder";
 import { TIMEZONE } from "@/lib/constants";
-import { PUBLIC_SITE_URL, SHOP_PHONE_DISPLAY } from "@/lib/business-info";
+import {
+  PUBLIC_SITE_URL,
+  SHOP_EMAIL,
+  SHOP_PHONE_DISPLAY,
+  SHOP_PHONE_E164,
+} from "@/lib/business-info";
+import { sendTelegramNotification } from "@/server/lib/telegram";
 import { addDays, format } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import { Timestamp } from "firebase-admin/firestore";
@@ -284,4 +290,110 @@ export async function runRemindersNow(): Promise<{
 
   revalidatePath("/admin/notifications");
   return { success: true, emailSent, smsSent, emailFailed, smsFailed };
+}
+
+// ---------------------------------------------------------------------------
+// Test send actions — diagnostic-only sends to the shop's own contacts.
+// They DO write to notificationLog (so the admin sees them flow through the
+// audit log, confirming the pipeline end-to-end) but tag the recipient with
+// the SHOP_EMAIL/SHOP_PHONE so they're easy to distinguish from real customer
+// events.
+// ---------------------------------------------------------------------------
+
+export async function sendTestEmail(): Promise<ActionResult> {
+  if (!(await getSession())) return UNAUTH;
+  const start = Date.now();
+  const result = await sendEmail({
+    to: SHOP_EMAIL,
+    subject: "Test — Strojček notifikačný systém",
+    html: `<p>Toto je testovací email zo Strojček admin panelu.</p>
+<p>Ak ho čítaš, SMTP funguje. Čas: ${new Date().toISOString()}</p>`,
+  }).catch((err) => ({ success: false, error: err }) as const);
+
+  await recordNotification({
+    kind: "email-confirmation",
+    status: result.success ? "sent" : "failed",
+    appointmentId: null,
+    recipient: SHOP_EMAIL,
+    error: result.success ? null : extractSendError(result.error),
+    durationMs: Date.now() - start,
+    trigger: "manual",
+  });
+
+  revalidatePath("/admin/notifications");
+  return result.success
+    ? { success: true }
+    : { success: false, error: "Email sa nepodarilo odoslať." };
+}
+
+export async function sendTestSms(): Promise<ActionResult> {
+  if (!(await getSession())) return UNAUTH;
+  const start = Date.now();
+  try {
+    await sendSMS({
+      phone: SHOP_PHONE_E164,
+      message: `Strojcek: testovacia SMS z admin panelu, ${new Date()
+        .toISOString()
+        .slice(11, 19)}.`,
+    });
+    await recordNotification({
+      kind: "sms-reminder",
+      status: "sent",
+      appointmentId: null,
+      recipient: SHOP_PHONE_E164,
+      durationMs: Date.now() - start,
+      trigger: "manual",
+    });
+    revalidatePath("/admin/notifications");
+    return { success: true };
+  } catch (err) {
+    await recordNotification({
+      kind: "sms-reminder",
+      status: "failed",
+      appointmentId: null,
+      recipient: SHOP_PHONE_E164,
+      error: extractSendError(err),
+      durationMs: Date.now() - start,
+      trigger: "manual",
+    });
+    revalidatePath("/admin/notifications");
+    return { success: false, error: "SMS sa nepodarilo odoslať." };
+  }
+}
+
+export async function sendTestTelegram(): Promise<ActionResult> {
+  if (!(await getSession())) return UNAUTH;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!chatId) {
+    return { success: false, error: "TELEGRAM_CHAT_ID nie je nastavené." };
+  }
+  const start = Date.now();
+  try {
+    await sendTelegramNotification({
+      chatId,
+      message: `<b>Test</b>\nTestovacia správa z admin panelu.\nČas: ${new Date().toISOString()}`,
+    });
+    await recordNotification({
+      kind: "telegram-alert",
+      status: "sent",
+      appointmentId: null,
+      recipient: chatId,
+      durationMs: Date.now() - start,
+      trigger: "manual",
+    });
+    revalidatePath("/admin/notifications");
+    return { success: true };
+  } catch (err) {
+    await recordNotification({
+      kind: "telegram-alert",
+      status: "failed",
+      appointmentId: null,
+      recipient: chatId,
+      error: extractSendError(err),
+      durationMs: Date.now() - start,
+      trigger: "manual",
+    });
+    revalidatePath("/admin/notifications");
+    return { success: false, error: "Telegram sa nepodarilo odoslať." };
+  }
 }
