@@ -417,32 +417,58 @@ export async function createAppointmentAdmin(
     // Walk-in / blocked-time entries don't notify anyone — there's no
     // customer email, no rawToken (cancel link), and no SMS phone.
     // The booking is committed; the operator can see it on the calendar.
-    if (!data.walkIn && customerEmail && rawToken) {
-      const appUrl =
-        process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-      const cancelUrl = `${appUrl}/cancel?token=${rawToken}`;
+    if (!data.walkIn) {
       const localStart = toZonedTime(startTime, TIMEZONE);
+      const formattedDate = format(localStart, "d.M.yyyy");
+      const formattedTime = format(localStart, "HH:mm");
+      const barberName = `${barber.firstName} ${barber.lastName}`;
 
-      // Await the customer-facing confirmation email so a misconfigured
-      // SMTP surfaces as a real failure path rather than disappearing
-      // when Cloud Run shuts down the response.
-      await sendEmail({
-        to: customerEmail,
-        subject: "Potvrdenie rezervácie - Strojček",
-        html: bookingConfirmationHtml({
-          customerName: data.firstName || customerName,
-          serviceName: bs.serviceName,
-          barberName: `${barber.firstName} ${barber.lastName}`,
-          date: format(localStart, "d.M.yyyy"),
-          time: format(localStart, "HH:mm"),
-          price: (priceCents / 100).toString(),
-          cancelUrl,
-          startTimeUtc: startTime.toISOString(),
-          endTimeUtc: endTime.toISOString(),
-        }),
-      }).catch((err) =>
-        console.error("[createAppointmentAdmin][email]", err)
-      );
+      if (customerEmail && rawToken) {
+        const appUrl =
+          process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+        const cancelUrl = `${appUrl}/cancel?token=${rawToken}`;
+
+        // Await the customer-facing confirmation email so a misconfigured
+        // SMTP surfaces as a real failure path rather than disappearing
+        // when Cloud Run shuts down the response.
+        await sendEmail({
+          to: customerEmail,
+          subject: "Potvrdenie rezervácie - Strojček",
+          html: bookingConfirmationHtml({
+            customerName: data.firstName || customerName,
+            serviceName: bs.serviceName,
+            barberName,
+            date: formattedDate,
+            time: formattedTime,
+            price: (priceCents / 100).toString(),
+            cancelUrl,
+            startTimeUtc: startTime.toISOString(),
+            endTimeUtc: endTime.toISOString(),
+          }),
+        }).catch((err) =>
+          console.error("[createAppointmentAdmin][email]", err)
+        );
+      }
+
+      // Mirror booking.ts: fire-and-forget Telegram alert to the admin
+      // chat. Independent of the email path so a missing customer email
+      // (admin-created walk-in-style entry that still has a phone) doesn't
+      // suppress the operator notification.
+      const chatId = process.env.TELEGRAM_CHAT_ID;
+      if (chatId) {
+        sendTelegramNotification({
+          chatId,
+          message:
+            `<b>Nová rezervácia (admin)</b>\n` +
+            `Zákazník: ${escapeTelegramHtml(customerName)}\n` +
+            `Služba: ${escapeTelegramHtml(bs.serviceName)}\n` +
+            `Dátum: ${escapeTelegramHtml(formattedDate)} o ${escapeTelegramHtml(formattedTime)}\n` +
+            (phone ? `Tel: ${escapeTelegramHtml(phone)}\n` : "") +
+            (customerEmail ? `Email: ${escapeTelegramHtml(customerEmail)}` : ""),
+        }).catch((err) =>
+          console.error("[createAppointmentAdmin][telegram]", err)
+        );
+      }
     }
 
     revalidatePath("/admin/reservations");
