@@ -107,10 +107,27 @@
       ]
     },
     {
-      "collectionGroup": "history",
-      "queryScope": "COLLECTION_GROUP",
+      "collectionGroup": "notificationLog",
+      "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "changedAt", "order": "ASCENDING" }
+        { "fieldPath": "kind", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "notificationLog",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "notificationLog",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "appointmentId", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
       ]
     }
   ],
