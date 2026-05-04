@@ -15,6 +15,7 @@ import {
   UsersIcon,
   LogOutIcon,
   MenuIcon,
+  BellIcon,
 } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase-client";
@@ -43,6 +44,7 @@ const NAV_ITEMS = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboardIcon },
   { href: "/admin/calendar", label: "Kalendár", icon: CalendarDaysIcon },
   { href: "/admin/reservations", label: "Rezervácie", icon: ClipboardListIcon },
+  { href: "/admin/notifications", label: "Notifikácie", icon: BellIcon },
   { href: "/admin/barbers", label: "Barberi", icon: ScissorsIcon },
   { href: "/admin/services", label: "Služby", icon: SparklesIcon },
   { href: "/admin/schedule", label: "Rozvrh", icon: ClockIcon },
