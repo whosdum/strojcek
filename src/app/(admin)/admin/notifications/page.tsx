@@ -80,34 +80,22 @@ export default async function NotificationsPage() {
       </section>
 
       <section className="mb-6">
-        <h2 className="mb-3 text-lg font-semibold">Problémy</h2>
         <Card>
-          <CardContent className="space-y-2 pt-6 text-sm">
+          <CardContent className="pt-6 text-sm">
             <p>
-              Customers bez emailu:{" "}
-              <span className="font-medium">{problems.customersWithoutEmail}</span>
-            </p>
-            <p>
-              Customers bez telefónu:{" "}
-              <span className="font-medium">{problems.customersWithoutPhone}</span>
-            </p>
-            <p>
-              Pending rezervácie {">"}24h:{" "}
-              <span className="font-medium">{problems.pendingOver24h}</span>
-              {problems.pendingOver24h > 0 && (
-                <Link
-                  href="/admin/reservations?status=PENDING"
-                  className="ml-2 text-xs underline-offset-2 hover:underline"
-                >
-                  zobraziť
-                </Link>
-              )}
-            </p>
-            <p>
-              Rate-limit headroom (aktuálna hodina):{" "}
+              Rezervácie tejto hodiny:{" "}
               <span className="font-medium">
-                {problems.globalBookingsCurrentHour} / {problems.globalBookingsCurrentHourLimit}
+                {problems.globalBookingsCurrentHour}
+              </span>{" "}
+              <span className="text-muted-foreground">
+                z hodinového limitu {problems.globalBookingsCurrentHourLimit}
               </span>
+              {problems.globalBookingsCurrentHour >=
+                problems.globalBookingsCurrentHourLimit * 0.8 && (
+                <span className="ml-2 text-destructive">
+                  ⚠ Blízko limitu — ďalšie online rezervácie môžu byť zablokované
+                </span>
+              )}
             </p>
           </CardContent>
         </Card>

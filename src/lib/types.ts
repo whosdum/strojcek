@@ -219,9 +219,8 @@ export interface NotificationStatsView {
 }
 
 export interface ProblemsSnapshotView {
-  customersWithoutEmail: number;
-  customersWithoutPhone: number;
-  pendingOver24h: number;
+  /** Bookings recorded in the current Bratislava-local hour. Compared
+   *  against `globalBookingsCurrentHourLimit` to show rate-limit headroom. */
   globalBookingsCurrentHour: number;
   globalBookingsCurrentHourLimit: number;
 }

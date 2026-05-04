@@ -3,7 +3,6 @@ import { adminDb } from "@/server/lib/firebase-admin";
 import { Timestamp } from "firebase-admin/firestore";
 import { tsToDate, tsToDateOrNull, hourKey } from "@/server/lib/firestore-utils";
 import { GLOBAL_BOOKING_LIMIT } from "@/lib/constants";
-import { subDays } from "date-fns";
 import type {
   NotificationLogDoc,
   NotificationKind,
@@ -90,23 +89,6 @@ export async function getNotificationStats(opts: {
 }
 
 export async function getProblemsSnapshot(): Promise<ProblemsSnapshotView> {
-  const customersSnap = await adminDb.collection("customers").get();
-  let withoutEmail = 0;
-  let withoutPhone = 0;
-  for (const d of customersSnap.docs) {
-    const c = d.data() as { email?: string | null; phone?: string | null };
-    if (!c.email) withoutEmail++;
-    if (!c.phone) withoutPhone++;
-  }
-
-  const cutoff = Timestamp.fromDate(subDays(new Date(), 1));
-  const pendingSnap = await adminDb
-    .collection("appointments")
-    .where("status", "==", "PENDING")
-    .where("createdAt", "<", cutoff)
-    .get();
-  const pendingOver24h = pendingSnap.size;
-
   const globalSnap = await adminDb.doc("counters/global_bookings").get();
   const hourly = globalSnap.exists
     ? ((globalSnap.data() as { hourly?: Record<string, number> }).hourly ?? {})
@@ -115,9 +97,6 @@ export async function getProblemsSnapshot(): Promise<ProblemsSnapshotView> {
   const currentCount = hourly[currentHourKey] ?? 0;
 
   return {
-    customersWithoutEmail: withoutEmail,
-    customersWithoutPhone: withoutPhone,
-    pendingOver24h,
     globalBookingsCurrentHour: currentCount,
     globalBookingsCurrentHourLimit: GLOBAL_BOOKING_LIMIT,
   };
