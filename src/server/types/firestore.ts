@@ -173,6 +173,10 @@ export type AdminUserDoc = {
 
 export type PhoneBookingsCounterDoc = {
   bookings: Timestamp[];
+  /** Watched by TTL on the `counters` collection. Set to
+   *  latest_booking_ts + 24h on each write. global_bookings has no
+   *  expireAt, so TTL skips it. */
+  expireAt: Timestamp;
 };
 
 export type GlobalBookingsCounterDoc = {

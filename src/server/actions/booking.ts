@@ -434,11 +434,16 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
         });
 
         // 5. Update counters in the same transaction
+        const counterExpireAt = Timestamp.fromMillis(
+          nowTs.toMillis() + 24 * 60 * 60 * 1000
+        );
         tx.set(phoneCounterRef, {
           bookings: [...recentPhone, nowTs],
+          expireAt: counterExpireAt,
         });
         tx.set(emailCounterRef, {
           bookings: [...recentEmail, nowTs],
+          expireAt: counterExpireAt,
         });
 
         const newHourly: Record<string, number> = { ...hourly };
