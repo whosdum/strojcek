@@ -686,6 +686,7 @@ export async function cancelBooking(input: unknown): Promise<ActionResult> {
     const notifications: Promise<unknown>[] = [];
 
     if (appointment.customerEmail) {
+      const emailStart = Date.now();
       notifications.push(
         sendEmail({
           to: appointment.customerEmail,
@@ -698,7 +699,28 @@ export async function cancelBooking(input: unknown): Promise<ActionResult> {
             time: format(localCancelStart, "HH:mm"),
             bookUrl: PUBLIC_SITE_URL,
           }),
-        }).catch((err) => console.error("[EMAIL]", err))
+        })
+          .then((r) =>
+            recordNotification({
+              kind: "email-cancellation",
+              status: r.success ? "sent" : "failed",
+              appointmentId: appointment.id,
+              recipient: appointment.customerEmail,
+              error: r.success ? null : "send failed",
+              durationMs: Date.now() - emailStart,
+            })
+          )
+          .catch((err) => {
+            console.error("[EMAIL]", err);
+            return recordNotification({
+              kind: "email-cancellation",
+              status: "failed",
+              appointmentId: appointment.id,
+              recipient: appointment.customerEmail,
+              error: err instanceof Error ? err.message : String(err),
+              durationMs: Date.now() - emailStart,
+            });
+          })
       );
     }
 
@@ -717,6 +739,7 @@ export async function cancelBooking(input: unknown): Promise<ActionResult> {
         ? escapeTelegramHtml(cancellationReason)
         : null;
 
+      const tgStart = Date.now();
       notifications.push(
         sendTelegramNotification({
           chatId,
@@ -727,7 +750,27 @@ export async function cancelBooking(input: unknown): Promise<ActionResult> {
             `Dátum: ${escapeTelegramHtml(formattedDate)} o ${escapeTelegramHtml(formattedTime)}` +
             `${safePhone ? `\nTel: ${safePhone}` : ""}` +
             `${safeReason ? `\nDôvod: ${safeReason}` : ""}`,
-        }).catch((err) => console.error("[TELEGRAM]", err))
+        })
+          .then(() =>
+            recordNotification({
+              kind: "telegram-alert",
+              status: "sent",
+              appointmentId: appointment.id,
+              recipient: chatId,
+              durationMs: Date.now() - tgStart,
+            })
+          )
+          .catch((err) => {
+            console.error("[TELEGRAM]", err);
+            return recordNotification({
+              kind: "telegram-alert",
+              status: "failed",
+              appointmentId: appointment.id,
+              recipient: chatId,
+              error: err instanceof Error ? err.message : String(err),
+              durationMs: Date.now() - tgStart,
+            });
+          })
       );
     }
 
