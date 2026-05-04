@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Timestamp } from "firebase-admin/firestore";
 import { adminDb } from "@/server/lib/firebase-admin";
-import { dateKey } from "@/server/lib/firestore-utils";
+import { dateKey, hourKey } from "@/server/lib/firestore-utils";
 import { verifyCronAuth } from "@/server/lib/cron-auth";
+import { recordNotification } from "@/server/lib/notification-log";
 import { sendEmail } from "@/server/lib/email";
 import { sendSMS } from "@/server/lib/sms";
 import { stripDiacritics } from "@/server/lib/strings";
 import { bookingReminderHtml } from "@/emails/booking-reminder";
-import { addDays, format } from "date-fns";
+import { addDays, format, subHours } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import { TIMEZONE } from "@/lib/constants";
 import { SHOP_PHONE_DISPLAY } from "@/lib/business-info";
@@ -122,6 +123,7 @@ async function processEmail(
 
   try {
     const localStart = toZonedTime(appt.startTime.toDate(), TIMEZONE);
+    const emailStart = Date.now();
     const result = await sendEmail({
       to: appt.customerEmail,
       subject: "Pripomienka rezervácie — Strojček",
@@ -136,10 +138,26 @@ async function processEmail(
     if (!result.success) throw result.error ?? new Error("send failed");
     await markSent(ref, "email");
     counters.emailSent++;
+    await recordNotification({
+      kind: "email-reminder",
+      status: "sent",
+      appointmentId: ref.id,
+      recipient: appt.customerEmail,
+      durationMs: Date.now() - emailStart,
+      trigger: "cron",
+    });
   } catch (err) {
     console.error(`[cron/reminders] email send failed for ${ref.id}:`, err);
     await releaseLock(ref, "email").catch(() => {});
     counters.emailFailed++;
+    await recordNotification({
+      kind: "email-reminder",
+      status: "failed",
+      appointmentId: ref.id,
+      recipient: appt.customerEmail,
+      error: err instanceof Error ? err.message : String(err),
+      trigger: "cron",
+    });
   }
 }
 
@@ -158,16 +176,33 @@ async function processSms(
 
   try {
     const localStart = toZonedTime(appt.startTime.toDate(), TIMEZONE);
+    const smsStart = Date.now();
     await sendSMS({
       phone: appt.customerPhone,
       message: `Strojcek: zajtra o ${format(localStart, "HH:mm")} mate rezervaciu na ${stripDiacritics(appt.serviceName)}. Pre zrusenie zavolajte ${SHOP_PHONE_DISPLAY}.`,
     });
     await markSent(ref, "sms");
     counters.smsSent++;
+    await recordNotification({
+      kind: "sms-reminder",
+      status: "sent",
+      appointmentId: ref.id,
+      recipient: appt.customerPhone,
+      durationMs: Date.now() - smsStart,
+      trigger: "cron",
+    });
   } catch (err) {
     console.error(`[cron/reminders] sms send failed for ${ref.id}:`, err);
     await releaseLock(ref, "sms").catch(() => {});
     counters.smsFailed++;
+    await recordNotification({
+      kind: "sms-reminder",
+      status: "failed",
+      appointmentId: ref.id,
+      recipient: appt.customerPhone,
+      error: err instanceof Error ? err.message : String(err),
+      trigger: "cron",
+    });
   }
 }
 
@@ -187,6 +222,32 @@ async function processOne(
 export async function GET(request: NextRequest) {
   const unauthorized = verifyCronAuth(request);
   if (unauthorized) return unauthorized;
+
+  // GC pass for counters/global_bookings.hourly. Booking writes trim it
+  // inline, but a quiet day with no bookings would let stale buckets
+  // accumulate. The cleanup cron used to handle this; now we piggy-back
+  // on the daily reminder job.
+  try {
+    const globalRef = adminDb.doc("counters/global_bookings");
+    const globalSnap = await globalRef.get();
+    if (globalSnap.exists) {
+      const hourly = (globalSnap.data() as {
+        hourly?: Record<string, number>;
+      }).hourly ?? {};
+      const cutoffHourKey = hourKey(subHours(new Date(), 24));
+      const trimmed: Record<string, number> = {};
+      let trimmedCount = 0;
+      for (const [k, v] of Object.entries(hourly)) {
+        if (k >= cutoffHourKey) trimmed[k] = v;
+        else trimmedCount++;
+      }
+      if (trimmedCount > 0) {
+        await globalRef.set({ hourly: trimmed });
+      }
+    }
+  } catch (err) {
+    console.error("[cron/reminders] global_bookings hourly GC failed:", err);
+  }
 
   const nowLocal = toZonedTime(new Date(), TIMEZONE);
   const tomorrowKey = dateKey(addDays(nowLocal, 1));
