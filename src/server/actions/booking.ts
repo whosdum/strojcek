@@ -39,6 +39,7 @@ import {
 } from "@/lib/constants";
 import { createHash } from "crypto";
 import { PUBLIC_SITE_URL, SHOP_PHONE_DISPLAY } from "@/lib/business-info";
+import { recordNotification } from "@/server/lib/notification-log";
 import type { AppointmentStatus } from "@/lib/types";
 import type {
   AppointmentDoc,
@@ -406,6 +407,14 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
             notes: data.note || null,
             source: "online",
             reminderSentAt: null,
+            confirmationEmailSentAt: null,
+            confirmationEmailError: null,
+            confirmationEmailAttempts: 0,
+            cancellationEmailSentAt: null,
+            cancellationEmailError: null,
+            cancellationEmailAttempts: 0,
+            telegramAlertSentAt: null,
+            telegramAlertError: null,
             createdAt: Timestamp.now(),
             updatedAt: Timestamp.now(),
           })
@@ -482,6 +491,7 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
     // Email is the customer-facing confirmation — await it so a failed
     // SMTP returns to the booking response (handled below) rather than
     // a Cloud Run shutdown silently dropping the send.
+    const emailStart = Date.now();
     const emailResult = await sendEmail({
       to: data.email,
       subject: "Potvrdenie rezervácie - Strojček",
@@ -498,7 +508,15 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
       }),
     }).catch((err) => {
       console.error("[booking][email]", err);
-      return { success: false } as const;
+      return { success: false, error: err } as const;
+    });
+    await recordNotification({
+      kind: "email-confirmation",
+      status: emailResult.success ? "sent" : "failed",
+      appointmentId,
+      recipient: data.email,
+      error: emailResult.success ? null : "send failed",
+      durationMs: Date.now() - emailStart,
     });
 
     // Telegram is admin-only — fire-and-forget. The Cloud Run instance
