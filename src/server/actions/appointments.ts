@@ -533,43 +533,45 @@ export async function createAppointmentAdmin(
         });
       }
 
-      // Mirror booking.ts: fire-and-forget Telegram alert to the admin
-      // chat. Independent of the email path so a missing customer email
-      // (admin-created walk-in-style entry that still has a phone) doesn't
-      // suppress the operator notification.
+      // Telegram alert to the admin chat. Awaited via Promise.allSettled
+      // (not fire-and-forget) — Cloud Run was tearing down before the
+      // .then() audit-log write could run, so alerts arrived but never
+      // appeared in the dashboard.
       const chatId = process.env.TELEGRAM_CHAT_ID;
       if (chatId) {
         const tgStart = Date.now();
-        sendTelegramNotification({
-          chatId,
-          message:
-            `<b>Nová rezervácia (admin)</b>\n` +
-            `Zákazník: ${escapeTelegramHtml(customerName)}\n` +
-            `Služba: ${escapeTelegramHtml(bs.serviceName)}\n` +
-            `Dátum: ${escapeTelegramHtml(formattedDate)} o ${escapeTelegramHtml(formattedTime)}\n` +
-            (phone ? `Tel: ${escapeTelegramHtml(phone)}\n` : "") +
-            (customerEmail ? `Email: ${escapeTelegramHtml(customerEmail)}` : ""),
-        })
-          .then(() =>
-            recordNotification({
-              kind: "telegram-alert",
-              status: "sent",
-              appointmentId,
-              recipient: chatId,
-              durationMs: Date.now() - tgStart,
-            })
-          )
-          .catch((err) => {
-            console.error("[createAppointmentAdmin][telegram]", err);
-            return recordNotification({
-              kind: "telegram-alert",
-              status: "failed",
-              appointmentId,
-              recipient: chatId,
-              error: err instanceof Error ? err.message : String(err),
-              durationMs: Date.now() - tgStart,
-            });
-          });
+        await Promise.allSettled([
+          sendTelegramNotification({
+            chatId,
+            message:
+              `<b>Nová rezervácia (admin)</b>\n` +
+              `Zákazník: ${escapeTelegramHtml(customerName)}\n` +
+              `Služba: ${escapeTelegramHtml(bs.serviceName)}\n` +
+              `Dátum: ${escapeTelegramHtml(formattedDate)} o ${escapeTelegramHtml(formattedTime)}\n` +
+              (phone ? `Tel: ${escapeTelegramHtml(phone)}\n` : "") +
+              (customerEmail ? `Email: ${escapeTelegramHtml(customerEmail)}` : ""),
+          })
+            .then(() =>
+              recordNotification({
+                kind: "telegram-alert",
+                status: "sent",
+                appointmentId,
+                recipient: chatId,
+                durationMs: Date.now() - tgStart,
+              })
+            )
+            .catch((err) => {
+              console.error("[createAppointmentAdmin][telegram]", err);
+              return recordNotification({
+                kind: "telegram-alert",
+                status: "failed",
+                appointmentId,
+                recipient: chatId,
+                error: extractSendError(err),
+                durationMs: Date.now() - tgStart,
+              });
+            }),
+        ]);
       }
     }
 
