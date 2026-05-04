@@ -98,6 +98,10 @@ export default async function EditReservationPage({
             status: appointment.status,
             source: appointment.source,
             customerName: appointment.customerName,
+            durationMinutes: Math.round(
+              (appointment.endTime.getTime() - appointment.startTime.getTime()) /
+                60000,
+            ),
           }}
         />
       </div>

@@ -63,6 +63,9 @@ interface AppointmentInitial {
   /** Used as the label seed when source === "walk-in" — the appointment
    *  has no customer doc, so the customerName field IS the label. */
   customerName: string | null;
+  /** Walk-in only: existing duration in minutes (endTime − startTime).
+   *  Lets the form prefill the override field on edit. */
+  durationMinutes: number | null;
 }
 
 interface AppointmentFormProps {
@@ -163,7 +166,10 @@ export function AppointmentForm({
       priceFinal: initial?.priceFinal != null ? String(initial.priceFinal) : "",
       walkIn: initialIsWalkIn,
       label: initialIsWalkIn ? initial?.customerName?.trim() || "Walk-in" : "",
-      customDurationMinutes: "",
+      customDurationMinutes:
+        initialIsWalkIn && initial?.durationMinutes
+          ? String(initial.durationMinutes)
+          : "",
     };
   });
 
