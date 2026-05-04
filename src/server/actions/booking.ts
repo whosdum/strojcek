@@ -38,7 +38,7 @@ import {
   EMAIL_BOOKING_LIMIT_24H,
 } from "@/lib/constants";
 import { createHash } from "crypto";
-import { SHOP_PHONE_DISPLAY } from "@/lib/business-info";
+import { PUBLIC_SITE_URL, SHOP_PHONE_DISPLAY } from "@/lib/business-info";
 import type { AppointmentStatus } from "@/lib/types";
 import type {
   AppointmentDoc,
@@ -470,8 +470,10 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
       throw e;
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const cancelUrl = `${appUrl}/cancel?token=${rawToken}`;
+    // Customer-facing URL — always the canonical public domain, never the
+    // staging `*.hosted.app` subdomain even when this booking was created
+    // through a staging deploy. See PUBLIC_SITE_URL docstring.
+    const cancelUrl = `${PUBLIC_SITE_URL}/cancel?token=${rawToken}`;
     const localStart = toZonedTime(startTime, TIMEZONE);
     const formattedDate = format(localStart, "d.M.yyyy");
     const formattedTime = format(localStart, "HH:mm");
@@ -642,7 +644,6 @@ export async function cancelBooking(input: unknown): Promise<ActionResult> {
       appointment.startTime.toDate(),
       TIMEZONE
     );
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const notifications: Promise<unknown>[] = [];
 
     if (appointment.customerEmail) {
@@ -656,7 +657,7 @@ export async function cancelBooking(input: unknown): Promise<ActionResult> {
             barberName: appointment.barberName,
             date: format(localCancelStart, "d.M.yyyy"),
             time: format(localCancelStart, "HH:mm"),
-            bookUrl: appUrl,
+            bookUrl: PUBLIC_SITE_URL,
           }),
         }).catch((err) => console.error("[EMAIL]", err))
       );

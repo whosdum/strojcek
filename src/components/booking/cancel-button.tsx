@@ -78,7 +78,13 @@ export function CancelButton({ token }: { token: string }) {
             <p className="text-xs text-muted-foreground">
               Voliteľné. Ak ho vyplníte, uloží sa k zrušenej rezervácii.
             </p>
-            <p className="text-xs text-muted-foreground text-right">
+            <p
+              className={`text-xs tabular-nums text-right ${
+                reason.length > REASON_MAX_LENGTH * 0.9
+                  ? "text-destructive"
+                  : "text-muted-foreground"
+              }`}
+            >
               {reason.length}/{REASON_MAX_LENGTH}
             </p>
           </div>
@@ -106,7 +112,7 @@ export function CancelButton({ token }: { token: string }) {
           {isPending ? (
             <>
               <Loader2Icon className="mr-2 size-4 animate-spin" />
-              Ruším...
+              Rušim rezerváciu...
             </>
           ) : (
             "Zrušiť rezerváciu"

@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import { getAppointmentById } from "@/server/queries/appointments";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -171,9 +170,6 @@ export default async function ReservationDetailPage({
               <CardTitle>Stav</CardTitle>
             </CardHeader>
             <CardContent>
-              <Badge className="mb-4 text-base">
-                {STATUS_LABELS[appointment.status]}
-              </Badge>
               <StatusActions
                 appointmentId={appointment.id}
                 currentStatus={appointment.status}

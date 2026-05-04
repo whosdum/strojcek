@@ -271,7 +271,7 @@ export function ContactForm(props: ContactFormProps) {
         {isSubmitting ? (
           <>
             <Loader2Icon className="size-5 animate-spin" />
-            Odosielam...
+            Pokračovať...
           </>
         ) : (
           "Ďalej"

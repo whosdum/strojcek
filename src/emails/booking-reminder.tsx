@@ -7,16 +7,24 @@ interface BookingReminderProps {
   barberName: string;
   date: string;
   time: string;
-  cancelUrl?: string;
 }
 
+/**
+ * The reminder intentionally does NOT include a one-click cancel link.
+ * Cancellation tokens are only stored as bcrypt-style hashes after
+ * booking creation, so the cron can't reconstruct a valid `?token=…`
+ * URL even if it wanted to. We point the customer at the confirmation
+ * email (which has the live token) and the shop phone instead — that
+ * also sidesteps the race where the booking is cancelled between
+ * reminder send and click-time, leaving the customer staring at an
+ * "invalid link" page.
+ */
 export function bookingReminderHtml({
   customerName,
   serviceName,
   barberName,
   date,
   time,
-  cancelUrl,
 }: BookingReminderProps): string {
   const safeCustomerName = escapeHtml(customerName);
   const safeServiceName = escapeHtml(serviceName);
@@ -61,13 +69,7 @@ export function bookingReminderHtml({
             <td style="padding: 12px 0; font-weight: bold; font-size: 14px; text-align: right;">${safeTime}</td>
           </tr>
         </table>
-        ${cancelUrl
-          ? `<p style="color: #666; margin: 24px 0 8px; font-size: 13px;">Ak potrebujete rezerváciu zrušiť (najneskôr 2 hodiny pred termínom):</p>
-        <div style="text-align: center; margin-top: 12px;">
-          <a href="${cancelUrl}" style="color: #ff703a; font-size: 14px; text-decoration: underline;">Zrušiť rezerváciu</a>
-        </div>`
-          : `<p style="color: #666; margin: 24px 0 8px; font-size: 13px;">Ak potrebujete rezerváciu zrušiť, použite odkaz z potvrdzovacieho emailu.</p>`
-        }
+        <p style="color: #666; margin: 24px 0 8px; font-size: 13px;">Ak potrebujete rezerváciu zrušiť, použite odkaz z potvrdzovacieho emailu.</p>
         <p style="color: #333; margin: 24px 0 0; font-size: 15px; text-align: center;">Tešíme sa na vás! 💈</p>
       </td>
     </tr>

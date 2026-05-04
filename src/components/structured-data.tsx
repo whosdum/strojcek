@@ -20,16 +20,6 @@ interface StructuredDataProps {
   services?: { name: string; description: string; price: number }[];
 }
 
-const DAY_NAMES = [
-  "Sunday",
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-];
-
 const DEFAULT_HOURS: OpeningHoursSpec[] = [
   { dayOfWeek: "Monday", opens: "09:00", closes: "17:00" },
   { dayOfWeek: "Tuesday", opens: "09:00", closes: "17:00" },
@@ -40,7 +30,10 @@ const DEFAULT_HOURS: OpeningHoursSpec[] = [
 ];
 
 export function StructuredData({ openingHours, services }: StructuredDataProps) {
-  const hours = openingHours ?? DEFAULT_HOURS;
+  // Empty array is a valid signal of "no schedule yet" — fall back only
+  // when caller didn't supply anything at all.
+  const hours =
+    openingHours && openingHours.length > 0 ? openingHours : DEFAULT_HOURS;
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://strojcek.sk";
   const jsonLd = {
@@ -101,5 +94,4 @@ export function StructuredData({ openingHours, services }: StructuredDataProps) 
   );
 }
 
-export { DAY_NAMES };
 export type { OpeningHoursSpec };

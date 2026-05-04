@@ -157,6 +157,12 @@ export async function getWorkingDays(barberId: string): Promise<number[]> {
     .sort((a, b) => a - b);
 }
 
+/** Matches strictly "HH:mm" with HH ∈ 01..23 and mm ∈ 00..59. The booking
+ *  wizard interprets this as "barber's last working minute today" — a
+ *  value of 00:00 (or worse, an unparseable string) would either flag the
+ *  whole day as "already over" or crash the slot grid, so reject early. */
+const HH_MM = /^([01]\d|2[0-3]):[0-5]\d$/;
+
 export async function getScheduleEndTimes(
   barberId: string
 ): Promise<Record<number, string>> {
@@ -165,6 +171,12 @@ export async function getScheduleEndTimes(
   for (const d of snap.docs) {
     const s = d.data() as ScheduleDoc;
     if (!s.isActive) continue;
+    if (!HH_MM.test(s.endTime) || s.endTime === "00:00") {
+      console.warn(
+        `[slots.getScheduleEndTimes] skipping invalid endTime for barber=${barberId} day=${s.dayOfWeek}: ${s.endTime}`
+      );
+      continue;
+    }
     if (!result[s.dayOfWeek] || s.endTime > result[s.dayOfWeek]) {
       result[s.dayOfWeek] = s.endTime;
     }

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { getAppointments } from "@/server/queries/appointments";
+import { getAllBarbers } from "@/server/queries/barbers";
 import { Badge } from "@/components/ui/badge";
+import { BarberFilter } from "@/components/admin/barber-filter";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -37,7 +39,10 @@ export default async function ReservationsPage({
   const barberId = params.barberId || undefined;
   const status = params.status as AppointmentStatus | undefined;
 
-  const { items, nextCursor } = await getAppointments({ cursor, barberId, status });
+  const [{ items, nextCursor }, allBarbers] = await Promise.all([
+    getAppointments({ cursor, barberId, status }),
+    getAllBarbers(),
+  ]);
 
   const filtersQuery = new URLSearchParams();
   if (barberId) filtersQuery.set("barberId", barberId);
@@ -63,17 +68,37 @@ export default async function ReservationsPage({
       </div>
 
       {/* Filters */}
-      <div className="mb-4 flex gap-2 overflow-x-auto pb-1 sm:flex-wrap">
-        <Link href="/admin/reservations">
-          <Badge variant={!status ? "default" : "outline"}>Všetky</Badge>
-        </Link>
-        {Object.entries(STATUS_LABELS).map(([key, label]) => (
-          <Link key={key} href={`/admin/reservations?status=${key}`}>
-            <Badge variant={status === key ? "default" : "outline"}>
-              {label}
-            </Badge>
+      <div className="mb-4 space-y-3">
+        <BarberFilter
+          barbers={allBarbers.map((b) => ({
+            id: b.id,
+            label: `${b.firstName} ${b.lastName}`.trim(),
+          }))}
+          selected={barberId}
+        />
+        <div className="flex gap-2 overflow-x-auto pb-1 sm:flex-wrap">
+          <Link
+            href={
+              barberId
+                ? `/admin/reservations?barberId=${barberId}`
+                : "/admin/reservations"
+            }
+          >
+            <Badge variant={!status ? "default" : "outline"}>Všetky</Badge>
           </Link>
-        ))}
+          {Object.entries(STATUS_LABELS).map(([key, label]) => {
+            const qs = new URLSearchParams();
+            if (barberId) qs.set("barberId", barberId);
+            qs.set("status", key);
+            return (
+              <Link key={key} href={`/admin/reservations?${qs.toString()}`}>
+                <Badge variant={status === key ? "default" : "outline"}>
+                  {label}
+                </Badge>
+              </Link>
+            );
+          })}
+        </div>
       </div>
 
       <div className="space-y-3 md:hidden">

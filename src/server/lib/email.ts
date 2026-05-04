@@ -30,6 +30,15 @@ const transporter =
 const EMAIL_FROM =
   process.env.EMAIL_FROM || "Strojcek <barbershopstrojcek@gmail.com>";
 
+/** Extract the bare email address from a "Name <addr@domain>" string,
+ *  falling back to the input itself if no angle brackets are present. */
+function extractEmailAddress(value: string): string {
+  const match = value.match(/<([^>]+)>/);
+  return (match ? match[1] : value).trim();
+}
+
+const UNSUBSCRIBE_ADDRESS = extractEmailAddress(EMAIL_FROM);
+
 interface SendEmailOptions {
   to: string;
   subject: string;
@@ -83,7 +92,12 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
       text: text || htmlToPlainText(html),
       headers: {
         "X-Mailer": "Strojcek Booking",
-        "List-Unsubscribe": `<mailto:${process.env.SMTP_USER || "barbershopstrojcek@gmail.com"}?subject=unsubscribe>`,
+        // Use the address customers see in the From: header. Falling back
+        // to SMTP_USER is fragile — it bound this header to whichever
+        // mailbox we authenticated with (often a Gmail account that's
+        // not the public reply-to), so unsubscribes went to a mailbox
+        // nobody reads.
+        "List-Unsubscribe": `<mailto:${UNSUBSCRIBE_ADDRESS}?subject=unsubscribe>`,
       },
     });
     return { success: true };

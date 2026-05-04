@@ -253,6 +253,50 @@ export async function getActiveBarbersWithServices(): Promise<
   );
 }
 
+/**
+ * Returns shop opening hours derived from the first active barber's
+ * weekly schedule (sortOrder ASC). Used by the JSON-LD on the public
+ * homepage so search engines see the real schedule, not a hardcoded
+ * default. Inactive schedule rows are skipped — the day simply won't
+ * appear in the result, which schema.org treats as "closed".
+ */
+const SCHEMA_ORG_DAY_NAMES = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+] as const;
+
+export async function getShopOpeningHours(): Promise<
+  Array<{ dayOfWeek: string; opens: string; closes: string }>
+> {
+  const barberSnap = await adminDb
+    .collection("barbers")
+    .where("isActive", "==", true)
+    .orderBy("sortOrder", "asc")
+    .limit(1)
+    .get();
+  if (barberSnap.empty) return [];
+
+  const barberId = barberSnap.docs[0].id;
+  const schedSnap = await adminDb
+    .collection(`barbers/${barberId}/schedules`)
+    .get();
+
+  return schedSnap.docs
+    .map((d) => d.data() as ScheduleDoc)
+    .filter((s) => s.isActive)
+    .sort((a, b) => a.dayOfWeek - b.dayOfWeek)
+    .map((s) => ({
+      dayOfWeek: SCHEMA_ORG_DAY_NAMES[s.dayOfWeek],
+      opens: s.startTime,
+      closes: s.endTime,
+    }));
+}
+
 export async function getBarberById(id: string): Promise<BarberFullView | null> {
   const ref = adminDb.doc(`barbers/${id}`);
   const snap = await ref.get();

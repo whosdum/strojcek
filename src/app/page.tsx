@@ -1,16 +1,21 @@
 export const revalidate = 1800;
 
 import { getActiveServices } from "@/server/queries/services";
-import { getActiveBarbersWithServices } from "@/server/queries/barbers";
+import {
+  getActiveBarbersWithServices,
+  getShopOpeningHours,
+} from "@/server/queries/barbers";
 import { BookingWizard } from "@/components/booking/booking-wizard";
 import { BookingShell } from "@/components/booking/booking-shell";
+import { StructuredData } from "@/components/structured-data";
 import Image from "next/image";
 import Link from "next/link";
 
 export default async function HomePage() {
-  const [services, barbers] = await Promise.all([
+  const [services, barbers, openingHours] = await Promise.all([
     getActiveServices(),
     getActiveBarbersWithServices(),
+    getShopOpeningHours(),
   ]);
 
   const serializedServices = services.map((s) => ({
@@ -23,6 +28,14 @@ export default async function HomePage() {
 
   return (
     <BookingShell>
+      <StructuredData
+        openingHours={openingHours}
+        services={services.map((s) => ({
+          name: s.name,
+          description: s.description ?? "",
+          price: Number(s.price),
+        }))}
+      />
       <header className="mb-6 flex flex-col items-center text-center sm:mb-8">
         <Image
           src="/logo.jpg"

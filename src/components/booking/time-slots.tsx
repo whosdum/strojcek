@@ -50,7 +50,7 @@ export function TimeSlots({ slots, selectedTime, onSelect, onChangeDate }: TimeS
           <h4 className="mb-2.5 text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">
             {group.label}
           </h4>
-          <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap">
+          <div className="grid grid-cols-2 gap-2 min-[375px]:grid-cols-3 sm:flex sm:flex-wrap">
             {group.slots.map((time) => (
               <SlotChip
                 key={time}

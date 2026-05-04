@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
 import { BookingShell } from "@/components/booking/booking-shell";
 
 export default function Error({
@@ -23,12 +24,20 @@ export default function Error({
         <p className="mt-2 text-sm text-muted-foreground">
           Nepodarilo sa načítať rezervačný systém. Skúste to prosím znova.
         </p>
-        <button
-          onClick={reset}
-          className="mt-6 rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-        >
-          Skúsiť znova
-        </button>
+        <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row">
+          <button
+            onClick={reset}
+            className="rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            Skúsiť znova
+          </button>
+          <Link
+            href="/"
+            className="rounded-lg border border-border px-6 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors"
+          >
+            Späť na domovskú stránku
+          </Link>
+        </div>
       </div>
     </BookingShell>
   );

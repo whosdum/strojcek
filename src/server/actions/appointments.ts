@@ -7,6 +7,7 @@ import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import { randomUUID } from "crypto";
 
 import { adminDb } from "@/server/lib/firebase-admin";
+import { PUBLIC_SITE_URL } from "@/lib/business-info";
 import {
   dateKey,
   generateSearchTokens,
@@ -206,7 +207,6 @@ export async function updateAppointmentStatus(
     // about. We do this AFTER the transaction so a failed email doesn't roll
     // back the status update.
     if (result.kind === "ok") {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
       const localStart = toZonedTime(result.prev.startTime.toDate(), TIMEZONE);
       const dateStr = formatDate(localStart, "d.M.yyyy");
       const timeStr = formatDate(localStart, "HH:mm");
@@ -226,7 +226,7 @@ export async function updateAppointmentStatus(
             barberName: result.prev.barberName,
             date: dateStr,
             time: timeStr,
-            bookUrl: appUrl,
+            bookUrl: PUBLIC_SITE_URL,
           }),
         }).catch((err) =>
           console.error("[updateAppointmentStatus][email]", err)
@@ -424,9 +424,10 @@ export async function createAppointmentAdmin(
       const barberName = `${barber.firstName} ${barber.lastName}`;
 
       if (customerEmail && rawToken) {
-        const appUrl =
-          process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-        const cancelUrl = `${appUrl}/cancel?token=${rawToken}`;
+        // Customer-facing URL — pin to the canonical public domain so
+        // the cancel link in the email never points at the staging
+        // `*.hosted.app` host even when triggered from a staging deploy.
+        const cancelUrl = `${PUBLIC_SITE_URL}/cancel?token=${rawToken}`;
 
         // Await the customer-facing confirmation email so a misconfigured
         // SMTP surfaces as a real failure path rather than disappearing

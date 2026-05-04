@@ -7,7 +7,7 @@ export default function NotFound() {
       <h1 className="text-6xl font-bold text-muted-foreground">404</h1>
       <p className="mt-4 text-lg text-muted-foreground">Stránka nenájdená</p>
       <Link href="/" className="mt-6">
-        <Button variant="outline">Späť na hlavnú stránku</Button>
+        <Button>Späť na hlavnú stránku</Button>
       </Link>
     </div>
   );
