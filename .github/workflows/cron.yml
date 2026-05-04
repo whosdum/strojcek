@@ -4,7 +4,7 @@ on:
   schedule:
     # Reminders — daily at 16:00 UTC (18:00 Bratislava summer / 17:00 winter)
     - cron: "0 16 * * *"
-  workflow_dispatch: # allow manual trigger (also the only way to run cleanup)
+  workflow_dispatch: # allow manual trigger of the reminder run
 
 # Block concurrent runs of the same trigger so a manual dispatch landing
 # on top of a scheduled run does not produce two simultaneous HTTP calls
@@ -29,17 +29,4 @@ jobs:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           curl -sS -f --max-time 120 -X GET "${APP_URL}/api/cron/reminders" \
-            -H "Authorization: Bearer ${CRON_SECRET}"
-
-  cleanup:
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Run cleanup
-        env:
-          APP_URL: ${{ secrets.APP_URL }}
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-        run: |
-          curl -sS -f --max-time 300 -X GET "${APP_URL}/api/cron/cleanup" \
             -H "Authorization: Bearer ${CRON_SECRET}"

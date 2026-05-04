@@ -34,7 +34,7 @@ firebase deploy --only firestore:rules,firestore:indexes  # Deploy security rule
 - `src/app/api/`
   - `/auth/session` — POST creates `__session` cookie via `createSessionCookie()`, DELETE clears
   - `/admin/calendar`, `/admin/services` — guarded JSON endpoints
-  - `/cron/reminders` (daily 16:00 UTC) and `/cron/cleanup` (manual only via `workflow_dispatch`) — `Authorization: Bearer $CRON_SECRET`
+  - `/cron/reminders` (daily 16:00 UTC) — `Authorization: Bearer $CRON_SECRET`. Also performs the daily GC pass on `counters/global_bookings.hourly`.
 
 ### Server Layer (`src/server/`)
 
@@ -186,3 +186,17 @@ After deploy, update `NEXT_PUBLIC_APP_URL` in `apphosting.yaml` to the actual ba
 - `Audit.md` is a 45-item UI/UX audit (P0–P3 priorities) — consult it before making UI changes
 - `.github/workflows/cron.yml` schedules cron HTTP calls to `/api/cron/*` — when deployed to App Hosting, set the GitHub Actions `APP_URL` repo secret to the backend URL
 - `docs/archive/2026-pre-firebase/` contains the original implementation plans/specs from the Postgres + Prisma + Better Auth + Vercel era — kept for historical reference only, not for current development
+- **Firestore TTL setup**: four collections rely on Firestore native TTL for retention (replaces the old cleanup cron). One-time per project:
+
+  ```bash
+  for COL in notificationLog history counters; do
+    gcloud firestore fields ttls update expireAt \
+      --collection-group=$COL --enable-ttl \
+      --project=strojcek-staging
+    gcloud firestore fields ttls update expireAt \
+      --collection-group=$COL --enable-ttl \
+      --project=strojcek-production
+  done
+  ```
+
+  Retention windows: `notificationLog` 90d, `history` 365d, `counters/phone_*` + `counters/email_*` 24h after last booking. `counters/global_bookings` has no `expireAt` field so TTL skips it (trimmed inline by booking.ts + reminder cron).
