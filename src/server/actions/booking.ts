@@ -524,6 +524,7 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
     // request to land at Telegram.
     const chatId = process.env.TELEGRAM_CHAT_ID;
     if (chatId) {
+      const tgStart = Date.now();
       sendTelegramNotification({
         chatId,
         message:
@@ -533,7 +534,27 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
           `Dátum: ${escapeTelegramHtml(formattedDate)} o ${escapeTelegramHtml(formattedTime)}\n` +
           `Tel: ${escapeTelegramHtml(phone)}\n` +
           `Email: ${escapeTelegramHtml(data.email)}`,
-      }).catch((err) => console.error("[booking][telegram]", err));
+      })
+        .then(() =>
+          recordNotification({
+            kind: "telegram-alert",
+            status: "sent",
+            appointmentId,
+            recipient: chatId,
+            durationMs: Date.now() - tgStart,
+          })
+        )
+        .catch((err) => {
+          console.error("[booking][telegram]", err);
+          return recordNotification({
+            kind: "telegram-alert",
+            status: "failed",
+            appointmentId,
+            recipient: chatId,
+            error: err instanceof Error ? err.message : String(err),
+            durationMs: Date.now() - tgStart,
+          });
+        });
     }
 
     if (!emailResult.success) {
