@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
 import { getAppointmentById } from "@/server/queries/appointments";
+import { getAppointmentNotificationStatus } from "@/server/queries/notifications";
+import { NotificationStatusPanel } from "@/components/admin/notification-status-panel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -17,7 +19,10 @@ export default async function ReservationDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const appointment = await getAppointmentById(id);
+  const [appointment, notificationStatus] = await Promise.all([
+    getAppointmentById(id),
+    getAppointmentNotificationStatus(id),
+  ]);
 
   if (!appointment) notFound();
 
@@ -216,6 +221,14 @@ export default async function ReservationDetailPage({
               )}
             </CardContent>
           </Card>
+
+          {notificationStatus && (
+            <NotificationStatusPanel
+              appointmentId={appointment.id}
+              appointmentStatus={appointment.status}
+              status={notificationStatus}
+            />
+          )}
         </div>
       </div>
     </div>
