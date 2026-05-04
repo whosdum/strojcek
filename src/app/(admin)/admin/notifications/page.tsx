@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { format, subDays, formatDistanceToNow } from "date-fns";
+import { subDays, formatDistanceToNow } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import { sk } from "date-fns/locale";
 import {
   Card,
@@ -29,6 +30,7 @@ import type {
   NotificationKind,
   NotificationStatus,
 } from "@/lib/types";
+import { TIMEZONE } from "@/lib/constants";
 
 const KIND_LABELS: Record<string, string> = {
   "email-confirmation": "Potvrdzovací email",
@@ -165,7 +167,7 @@ export default async function NotificationsPage({ searchParams }: PageProps) {
                   </span>
                 )}{" "}
                 <span className="text-muted-foreground">
-                  · {format(lastCron.lastRunAt, "d.M.yyyy HH:mm", { locale: sk })}
+                  · {formatInTimeZone(lastCron.lastRunAt, TIMEZONE, "d.M.yyyy HH:mm", { locale: sk })}
                 </span>
               </p>
             ) : (
@@ -344,7 +346,7 @@ export default async function NotificationsPage({ searchParams }: PageProps) {
                   {log.map((e) => (
                     <TableRow key={e.id}>
                       <TableCell className="whitespace-nowrap text-xs">
-                        {format(e.timestamp, "d.M. HH:mm:ss", { locale: sk })}
+                        {formatInTimeZone(e.timestamp, TIMEZONE, "d.M. HH:mm:ss", { locale: sk })}
                       </TableCell>
                       <TableCell className="text-xs">
                         {KIND_LABELS[e.kind] ?? e.kind}

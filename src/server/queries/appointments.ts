@@ -4,7 +4,7 @@ import { Timestamp } from "firebase-admin/firestore";
 import { dateKey, tsToDate, tsToDateOrNull } from "@/server/lib/firestore-utils";
 import { PAGE_SIZE, TIMEZONE } from "@/lib/constants";
 import { startOfDay, startOfMonth } from "date-fns";
-import { toZonedTime } from "date-fns-tz";
+import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import type {
   AppointmentView,
   AppointmentWithBarberServiceView,
@@ -114,17 +114,22 @@ export async function getUpcomingAppointments(
   return all.slice(0, limit);
 }
 
+export type AppointmentListViewMode = "upcoming" | "past" | "all";
+
 interface GetAppointmentsParams {
   /** Cursor = ISO timestamp of the last item on the previous page. */
   cursor?: string;
   barberId?: string;
   status?: AppointmentStatus;
+  /** Default "upcoming" — today onwards, ascending (closest first). */
+  view?: AppointmentListViewMode;
 }
 
 export async function getAppointments({
   cursor,
   barberId,
   status,
+  view = "upcoming",
 }: GetAppointmentsParams = {}): Promise<{
   items: AppointmentListView[];
   nextCursor: string | null;
@@ -136,7 +141,21 @@ export async function getAppointments({
   let query: FirebaseFirestore.Query = adminDb.collection("appointments");
   if (barberId) query = query.where("barberId", "==", barberId);
   if (status) query = query.where("status", "==", status);
-  query = query.orderBy("startTime", "desc");
+
+  if (view === "upcoming") {
+    const startOfToday = fromZonedTime(startOfDay(nowInTz()), TIMEZONE);
+    query = query
+      .where("startTime", ">=", Timestamp.fromDate(startOfToday))
+      .orderBy("startTime", "asc");
+  } else if (view === "past") {
+    const startOfToday = fromZonedTime(startOfDay(nowInTz()), TIMEZONE);
+    query = query
+      .where("startTime", "<", Timestamp.fromDate(startOfToday))
+      .orderBy("startTime", "desc");
+  } else {
+    query = query.orderBy("startTime", "desc");
+  }
+
   if (cursor) {
     const ms = Number(cursor);
     if (Number.isFinite(ms)) {

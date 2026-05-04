@@ -586,6 +586,24 @@ export function AppointmentForm({
               }
               disabled={limited}
             />
+            <div className="flex flex-wrap gap-1.5">
+              {[60, 120, 180, 240].map((mins) => {
+                const value = String(mins);
+                const active = form.customDurationMinutes === value;
+                return (
+                  <Button
+                    key={mins}
+                    type="button"
+                    variant={active ? "default" : "outline"}
+                    size="sm"
+                    disabled={limited}
+                    onClick={() => updateField("customDurationMinutes", value)}
+                  >
+                    {mins} min
+                  </Button>
+                );
+              })}
+            </div>
             <p className="text-xs text-muted-foreground">
               Override pre dĺžku rezervácie 5–480 min. Prázdne = použije sa
               trvanie vybranej služby. Pre voľne zadaný čas zapnite

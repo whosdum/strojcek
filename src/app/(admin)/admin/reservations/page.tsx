@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ClickableTableRow } from "@/components/admin/clickable-table-row";
-import { format } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import { sk } from "date-fns/locale";
 import { EyeIcon, ChevronRightIcon, PlusIcon, UserMinusIcon } from "lucide-react";
 import type { AppointmentStatus } from "@/lib/types";
@@ -23,7 +23,16 @@ import {
   DATE_FORMAT,
   TIME_FORMAT,
   DATETIME_DAY_FORMAT,
+  TIMEZONE,
 } from "@/lib/constants";
+
+type ViewMode = "upcoming" | "past" | "all";
+
+const VIEW_LABELS: Record<ViewMode, string> = {
+  upcoming: "Nadchádzajúce",
+  past: "Predošlé",
+  all: "Všetky",
+};
 
 export default async function ReservationsPage({
   searchParams,
@@ -32,21 +41,25 @@ export default async function ReservationsPage({
     cursor?: string;
     barberId?: string;
     status?: string;
+    view?: string;
   }>;
 }) {
   const params = await searchParams;
   const cursor = params.cursor;
   const barberId = params.barberId || undefined;
   const status = params.status as AppointmentStatus | undefined;
+  const view: ViewMode =
+    params.view === "past" || params.view === "all" ? params.view : "upcoming";
 
   const [{ items, nextCursor }, allBarbers] = await Promise.all([
-    getAppointments({ cursor, barberId, status }),
+    getAppointments({ cursor, barberId, status, view }),
     getAllBarbers(),
   ]);
 
   const filtersQuery = new URLSearchParams();
   if (barberId) filtersQuery.set("barberId", barberId);
   if (status) filtersQuery.set("status", status);
+  if (view !== "upcoming") filtersQuery.set("view", view);
   const filtersStr = filtersQuery.toString();
   const filtersSuffix = filtersStr ? `&${filtersStr}` : "";
 
@@ -77,12 +90,33 @@ export default async function ReservationsPage({
           selected={barberId}
         />
         <div className="flex gap-2 overflow-x-auto pb-1 sm:flex-wrap">
+          {(Object.keys(VIEW_LABELS) as ViewMode[]).map((v) => {
+            const qs = new URLSearchParams();
+            if (barberId) qs.set("barberId", barberId);
+            if (status) qs.set("status", status);
+            if (v !== "upcoming") qs.set("view", v);
+            const href = qs.toString()
+              ? `/admin/reservations?${qs.toString()}`
+              : "/admin/reservations";
+            return (
+              <Link key={v} href={href}>
+                <Badge variant={view === v ? "default" : "outline"}>
+                  {VIEW_LABELS[v]}
+                </Badge>
+              </Link>
+            );
+          })}
+        </div>
+        <div className="flex gap-2 overflow-x-auto pb-1 sm:flex-wrap">
           <Link
-            href={
-              barberId
-                ? `/admin/reservations?barberId=${barberId}`
-                : "/admin/reservations"
-            }
+            href={(() => {
+              const qs = new URLSearchParams();
+              if (barberId) qs.set("barberId", barberId);
+              if (view !== "upcoming") qs.set("view", view);
+              return qs.toString()
+                ? `/admin/reservations?${qs.toString()}`
+                : "/admin/reservations";
+            })()}
           >
             <Badge variant={!status ? "default" : "outline"}>Všetky</Badge>
           </Link>
@@ -90,6 +124,7 @@ export default async function ReservationsPage({
             const qs = new URLSearchParams();
             if (barberId) qs.set("barberId", barberId);
             qs.set("status", key);
+            if (view !== "upcoming") qs.set("view", view);
             return (
               <Link key={key} href={`/admin/reservations?${qs.toString()}`}>
                 <Badge variant={status === key ? "default" : "outline"}>
@@ -120,7 +155,7 @@ export default async function ReservationsPage({
                   <span>{appt.customerName}</span>
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {format(appt.startTime, DATETIME_DAY_FORMAT, { locale: sk })}
+                  {formatInTimeZone(appt.startTime, TIMEZONE, DATETIME_DAY_FORMAT, { locale: sk })}
                 </p>
               </div>
               <Badge variant={STATUS_VARIANTS[appt.status]}>
@@ -155,13 +190,13 @@ export default async function ReservationsPage({
               <ClickableTableRow
                 key={appt.id}
                 href={`/admin/reservations/${appt.id}`}
-                ariaLabel={`Otvoriť rezerváciu ${appt.customerName ?? ""} ${format(appt.startTime, DATE_FORMAT)}`.trim()}
+                ariaLabel={`Otvoriť rezerváciu ${appt.customerName ?? ""} ${formatInTimeZone(appt.startTime, TIMEZONE, DATE_FORMAT)}`.trim()}
               >
                 <TableCell>
-                  {format(appt.startTime, DATE_FORMAT)}
+                  {formatInTimeZone(appt.startTime, TIMEZONE, DATE_FORMAT)}
                 </TableCell>
                 <TableCell>
-                  {format(appt.startTime, TIME_FORMAT)}
+                  {formatInTimeZone(appt.startTime, TIMEZONE, TIME_FORMAT)}
                 </TableCell>
                 <TableCell className="font-medium">
                   <span className="inline-flex items-center gap-1.5">

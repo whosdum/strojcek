@@ -3,7 +3,7 @@ import { getCustomerById } from "@/server/queries/customers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { format } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import { sk } from "date-fns/locale";
 import Link from "next/link";
 import { CustomerActions } from "@/components/admin/customer-actions";
@@ -11,6 +11,7 @@ import {
   STATUS_LABELS,
   STATUS_VARIANTS,
   DATETIME_FORMAT,
+  TIMEZONE,
 } from "@/lib/constants";
 
 export default async function CustomerDetailPage({
@@ -96,7 +97,7 @@ export default async function CustomerDetailPage({
                   >
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <span className="font-medium">
-                        {format(appt.startTime, DATETIME_FORMAT, {
+                        {formatInTimeZone(appt.startTime, TIMEZONE, DATETIME_FORMAT, {
                           locale: sk,
                         })}
                       </span>

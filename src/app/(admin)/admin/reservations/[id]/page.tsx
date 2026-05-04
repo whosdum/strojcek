@@ -5,12 +5,12 @@ import { NotificationStatusPanel } from "@/components/admin/notification-status-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { format } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import { sk } from "date-fns/locale";
 import { StatusActions } from "@/components/admin/status-actions";
 import Link from "next/link";
 import { AppointmentDeleteButton } from "@/components/admin/appointment-delete-button";
-import { STATUS_LABELS, formatCurrency } from "@/lib/constants";
+import { STATUS_LABELS, TIMEZONE, formatCurrency } from "@/lib/constants";
 import { PencilIcon } from "lucide-react";
 
 export default async function ReservationDetailPage({
@@ -104,17 +104,20 @@ export default async function ReservationDetailPage({
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
               <span className="text-muted-foreground">Dátum</span>
               <span className="break-words sm:text-right">
-                {format(appointment.startTime, "EEEE, d. MMMM yyyy", {
-                  locale: sk,
-                })}
+                {formatInTimeZone(
+                  appointment.startTime,
+                  TIMEZONE,
+                  "EEEE, d. MMMM yyyy",
+                  { locale: sk },
+                )}
               </span>
             </div>
             <Separator />
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
               <span className="text-muted-foreground">Čas</span>
               <span className="sm:text-right">
-                {format(appointment.startTime, "HH:mm")} —{" "}
-                {format(appointment.endTime, "HH:mm")}
+                {formatInTimeZone(appointment.startTime, TIMEZONE, "HH:mm")} —{" "}
+                {formatInTimeZone(appointment.endTime, TIMEZONE, "HH:mm")}
               </span>
             </div>
             <Separator />
@@ -207,7 +210,7 @@ export default async function ReservationDetailPage({
                           </span>
                         </div>
                         <span className="text-xs text-muted-foreground">
-                          {format(h.changedAt, "d.M. HH:mm")}
+                          {formatInTimeZone(h.changedAt, TIMEZONE, "d.M. HH:mm")}
                         </span>
                       </div>
                       {h.reason && (

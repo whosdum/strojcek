@@ -1,11 +1,11 @@
 import { getTodayAppointments, getUpcomingAppointments, getDayStats, getServicePopularity } from "@/server/queries/appointments";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import { sk } from "date-fns/locale";
 import { CalendarDaysIcon, ClockIcon, UsersIcon, TrendingUpIcon, BarChart3Icon } from "lucide-react";
 import Link from "next/link";
-import { STATUS_LABELS, STATUS_VARIANTS, formatCurrency } from "@/lib/constants";
+import { STATUS_LABELS, STATUS_VARIANTS, TIMEZONE, formatCurrency } from "@/lib/constants";
 
 export default async function AdminDashboardPage() {
   const [todayAppointments, upcoming, stats, popularity] = await Promise.all([
@@ -79,7 +79,7 @@ export default async function AdminDashboardPage() {
                     <div>
                       <p className="font-medium">{appt.customerName}</p>
                       <p className="text-muted-foreground">
-                        {format(appt.startTime, "HH:mm")} — {appt.service.name}
+                        {formatInTimeZone(appt.startTime, TIMEZONE, "HH:mm")} — {appt.service.name}
                       </p>
                     </div>
                     <Badge
@@ -113,7 +113,7 @@ export default async function AdminDashboardPage() {
                     <div>
                       <p className="font-medium">{appt.customerName}</p>
                       <p className="text-muted-foreground">
-                        {format(appt.startTime, "EEE d.M. HH:mm", { locale: sk })} — {appt.service.name}
+                        {formatInTimeZone(appt.startTime, TIMEZONE, "EEE d.M. HH:mm", { locale: sk })} — {appt.service.name}
                       </p>
                     </div>
                     <Badge

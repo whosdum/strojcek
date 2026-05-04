@@ -1,5 +1,6 @@
-import { format } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import { sk } from "date-fns/locale";
+import { TIMEZONE } from "@/lib/constants";
 import {
   Card,
   CardContent,
@@ -148,7 +149,7 @@ function Row(props: RowProps) {
           <p className="font-medium">{label}</p>
           {state === "sent" && sentAt && (
             <p className="text-muted-foreground text-xs">
-              Poslané {format(sentAt, "d.M.yyyy HH:mm", { locale: sk })}
+              Poslané {formatInTimeZone(sentAt, TIMEZONE, "d.M.yyyy HH:mm", { locale: sk })}
               {!hideRecipient && recipient && ` · ${recipient}`}
               {attempts && attempts > 1 && ` · ${attempts}× pokusov`}
             </p>
@@ -197,7 +198,7 @@ function ReminderRow({ icon, label, recipient, sentAt, lockedAt }: ReminderRowPr
         {state === "sent" && sentAt && (
           <p className="text-muted-foreground text-xs">
             <CheckCircle2Icon className="mr-1 inline size-3" />
-            Poslané {format(sentAt, "d.M.yyyy HH:mm", { locale: sk })}
+            Poslané {formatInTimeZone(sentAt, TIMEZONE, "d.M.yyyy HH:mm", { locale: sk })}
             {recipient && ` · ${recipient}`}
           </p>
         )}
@@ -205,7 +206,7 @@ function ReminderRow({ icon, label, recipient, sentAt, lockedAt }: ReminderRowPr
           <p className="text-muted-foreground text-xs">
             <ClockIcon className="mr-1 inline size-3" />
             Locked (cron beží alebo zaseknutý) od{" "}
-            {format(lockedAt, "d.M.yyyy HH:mm", { locale: sk })}
+            {formatInTimeZone(lockedAt, TIMEZONE, "d.M.yyyy HH:mm", { locale: sk })}
           </p>
         )}
         {state === "pending" && (
