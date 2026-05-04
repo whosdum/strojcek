@@ -5,14 +5,19 @@ import { getSession } from "@/server/lib/auth";
 import { sendEmail } from "@/server/lib/email";
 import { sendSMS } from "@/server/lib/sms";
 import { stripDiacritics } from "@/server/lib/strings";
-import { recordNotification } from "@/server/lib/notification-log";
+import {
+  extractSendError,
+  recordNotification,
+} from "@/server/lib/notification-log";
 import { bookingConfirmationHtml } from "@/emails/booking-confirmation";
 import { bookingCancellationHtml } from "@/emails/booking-cancellation";
 import { bookingReminderHtml } from "@/emails/booking-reminder";
 import { TIMEZONE } from "@/lib/constants";
 import { PUBLIC_SITE_URL, SHOP_PHONE_DISPLAY } from "@/lib/business-info";
-import { format } from "date-fns";
+import { addDays, format } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
+import { Timestamp } from "firebase-admin/firestore";
+import { dateKey } from "@/server/lib/firestore-utils";
 import type { AppointmentDoc } from "@/server/types/firestore";
 import { revalidatePath } from "next/cache";
 
@@ -58,7 +63,7 @@ export async function resendConfirmationEmail(
     status: result.success ? "sent" : "failed",
     appointmentId,
     recipient: a.customerEmail,
-    error: result.success ? null : "send failed",
+    error: result.success ? null : extractSendError(result.error),
     durationMs: Date.now() - start,
     trigger: "manual",
   });
@@ -102,7 +107,7 @@ export async function resendCancellationEmail(
     status: result.success ? "sent" : "failed",
     appointmentId,
     recipient: a.customerEmail,
-    error: result.success ? null : "send failed",
+    error: result.success ? null : extractSendError(result.error),
     durationMs: Date.now() - start,
     trigger: "manual",
   });
@@ -134,10 +139,8 @@ export async function runRemindersNow(): Promise<{
 
   // Reminder loop logic. Mirrors src/app/api/cron/reminders/route.ts but
   // marks every recordNotification call with trigger="manual". We can't
-  // import from a route module, hence the duplication.
-  const { dateKey } = await import("@/server/lib/firestore-utils");
-  const { Timestamp } = await import("firebase-admin/firestore");
-  const { addDays } = await import("date-fns");
+  // import from a route module (Next.js forbids it), hence the duplication;
+  // see TODO in the design doc about extracting into a shared lib.
   const nowLocal = toZonedTime(new Date(), TIMEZONE);
   const tomorrowKey = dateKey(addDays(nowLocal, 1));
 

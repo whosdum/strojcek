@@ -9,6 +9,29 @@ import type {
 
 const RETENTION_DAYS = 90;
 
+/**
+ * Best-effort extraction of a useful error message from any of the
+ * shapes our send paths return:
+ *  - `sendEmail` resolves with `{ success: false, error: Error }`
+ *  - thrown errors caught from a Promise rejection
+ *  - `Error` instances or arbitrary thrown values
+ *  - or nothing at all (resolved-but-failed without an error attached)
+ */
+export function extractSendError(value: unknown): string | null {
+  if (value == null) return null;
+  if (value instanceof Error) return value.message;
+  if (typeof value === "string") return value;
+  if (typeof value === "object" && "message" in value) {
+    const m = (value as { message?: unknown }).message;
+    if (typeof m === "string") return m;
+  }
+  try {
+    return String(value);
+  } catch {
+    return null;
+  }
+}
+
 interface RecordOptions {
   kind: NotificationKind;
   status: NotificationStatus;
@@ -93,7 +116,7 @@ export async function recordNotification(opts: RecordOptions): Promise<void> {
       update[fields.sentAt] = now;
       update[fields.error] = null;
     } else {
-      update[fields.error] = opts.error ?? "unknown";
+      update[fields.error] = opts.error ?? null;
     }
     if (fields.attempts) {
       update[fields.attempts] = FieldValue.increment(1);

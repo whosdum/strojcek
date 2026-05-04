@@ -24,10 +24,10 @@ import {
 } from "@/server/queries/notifications";
 
 const KIND_LABELS: Record<string, string> = {
-  "email-confirmation": "Confirmation email",
-  "email-cancellation": "Cancellation email",
-  "email-reminder": "Reminder email",
-  "sms-reminder": "Reminder SMS",
+  "email-confirmation": "Potvrdzovací email",
+  "email-cancellation": "Email o zrušení",
+  "email-reminder": "Pripomienka (email)",
+  "sms-reminder": "Pripomienka (SMS)",
   "telegram-alert": "Telegram alert",
 };
 

@@ -7,6 +7,10 @@ import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import { randomUUID } from "crypto";
 
 import { adminDb } from "@/server/lib/firebase-admin";
+import {
+  extractSendError,
+  recordNotification,
+} from "@/server/lib/notification-log";
 import { PUBLIC_SITE_URL } from "@/lib/business-info";
 import {
   dateKey,
@@ -28,7 +32,6 @@ import {
 } from "@/server/lib/telegram";
 import { bookingConfirmationHtml } from "@/emails/booking-confirmation";
 import { bookingCancellationHtml } from "@/emails/booking-cancellation";
-import { recordNotification } from "@/server/lib/notification-log";
 import { format as formatDate } from "date-fns";
 import type { AppointmentStatus } from "@/lib/types";
 import type {
@@ -209,11 +212,16 @@ export async function updateAppointmentStatus(
 
     // Notify on admin-driven status changes that the customer needs to know
     // about. We do this AFTER the transaction so a failed email doesn't roll
-    // back the status update.
+    // back the status update. We *await* both notifications via
+    // Promise.allSettled — Cloud Run was tearing down the response before
+    // fire-and-forget sends finished, leaving the email un-shipped and the
+    // log entry un-written. allSettled (not all) is intentional: a Telegram
+    // outage must not surface as a customer-facing error.
     if (result.kind === "ok") {
       const localStart = toZonedTime(result.prev.startTime.toDate(), TIMEZONE);
       const dateStr = formatDate(localStart, "d.M.yyyy");
       const timeStr = formatDate(localStart, "HH:mm");
+      const notifications: Promise<unknown>[] = [];
 
       // Customer email when admin cancels.
       if (
@@ -222,76 +230,84 @@ export async function updateAppointmentStatus(
         result.prev.customerEmail
       ) {
         const emailStart = Date.now();
-        sendEmail({
-          to: result.prev.customerEmail,
-          subject: "Vaša rezervácia bola zrušená — Strojček",
-          html: bookingCancellationHtml({
-            customerName: result.prev.customerName || "zákazník",
-            serviceName: result.prev.serviceName,
-            barberName: result.prev.barberName,
-            date: dateStr,
-            time: timeStr,
-            bookUrl: PUBLIC_SITE_URL,
-          }),
-        })
-          .then((r) =>
-            recordNotification({
-              kind: "email-cancellation",
-              status: r.success ? "sent" : "failed",
-              appointmentId: id,
-              recipient: result.prev.customerEmail,
-              error: r.success ? null : "send failed",
-              durationMs: Date.now() - emailStart,
+        notifications.push(
+          sendEmail({
+            to: result.prev.customerEmail,
+            subject: "Vaša rezervácia bola zrušená — Strojček",
+            html: bookingCancellationHtml({
+              customerName: result.prev.customerName || "zákazník",
+              serviceName: result.prev.serviceName,
+              barberName: result.prev.barberName,
+              date: dateStr,
+              time: timeStr,
+              bookUrl: PUBLIC_SITE_URL,
+            }),
+          })
+            .then((r) =>
+              recordNotification({
+                kind: "email-cancellation",
+                status: r.success ? "sent" : "failed",
+                appointmentId: id,
+                recipient: result.prev.customerEmail,
+                error: r.success ? null : extractSendError(r.error),
+                durationMs: Date.now() - emailStart,
+              })
+            )
+            .catch((err) => {
+              console.error("[updateAppointmentStatus][email]", err);
+              return recordNotification({
+                kind: "email-cancellation",
+                status: "failed",
+                appointmentId: id,
+                recipient: result.prev.customerEmail,
+                error: extractSendError(err),
+                durationMs: Date.now() - emailStart,
+              });
             })
-          )
-          .catch((err) => {
-            console.error("[updateAppointmentStatus][email]", err);
-            return recordNotification({
-              kind: "email-cancellation",
-              status: "failed",
-              appointmentId: id,
-              recipient: result.prev.customerEmail,
-              error: err instanceof Error ? err.message : String(err),
-              durationMs: Date.now() - emailStart,
-            });
-          });
+        );
       }
 
       // Telegram audit ping for the admin's records on every transition.
       const chatId = process.env.TELEGRAM_CHAT_ID;
       if (chatId) {
         const tgStart = Date.now();
-        sendTelegramNotification({
-          chatId,
-          message:
-            `<b>Stav rezervácie zmenený</b>\n` +
-            `${escapeTelegramHtml(result.prev.serviceName)} · ${escapeTelegramHtml(result.prev.barberName)}\n` +
-            `${dateStr} ${timeStr}\n` +
-            `${result.prev.status} → <b>${newStatus}</b>\n` +
-            (result.prev.customerName
-              ? `Zákazník: ${escapeTelegramHtml(result.prev.customerName)}`
-              : ""),
-        })
-          .then(() =>
-            recordNotification({
-              kind: "telegram-alert",
-              status: "sent",
-              appointmentId: id,
-              recipient: chatId,
-              durationMs: Date.now() - tgStart,
+        notifications.push(
+          sendTelegramNotification({
+            chatId,
+            message:
+              `<b>Stav rezervácie zmenený</b>\n` +
+              `${escapeTelegramHtml(result.prev.serviceName)} · ${escapeTelegramHtml(result.prev.barberName)}\n` +
+              `${dateStr} ${timeStr}\n` +
+              `${result.prev.status} → <b>${newStatus}</b>\n` +
+              (result.prev.customerName
+                ? `Zákazník: ${escapeTelegramHtml(result.prev.customerName)}`
+                : ""),
+          })
+            .then(() =>
+              recordNotification({
+                kind: "telegram-alert",
+                status: "sent",
+                appointmentId: id,
+                recipient: chatId,
+                durationMs: Date.now() - tgStart,
+              })
+            )
+            .catch((err) => {
+              console.error("[updateAppointmentStatus][telegram]", err);
+              return recordNotification({
+                kind: "telegram-alert",
+                status: "failed",
+                appointmentId: id,
+                recipient: chatId,
+                error: extractSendError(err),
+                durationMs: Date.now() - tgStart,
+              });
             })
-          )
-          .catch((err) => {
-            console.error("[updateAppointmentStatus][telegram]", err);
-            return recordNotification({
-              kind: "telegram-alert",
-              status: "failed",
-              appointmentId: id,
-              recipient: chatId,
-              error: err instanceof Error ? err.message : String(err),
-              durationMs: Date.now() - tgStart,
-            });
-          });
+        );
+      }
+
+      if (notifications.length > 0) {
+        await Promise.allSettled(notifications);
       }
     }
 
@@ -503,14 +519,16 @@ export async function createAppointmentAdmin(
           }),
         }).catch((err) => {
           console.error("[createAppointmentAdmin][email]", err);
-          return { success: false } as const;
+          return { success: false, error: err } as const;
         });
         await recordNotification({
           kind: "email-confirmation",
           status: emailResult.success ? "sent" : "failed",
           appointmentId,
           recipient: customerEmail,
-          error: emailResult.success ? null : "send failed",
+          error: emailResult.success
+            ? null
+            : extractSendError(emailResult.error),
           durationMs: Date.now() - emailStart,
         });
       }

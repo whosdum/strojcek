@@ -19,9 +19,15 @@ export function RunRemindersButton() {
           toast.error(r.error || "Nepodarilo sa spustiť.");
           return;
         }
-        toast.success(
-          `Hotovo: email ${r.emailSent}/${r.emailSent + r.emailFailed}, SMS ${r.smsSent}/${r.smsSent + r.smsFailed}`
-        );
+        const total =
+          r.emailSent + r.emailFailed + r.smsSent + r.smsFailed;
+        if (total === 0) {
+          toast.success("Žiadne pripomienky na poslanie.");
+        } else {
+          toast.success(
+            `Hotovo: email ${r.emailSent}/${r.emailSent + r.emailFailed}, SMS ${r.smsSent}/${r.smsSent + r.smsFailed}`
+          );
+        }
         router.refresh();
       } catch {
         toast.error("Nepodarilo sa spustiť.");

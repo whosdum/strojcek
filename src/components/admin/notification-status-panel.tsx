@@ -43,7 +43,7 @@ export function NotificationStatusPanel({
       <CardContent className="space-y-5 text-sm">
         <Row
           icon={<MailIcon className="size-4" />}
-          label="Confirmation email"
+          label="Potvrdzovací email"
           recipient={status.confirmation.recipient}
           sentAt={status.confirmation.sentAt}
           error={status.confirmation.error}
@@ -59,7 +59,7 @@ export function NotificationStatusPanel({
         />
         <Row
           icon={<XCircleIcon className="size-4" />}
-          label="Cancellation email"
+          label="Email o zrušení"
           recipient={status.cancellation.recipient}
           sentAt={status.cancellation.sentAt}
           error={status.cancellation.error}
@@ -80,14 +80,14 @@ export function NotificationStatusPanel({
         />
         <ReminderRow
           icon={<MailIcon className="size-4" />}
-          label="Reminder email"
+          label="Pripomienka (email)"
           recipient={status.reminderEmail.recipient}
           sentAt={status.reminderEmail.sentAt}
           lockedAt={status.reminderEmail.lockedAt}
         />
         <ReminderRow
           icon={<MessageSquareIcon className="size-4" />}
-          label="Reminder SMS"
+          label="Pripomienka (SMS)"
           recipient={status.reminderSms.recipient}
           sentAt={status.reminderSms.sentAt}
           lockedAt={status.reminderSms.lockedAt}

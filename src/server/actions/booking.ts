@@ -39,7 +39,10 @@ import {
 } from "@/lib/constants";
 import { createHash } from "crypto";
 import { PUBLIC_SITE_URL, SHOP_PHONE_DISPLAY } from "@/lib/business-info";
-import { recordNotification } from "@/server/lib/notification-log";
+import {
+  extractSendError,
+  recordNotification,
+} from "@/server/lib/notification-log";
 import type { AppointmentStatus } from "@/lib/types";
 import type {
   AppointmentDoc,
@@ -523,7 +526,9 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
       status: emailResult.success ? "sent" : "failed",
       appointmentId,
       recipient: data.email,
-      error: emailResult.success ? null : "send failed",
+      error: emailResult.success
+        ? null
+        : extractSendError(emailResult.error),
       durationMs: Date.now() - emailStart,
     });
 
@@ -631,7 +636,6 @@ export async function cancelBooking(input: unknown): Promise<ActionResult> {
       };
     }
 
-    let oldStatus: AppointmentStatus = appointment.status;
     try {
       await adminDb.runTransaction(async (tx) => {
         const fresh = await tx.get(ref);
@@ -645,7 +649,6 @@ export async function cancelBooking(input: unknown): Promise<ActionResult> {
         if (isBefore(current.startTime.toDate(), freshMinCancelTime)) {
           throw new Error("TOO_LATE");
         }
-        oldStatus = current.status;
 
         tx.update(ref, {
           status: "CANCELLED",
@@ -688,7 +691,6 @@ export async function cancelBooking(input: unknown): Promise<ActionResult> {
       }
       throw e;
     }
-    void oldStatus;
 
     const localCancelStart = toZonedTime(
       appointment.startTime.toDate(),
@@ -717,7 +719,7 @@ export async function cancelBooking(input: unknown): Promise<ActionResult> {
               status: r.success ? "sent" : "failed",
               appointmentId: appointment.id,
               recipient: appointment.customerEmail,
-              error: r.success ? null : "send failed",
+              error: r.success ? null : extractSendError(r.error),
               durationMs: Date.now() - emailStart,
             })
           )
@@ -728,7 +730,7 @@ export async function cancelBooking(input: unknown): Promise<ActionResult> {
               status: "failed",
               appointmentId: appointment.id,
               recipient: appointment.customerEmail,
-              error: err instanceof Error ? err.message : String(err),
+              error: extractSendError(err),
               durationMs: Date.now() - emailStart,
             });
           })
