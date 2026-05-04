@@ -108,6 +108,19 @@ export type AppointmentDoc = {
   reminderEmailLockedAt?: Timestamp | null;
   reminderSmsLockedAt?: Timestamp | null;
 
+  // Delivery status — written by recordNotification post-send.
+  // null = no attempt logged yet. Reset to null + set sentAt on success.
+  confirmationEmailSentAt: Timestamp | null;
+  confirmationEmailError: string | null;
+  confirmationEmailAttempts: number;
+
+  cancellationEmailSentAt: Timestamp | null;
+  cancellationEmailError: string | null;
+  cancellationEmailAttempts: number;
+
+  telegramAlertSentAt: Timestamp | null;
+  telegramAlertError: string | null;
+
   createdAt: Timestamp;
   updatedAt: Timestamp;
 };
@@ -162,4 +175,29 @@ export type PhoneBookingsCounterDoc = {
 
 export type GlobalBookingsCounterDoc = {
   hourly: { [hourKey: string]: number };
+};
+
+export type NotificationKind =
+  | "email-confirmation"
+  | "email-cancellation"
+  | "email-reminder"
+  | "sms-reminder"
+  | "telegram-alert";
+
+export type NotificationStatus = "sent" | "failed";
+
+export type NotificationTrigger = "auto" | "manual" | "cron";
+
+export type NotificationLogDoc = {
+  id: string;
+  timestamp: Timestamp;
+  kind: NotificationKind;
+  status: NotificationStatus;
+  appointmentId: string | null;
+  recipient: string | null;
+  error: string | null;
+  durationMs: number | null;
+  trigger: NotificationTrigger;
+  /** Watched by the Firestore TTL policy on this collection. */
+  expireAt: Timestamp;
 };
