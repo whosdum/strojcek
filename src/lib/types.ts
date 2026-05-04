@@ -185,3 +185,72 @@ export type ActiveBarberWithServiceIdsView = {
   serviceOverrides: Record<string, { price?: string; duration?: number }>;
   bookingHorizonWeeks: number;
 };
+
+// Notification dashboard view types — re-exports for client/UI consumers
+// so they don't reach into server/types.
+
+import type {
+  NotificationKind,
+  NotificationStatus,
+  NotificationTrigger,
+} from "@/server/types/firestore";
+
+export type { NotificationKind, NotificationStatus, NotificationTrigger };
+
+export interface NotificationLogView {
+  id: string;
+  timestamp: Date;
+  kind: NotificationKind;
+  status: NotificationStatus;
+  appointmentId: string | null;
+  recipient: string | null;
+  error: string | null;
+  durationMs: number | null;
+  trigger: NotificationTrigger;
+}
+
+export interface NotificationStatsView {
+  emailSent: number;
+  emailFailed: number;
+  smsSent: number;
+  smsFailed: number;
+  telegramSent: number;
+  telegramFailed: number;
+}
+
+export interface ProblemsSnapshotView {
+  customersWithoutEmail: number;
+  customersWithoutPhone: number;
+  pendingOver24h: number;
+  globalBookingsCurrentHour: number;
+  globalBookingsCurrentHourLimit: number;
+}
+
+export interface AppointmentNotificationStatusView {
+  confirmation: {
+    sentAt: Date | null;
+    error: string | null;
+    attempts: number;
+    recipient: string | null;
+  };
+  cancellation: {
+    sentAt: Date | null;
+    error: string | null;
+    attempts: number;
+    recipient: string | null;
+  };
+  reminderEmail: {
+    sentAt: Date | null;
+    lockedAt: Date | null;
+    recipient: string | null;
+  };
+  reminderSms: {
+    sentAt: Date | null;
+    lockedAt: Date | null;
+    recipient: string | null;
+  };
+  telegram: {
+    sentAt: Date | null;
+    error: string | null;
+  };
+}
