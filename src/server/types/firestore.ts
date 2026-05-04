@@ -132,6 +132,8 @@ export type AppointmentStatusHistoryDoc = {
   changedBy: string | null;
   reason: string | null;
   changedAt: Timestamp;
+  /** Watched by Firestore TTL on the `history` collection group. */
+  expireAt: Timestamp;
 };
 
 export type ScheduleDoc = {

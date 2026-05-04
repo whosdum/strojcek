@@ -428,6 +428,9 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
           changedBy: "system",
           reason: null,
           changedAt: Timestamp.now(),
+          expireAt: Timestamp.fromMillis(
+            Timestamp.now().toMillis() + 365 * 24 * 60 * 60 * 1000
+          ),
         });
 
         // 5. Update counters in the same transaction
@@ -655,6 +658,9 @@ export async function cancelBooking(input: unknown): Promise<ActionResult> {
             ? `Zrušené zákazníkom: ${cancellationReason}`
             : "Zrušené zákazníkom",
           changedAt: Timestamp.now(),
+          expireAt: Timestamp.fromMillis(
+            Timestamp.now().toMillis() + 365 * 24 * 60 * 60 * 1000
+          ),
         });
       });
     } catch (e) {

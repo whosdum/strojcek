@@ -181,6 +181,9 @@ export async function updateAppointmentStatus(
         changedBy: "admin",
         reason: reason ?? null,
         changedAt: Timestamp.now(),
+        expireAt: Timestamp.fromMillis(
+          Timestamp.now().toMillis() + 365 * 24 * 60 * 60 * 1000
+        ),
       });
 
       if (current.customerId) {
@@ -449,6 +452,9 @@ export async function createAppointmentAdmin(
           changedBy: "admin",
           reason: null,
           changedAt: Timestamp.now(),
+          expireAt: Timestamp.fromMillis(
+            Timestamp.now().toMillis() + 365 * 24 * 60 * 60 * 1000
+          ),
         });
       });
     } catch (e: unknown) {
@@ -626,6 +632,9 @@ export async function updateAppointment(
           changedBy: "admin",
           reason: `Upravené polia: ${changedFields.join(", ")}`,
           changedAt: Timestamp.now(),
+          expireAt: Timestamp.fromMillis(
+            Timestamp.now().toMillis() + 365 * 24 * 60 * 60 * 1000
+          ),
         });
       }
       await batch.commit();
@@ -760,6 +769,9 @@ export async function updateAppointment(
               changedBy: "admin",
               reason: `Upravené polia: ${changedFields.join(", ")}`,
               changedAt: Timestamp.now(),
+              expireAt: Timestamp.fromMillis(
+                Timestamp.now().toMillis() + 365 * 24 * 60 * 60 * 1000
+              ),
             });
           }
         });
