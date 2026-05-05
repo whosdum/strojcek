@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   title: "Všeobecné obchodné podmienky — Strojček",
   description:
     "Všeobecné obchodné podmienky pre online rezervácie v barbershope Strojček",
+  alternates: { canonical: "/vop" },
 };
 
 export default function VopPage() {

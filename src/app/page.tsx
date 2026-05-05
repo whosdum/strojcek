@@ -1,5 +1,6 @@
 export const revalidate = 1800;
 
+import type { Metadata } from "next";
 import { getActiveServices } from "@/server/queries/services";
 import {
   getActiveBarbersWithServices,
@@ -10,6 +11,10 @@ import { BookingShell } from "@/components/booking/booking-shell";
 import { StructuredData } from "@/components/structured-data";
 import Image from "next/image";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 export default async function HomePage() {
   const [services, barbers, openingHours] = await Promise.all([

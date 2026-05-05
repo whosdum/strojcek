@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   title: "Ochrana osobných údajov — Strojček",
   description:
     "Zásady ochrany osobných údajov pre online rezervácie v barbershope Strojček",
+  alternates: { canonical: "/ochrana-udajov" },
 };
 
 export default function OchranaUdajovPage() {
