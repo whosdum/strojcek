@@ -17,9 +17,10 @@ export const metadata: Metadata = {
     template: "%s | Strojček",
   },
   description:
-    "Pánsky barbershop v Bytči. Strih, úprava brady, hot towel rituál. Rezervujte si termín online.",
+    "Pánsky barber shop v Bytči — Strojček barbershop. Strih, úprava brady, hot towel rituál. Rezervujte si termín online.",
   keywords: [
     "barber",
+    "barber shop",
     "barbershop",
     "Bytča",
     "pánsky strih",
@@ -37,13 +38,13 @@ export const metadata: Metadata = {
     siteName: "Strojček",
     title: "Strojček — Barbershop Bytča",
     description:
-      "Pánsky barbershop v Bytči. Strih, úprava brady, hot towel rituál. Rezervujte si termín online.",
+      "Pánsky barber shop v Bytči — Strojček barbershop. Strih, úprava brady, hot towel rituál. Rezervujte si termín online.",
     images: [
       {
         url: "/logo.jpg",
         width: 800,
         height: 600,
-        alt: "Strojček Barbershop",
+        alt: "Strojček — barber shop Bytča",
       },
     ],
   },

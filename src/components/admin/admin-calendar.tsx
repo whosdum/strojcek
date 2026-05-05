@@ -300,10 +300,24 @@ export function AdminCalendar() {
           .fc .fc-timegrid-axis-cushion,
           .fc .fc-timegrid-slot-label-cushion,
           .fc .fc-col-header-cell-cushion {
-            font-size: 0.75rem;
+            font-size: 0.7rem;
+          }
+          /* Compress slot rows so the day fits in less vertical space.
+             Default ~22px/slot is too tall on phones. */
+          .fc .fc-timegrid-slot {
+            height: 1.6em;
+          }
+          .fc .fc-col-header-cell-cushion {
+            padding-block: 0.25rem;
           }
           .fc .fc-event {
-            font-size: 0.75rem;
+            font-size: 0.7rem;
+          }
+          .fc .fc-event-main {
+            padding: 0.0625rem 0.2rem;
+          }
+          .fc .fc-event-time {
+            font-size: 0.65rem;
           }
         }
         ${statusStyles}
@@ -343,14 +357,15 @@ export function AdminCalendar() {
           locale="sk"
           firstDay={1}
           slotMinTime="07:00:00"
-          slotMaxTime="21:00:00"
+          slotMaxTime="19:00:00"
           allDaySlot={false}
           height="auto"
           events={fetchEvents}
           eventClick={handleEventClick}
           nowIndicator
-          slotDuration="00:15:00"
-          eventMinHeight={28}
+          slotDuration={isMobile ? "00:30:00" : "00:15:00"}
+          slotLabelInterval={isMobile ? "01:00:00" : "00:30:00"}
+          eventMinHeight={isMobile ? 20 : 28}
           stickyHeaderDates
           dayHeaderFormat={
             isMobile

@@ -127,10 +127,10 @@ export default async function HomePage() {
           O barbershope Strojček
         </h2>
         <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">
-          Strojček je pánsky barbershop v Bytči. Ponúkame pánsky strih, úpravu
+          Strojček je pánsky barber shop v Bytči. Ponúkame pánsky strih, úpravu
           brady, hot towel rituál a komplexnú starostlivosť o vlasy aj fúzy.
-          Vďaka online rezervácii prídete na presný čas — bez čakania v rade
-          a s istotou, že vás obslúžime kedy potrebujete.
+          Vďaka online rezervácii prídete do nášho barbershopu na presný čas —
+          bez čakania v rade a s istotou, že vás obslúžime kedy potrebujete.
         </p>
 
         <div className="mt-8 grid gap-8 sm:grid-cols-2 sm:gap-10">
