@@ -23,7 +23,16 @@ export function middleware(req: NextRequest) {
   // reason for them to be on apex, and 301 silently downgrades POST → GET
   // in some clients. /api stays reachable on both hosts; everything user
   // facing gets canonicalized.
-  const host = (req.headers.get("host") ?? "").toLowerCase();
+  //
+  // Prefer x-forwarded-host: on Firebase App Hosting / Cloud Run the
+  // request's `Host` header is the internal Cloud Run hostname, not the
+  // public domain the user actually visited. The same pattern is used
+  // by the auth same-origin guard.
+  const host = (
+    req.headers.get("x-forwarded-host") ??
+    req.headers.get("host") ??
+    ""
+  ).toLowerCase();
   if (
     host === `www.${APEX_HOST}` &&
     !req.nextUrl.pathname.startsWith("/api")
