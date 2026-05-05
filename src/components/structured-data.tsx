@@ -1,4 +1,5 @@
 import {
+  PUBLIC_SITE_URL,
   SHOP_NAME,
   SHOP_PHONE_E164,
   SHOP_EMAIL,
@@ -7,6 +8,8 @@ import {
   SHOP_POSTAL_CODE,
   SHOP_COUNTRY,
   SHOP_GEO,
+  SHOP_MAPS_URL,
+  SHOP_SOCIAL_PROFILES,
 } from "@/lib/business-info";
 
 interface OpeningHoursSpec {
@@ -35,14 +38,13 @@ export function StructuredData({ openingHours, services }: StructuredDataProps) 
   const hours =
     openingHours && openingHours.length > 0 ? openingHours : DEFAULT_HOURS;
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://strojcek.sk";
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "BarberShop",
+    "@type": ["BarberShop", "HairSalon"],
     name: SHOP_NAME,
-    url: baseUrl,
-    logo: `${baseUrl}/logo.jpg`,
-    image: `${baseUrl}/logo.jpg`,
+    url: PUBLIC_SITE_URL,
+    logo: `${PUBLIC_SITE_URL}/logo.jpg`,
+    image: `${PUBLIC_SITE_URL}/logo.jpg`,
     telephone: SHOP_PHONE_E164,
     email: SHOP_EMAIL,
     address: {
@@ -57,6 +59,8 @@ export function StructuredData({ openingHours, services }: StructuredDataProps) 
       latitude: SHOP_GEO.lat,
       longitude: SHOP_GEO.lng,
     },
+    hasMap: SHOP_MAPS_URL,
+    sameAs: SHOP_SOCIAL_PROFILES,
     priceRange: "€€",
     currenciesAccepted: "EUR",
     paymentAccepted: "Cash, Credit Card",

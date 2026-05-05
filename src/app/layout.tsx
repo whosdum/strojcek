@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
+import { PUBLIC_SITE_URL } from "@/lib/business-info";
 import "./globals.css";
 
 const jakarta = Plus_Jakarta_Sans({
@@ -9,10 +10,8 @@ const jakarta = Plus_Jakarta_Sans({
   display: "swap",
 });
 
-const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://strojcek.sk";
-
 export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
+  metadataBase: new URL(PUBLIC_SITE_URL),
   title: {
     default: "Strojček — Barbershop Bytča",
     template: "%s | Strojček",
@@ -34,7 +33,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "sk_SK",
-    url: SITE_URL,
+    url: PUBLIC_SITE_URL,
     siteName: "Strojček",
     title: "Strojček — Barbershop Bytča",
     description:
