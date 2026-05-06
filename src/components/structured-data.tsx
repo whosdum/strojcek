@@ -43,7 +43,7 @@ export function StructuredData({ openingHours, services }: StructuredDataProps) 
     "@context": "https://schema.org",
     "@type": ["BarberShop", "HairSalon"],
     name: "Strojček Barbershop",
-    alternateName: SHOP_NAME,
+    alternateName: [SHOP_NAME, "STROJČEK BARBERSHOP"],
     legalName: SHOP_LEGAL_NAME,
     url: PUBLIC_SITE_URL,
     logo: `${PUBLIC_SITE_URL}/logo.jpg`,
