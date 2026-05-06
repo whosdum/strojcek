@@ -278,9 +278,12 @@ export default async function HomePage() {
           ceny a presnú dĺžku trvania jednotlivých služieb vidíte v rezervačnom
           kroku „Služba“.
         </p>
-        <div className="mt-6 grid gap-6 sm:grid-cols-2">
-          <div>
-            <h3 className="text-[15px] font-semibold text-foreground">
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          <Link
+            href="/sluzby/pansky-strih"
+            className="group -m-3 rounded-xl p-3 transition-colors hover:bg-card/60"
+          >
+            <h3 className="text-[15px] font-semibold text-foreground group-hover:text-primary">
               Klasický pánsky strih
             </h3>
             <p className="mt-1.5 text-[14px] leading-relaxed text-muted-foreground">
@@ -289,9 +292,12 @@ export default async function HomePage() {
               finálny styling. Výsledok drží niekoľko týždňov a vyzerá čisto aj
               po pár dňoch.
             </p>
-          </div>
-          <div>
-            <h3 className="text-[15px] font-semibold text-foreground">
+          </Link>
+          <Link
+            href="/sluzby/fade-strih"
+            className="group -m-3 rounded-xl p-3 transition-colors hover:bg-card/60"
+          >
+            <h3 className="text-[15px] font-semibold text-foreground group-hover:text-primary">
               Fade strih
             </h3>
             <p className="mt-1.5 text-[14px] leading-relaxed text-muted-foreground">
@@ -300,9 +306,12 @@ export default async function HomePage() {
               a britvou. Trendová alternatíva ku klasickému strihu, ideálna
               pre kratší vrchný styling.
             </p>
-          </div>
-          <div>
-            <h3 className="text-[15px] font-semibold text-foreground">
+          </Link>
+          <Link
+            href="/sluzby/uprava-brady"
+            className="group -m-3 rounded-xl p-3 transition-colors hover:bg-card/60"
+          >
+            <h3 className="text-[15px] font-semibold text-foreground group-hover:text-primary">
               Úprava brady a fúzov
             </h3>
             <p className="mt-1.5 text-[14px] leading-relaxed text-muted-foreground">
@@ -310,9 +319,12 @@ export default async function HomePage() {
               holením otvorí póry a uvoľní pokožku, takže výsledok je hladký a
               podráždenie minimálne. Olej alebo balzam sú súčasťou.
             </p>
-          </div>
-          <div>
-            <h3 className="text-[15px] font-semibold text-foreground">
+          </Link>
+          <Link
+            href="/sluzby/hot-towel-ritual"
+            className="group -m-3 rounded-xl p-3 transition-colors hover:bg-card/60"
+          >
+            <h3 className="text-[15px] font-semibold text-foreground group-hover:text-primary">
               Hot towel rituál
             </h3>
             <p className="mt-1.5 text-[14px] leading-relaxed text-muted-foreground">
@@ -320,9 +332,12 @@ export default async function HomePage() {
               zmäkčená brada, presné ťahy britvou. Výsledkom je dokonale hladká
               pokožka a relaxačný zážitok. Odporúčame raz za 2–3 týždne.
             </p>
-          </div>
-          <div className="sm:col-span-2">
-            <h3 className="text-[15px] font-semibold text-foreground">
+          </Link>
+          <Link
+            href="/sluzby/strojcek-ritual"
+            className="group -m-3 rounded-xl p-3 transition-colors hover:bg-card/60 sm:col-span-2"
+          >
+            <h3 className="text-[15px] font-semibold text-foreground group-hover:text-primary">
               Strojček rituál
             </h3>
             <p className="mt-1.5 text-[14px] leading-relaxed text-muted-foreground">
@@ -331,7 +346,7 @@ export default async function HomePage() {
               dopriať full service a odísť kompletne upravení od hlavy po
               bradu. Trvá približne 75 minút.
             </p>
-          </div>
+          </Link>
         </div>
       </section>
 

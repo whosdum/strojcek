@@ -1,7 +1,17 @@
 import type { MetadataRoute } from "next";
 import { PUBLIC_SITE_URL } from "@/lib/business-info";
+import { ALL_SERVICE_SLUGS } from "./(public)/sluzby/_data";
 
 export default function sitemap(): MetadataRoute.Sitemap {
+  const serviceEntries: MetadataRoute.Sitemap = ALL_SERVICE_SLUGS.map(
+    (slug) => ({
+      url: `${PUBLIC_SITE_URL}/sluzby/${slug}`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.8,
+    })
+  );
+
   return [
     {
       url: PUBLIC_SITE_URL,
@@ -9,6 +19,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "weekly",
       priority: 1,
     },
+    ...serviceEntries,
     {
       url: `${PUBLIC_SITE_URL}/vop`,
       lastModified: new Date("2025-01-01"),

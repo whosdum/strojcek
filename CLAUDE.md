@@ -116,7 +116,7 @@ Custom claims are set by `scripts/create-admin.ts` (idempotent; safe to run agai
 
 ## Key Patterns
 
-- **Booking wizard state** is held in `useReducer` + persisted to `sessionStorage` (`strojcek-draft`, 30 min TTL). Browser back/forward does NOT change wizard step — refresh restores the draft.
+- **Booking wizard state** is held in `useReducer` (in-memory only — no sessionStorage persistence). Refresh, browser back/forward and tab close all reset the wizard to step 1. The previous draft persistence behavior was removed because it caused confusing UX in multi-tab and stale-data scenarios.
 - **Denormalized fields are SNAPSHOT at booking time, not propagated.** `appointmentDoc.barberName / serviceName / customerName / customerPhone / customerEmail / serviceBufferMinutes / priceCents` are written once at create and never updated when the source (`barbers/{id}`, `services/{id}`, `customers/{id}`) is renamed. UI in admin reservations therefore shows values that were valid at the moment of booking — by design (audit trail / historical truth).
 - **No Prisma, no Postgres.** All data goes through `adminDb` (server) or `db` (client). Client SDK is rarely used directly — admin pages render server-side and stream data through server queries
 - **Path alias**: `@/*` maps to `./src/*`

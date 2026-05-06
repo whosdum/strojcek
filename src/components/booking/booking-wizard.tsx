@@ -284,10 +284,6 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
 // ---------------------------------------------------------------------------
 
 const TOTAL_STEPS = 6;
-const DRAFT_KEY = "strojcek-draft";
-// 25 min — sits under page.tsx's 30-min revalidate so the draft never
-// expires at exactly the moment public data is refetched.
-const DRAFT_MAX_AGE_MS = 25 * 60 * 1000;
 
 /** Format phone for display: "+421 903123456" → "+421 903 123 456" */
 function formatPhoneDisplay(prefix: string, phone: string): string {
@@ -299,33 +295,11 @@ function formatPhoneDisplay(prefix: string, phone: string): string {
 // Component
 // ---------------------------------------------------------------------------
 
-function getRestoredState(): Partial<Pick<WizardState, "serviceId" | "barberId" | "date" | "step">> | null {
-  try {
-    const raw = sessionStorage.getItem(DRAFT_KEY);
-    if (!raw) return null;
-    const draft = JSON.parse(raw) as {
-      serviceId?: string;
-      barberId?: string;
-      date?: string;
-      step?: number;
-      savedAt?: number;
-    };
-    if (!draft.savedAt || Date.now() - draft.savedAt > DRAFT_MAX_AGE_MS) {
-      sessionStorage.removeItem(DRAFT_KEY);
-      return null;
-    }
-    return draft;
-  } catch {
-    return null;
-  }
-}
-
 export function BookingWizard({ services, barbers }: BookingWizardProps) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [isPending, startTransition] = useTransition();
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showTermsHint, setShowTermsHint] = useState(false);
-  const draftRestored = useRef(false);
   const honeypotRef = useRef<HTMLInputElement>(null);
 
   const sectionRefs = useRef<Array<HTMLDivElement | null>>(
@@ -386,114 +360,6 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
       }
     });
   }, []);
-
-  // Date stash — set during the initial draft restore, consumed by
-  // the post-schedule effect below once the barber's working days +
-  // overrides are known so we can validate the saved date is still
-  // bookable before re-selecting it.
-  const pendingDraftDateRef = useRef<string | null>(null);
-
-  // Restore draft from sessionStorage on mount. Validates that both
-  // serviceId AND the matching barber for that service still exist —
-  // if a service was deleted/disabled (or the barber dropped that
-  // service) since the draft was saved, restore is silently skipped
-  // and the draft is wiped, so the user starts at step 1 instead of
-  // landing on a broken auto-selected service.
-  useEffect(() => {
-    if (draftRestored.current) return;
-    draftRestored.current = true;
-    const draft = getRestoredState();
-    if (!draft) return;
-    const service = draft.serviceId
-      ? services.find((s) => s.id === draft.serviceId)
-      : undefined;
-    if (!service) {
-      try {
-        sessionStorage.removeItem(DRAFT_KEY);
-      } catch {
-        // ignore
-      }
-      return;
-    }
-    dispatch({ type: "SELECT_SERVICE", serviceId: service.id });
-    if (!draft.barberId) return;
-    const barber = barbers.find(
-      (b) => b.id === draft.barberId && b.serviceIds.includes(service.id)
-    );
-    if (!barber) return; // barber gone or no longer offers this service
-    dispatch({ type: "SELECT_BARBER", barberId: barber.id });
-    if (draft.date) pendingDraftDateRef.current = draft.date;
-    loadBarberCalendar(barber.id);
-  }, [services, barbers, loadBarberCalendar]);
-
-  // Once the schedule loads, validate any stashed draft date and
-  // re-select it. CLAUDE.md promises "refresh restores draft" — the
-  // previous restore only re-selected service + barber and silently
-  // dropped date and step, so users who refreshed in step 4 lost
-  // their slot pick. Inline the slot-fetch (rather than calling the
-  // click handler) to avoid the temporal-dead-zone reference.
-  useEffect(() => {
-    const dateStr = pendingDraftDateRef.current;
-    if (!dateStr) return;
-    if (!state.workingDays || !state.barberId || !state.serviceId) return;
-    pendingDraftDateRef.current = null;
-
-    const date = parseISO(dateStr);
-    if (Number.isNaN(date.getTime())) return;
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (date < today) return; // draft expired during the gap
-    const horizonWeeks =
-      barbers.find((b) => b.id === state.barberId)?.bookingHorizonWeeks ?? 3;
-    if (date > addDays(today, horizonWeeks * 7)) return;
-
-    const override = state.overrides?.[dateStr];
-    if (override === false) return;
-    if (override !== true && !state.workingDays.includes(date.getDay())) return;
-
-    const myId = ++slotsFetchIdRef.current;
-    const barberId = state.barberId;
-    const serviceId = state.serviceId;
-    dispatch({ type: "SELECT_DATE", date: dateStr });
-    dispatch({ type: "SET_LOADING_SLOTS", loading: true });
-    startTransition(async () => {
-      try {
-        const slots = await fetchSlots(barberId, serviceId, dateStr);
-        if (slotsFetchIdRef.current !== myId) return;
-        dispatch({ type: "SET_SLOTS", slots });
-      } catch (err) {
-        if (slotsFetchIdRef.current !== myId) return;
-        console.error("[booking-wizard] draft slot fetch failed", err);
-        dispatch({ type: "SET_SLOTS", slots: [] });
-      }
-    });
-  }, [
-    state.workingDays,
-    state.overrides,
-    state.barberId,
-    state.serviceId,
-    barbers,
-  ]);
-
-  // Save draft to sessionStorage on relevant state changes
-  useEffect(() => {
-    if (!state.serviceId) return;
-    try {
-      sessionStorage.setItem(
-        DRAFT_KEY,
-        JSON.stringify({
-          serviceId: state.serviceId,
-          barberId: state.barberId,
-          date: state.date,
-          step: state.step,
-          savedAt: Date.now(),
-        })
-      );
-    } catch {
-      // sessionStorage may be unavailable
-    }
-  }, [state.serviceId, state.barberId, state.date, state.step]);
 
   useEffect(() => {
     const el = sectionRefs.current[state.step];
@@ -694,15 +560,10 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
   // Success screen
   // ---------------------------------------------------------------------------
 
-  // Scroll to top on success + clear draft
+  // Scroll to top on success
   useEffect(() => {
     if (state.result?.success) {
       window.scrollTo({ top: 0 });
-      try {
-        sessionStorage.removeItem(DRAFT_KEY);
-      } catch {
-        // sessionStorage may be unavailable
-      }
     }
   }, [state.result?.success]);
 
