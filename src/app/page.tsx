@@ -128,17 +128,14 @@ export default async function HomePage() {
       <header className="mb-6 flex flex-col items-center text-center sm:mb-8">
         <Image
           src="/logo.jpg"
-          alt="Strojček"
+          alt="Strojček — pánsky barbershop Bytča"
           width={140}
           height={76}
           className="rounded-xl shadow-lg shadow-black/20"
           priority
         />
-        <h1 className="mt-3 text-2xl font-bold tracking-[0.08em] text-primary sm:text-3xl">
-          Strojček
-          <span className="mt-1 block text-[13px] font-medium normal-case tracking-normal text-foreground/80 sm:text-sm">
-            Pánsky barber shop v Bytči
-          </span>
+        <h1 className="mt-3 text-xl font-bold tracking-tight text-primary sm:text-2xl">
+          Strojček — pánsky barbershop v Bytči
         </h1>
         <p className="mt-1.5 text-[12px] font-medium uppercase tracking-widest text-muted-foreground">
           Online rezervácia
@@ -167,10 +164,12 @@ export default async function HomePage() {
         <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">
           Strojček je pánsky barber shop v Bytči — pánsky kaderník v okolí
           Žiliny pre všetkých, ktorí chcú profesionálny strih bez kompromisov.
-          Robíme klasický pánsky strih, fade strih, úpravu brady aj úpravu
-          fúzov, hot towel rituál a komplexnú starostlivosť o vlasy. Vďaka
-          online rezervácii prídete do nášho barbershopu na presný čas — bez
-          čakania v rade a s istotou, že vás obslúžime kedy potrebujete.
+          Chodia k nám zákazníci z Bytče, Predmiera, Hričovského Podhradia,
+          Súľova-Hradnej aj z Považskej Bystrice. Robíme klasický pánsky strih,
+          fade strih, úpravu brady aj úpravu fúzov, hot towel rituál a
+          komplexnú starostlivosť o vlasy. Vďaka online rezervácii prídete do
+          nášho barbershopu na presný čas — bez čakania v rade a s istotou, že
+          vás obslúžime kedy potrebujete.
         </p>
 
         <div className="mt-8 grid gap-8 sm:grid-cols-2 sm:gap-10">
