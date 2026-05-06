@@ -75,8 +75,12 @@ const FAQ: Array<{ q: string; a: string }> = [
     a: "Aktuálny cenník je v rezervačnom formulári pri každej službe (pánsky strih, úprava brady, hot towel rituál, študentský strih a kombinácie). Ceny zahŕňajú DPH.",
   },
   {
-    q: "Kde sa salón nachádza?",
-    a: "Strojček nájdete na adrese Moyzesova 379/2, 014 01 Bytča. Sme priamo v centre, parking je dostupný v okolí.",
+    q: "Kde sa barber shop v Bytči nachádza?",
+    a: "Strojček Barbershop nájdete v centre Bytče na adrese Moyzesova 379/2, 014 01 Bytča. Sme pár minút pešo od námestia a parking je dostupný priamo na ulici aj v okolí. Najbližšie autobusové zastávky sú v dochádzkovej vzdialenosti.",
+  },
+  {
+    q: "Z akých miest k vám chodia zákazníci?",
+    a: "Okrem Bytče k nám chodia pánski zákazníci aj z okolia — Predmier, Hričovské Podhradie, Súľov-Hradná, Považská Bystrica aj zo Žiliny. Bytča je dostupná z celého Žilinského kraja a online rezervácia šetrí čas — prídete na presný termín bez čakania.",
   },
   {
     q: "Robíte fade strih a úpravu fúzov?",
@@ -254,6 +258,79 @@ export default async function HomePage() {
                 ))}
               </dl>
             )}
+          </div>
+        </div>
+      </section>
+
+      <section
+        aria-labelledby="nase-sluzby"
+        className="mt-8 rounded-2xl border border-border/40 bg-card/40 p-6 sm:p-8"
+      >
+        <h2
+          id="nase-sluzby"
+          className="text-lg font-bold tracking-tight sm:text-xl"
+        >
+          Naše služby
+        </h2>
+        <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">
+          V našom barber shope v Bytči robíme všetko od klasického pánskeho
+          strihu cez moderné fade strihy až po komplexnú úpravu brady. Aktuálne
+          ceny a presnú dĺžku trvania jednotlivých služieb vidíte v rezervačnom
+          kroku „Služba“.
+        </p>
+        <div className="mt-6 grid gap-6 sm:grid-cols-2">
+          <div>
+            <h3 className="text-[15px] font-semibold text-foreground">
+              Klasický pánsky strih
+            </h3>
+            <p className="mt-1.5 text-[14px] leading-relaxed text-muted-foreground">
+              Strih nožnicami a strojčekom podľa tvaru tváre a typu vlasov.
+              Súčasťou je krátka konzultácia, presný strih, umytie vlasov a
+              finálny styling. Výsledok drží niekoľko týždňov a vyzerá čisto aj
+              po pár dňoch.
+            </p>
+          </div>
+          <div>
+            <h3 className="text-[15px] font-semibold text-foreground">
+              Fade strih
+            </h3>
+            <p className="mt-1.5 text-[14px] leading-relaxed text-muted-foreground">
+              Plynulý prechod od kratšej dĺžky pri pokožke k dlhšej hore — low
+              fade, mid fade, high fade aj skin fade. Detailná práca strojčekom
+              a britvou. Trendová alternatíva ku klasickému strihu, ideálna
+              pre kratší vrchný styling.
+            </p>
+          </div>
+          <div>
+            <h3 className="text-[15px] font-semibold text-foreground">
+              Úprava brady a fúzov
+            </h3>
+            <p className="mt-1.5 text-[14px] leading-relaxed text-muted-foreground">
+              Strih a tvarovanie brady nožnicami aj britvou. Hot towel pred
+              holením otvorí póry a uvoľní pokožku, takže výsledok je hladký a
+              podráždenie minimálne. Olej alebo balzam sú súčasťou.
+            </p>
+          </div>
+          <div>
+            <h3 className="text-[15px] font-semibold text-foreground">
+              Hot towel rituál
+            </h3>
+            <p className="mt-1.5 text-[14px] leading-relaxed text-muted-foreground">
+              Tradičná barberská metóda holenia — horúce uteráky, parou
+              zmäkčená brada, presné ťahy britvou. Výsledkom je dokonale hladká
+              pokožka a relaxačný zážitok. Odporúčame raz za 2–3 týždne.
+            </p>
+          </div>
+          <div className="sm:col-span-2">
+            <h3 className="text-[15px] font-semibold text-foreground">
+              Strojček rituál
+            </h3>
+            <p className="mt-1.5 text-[14px] leading-relaxed text-muted-foreground">
+              Naša signatúrna kombinácia — strih, úprava brady, hot towel a
+              vosková finálna úprava. Komplexný balík pre tých, ktorí si chcú
+              dopriať full service a odísť kompletne upravení od hlavy po
+              bradu. Trvá približne 75 minút.
+            </p>
           </div>
         </div>
       </section>

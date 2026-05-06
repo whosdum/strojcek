@@ -63,6 +63,16 @@ export function StructuredData({ openingHours, services }: StructuredDataProps) 
       longitude: SHOP_GEO.lng,
     },
     hasMap: SHOP_MAPS_URL,
+    areaServed: [
+      { "@type": "City", name: "Bytča" },
+      { "@type": "City", name: "Predmier" },
+      { "@type": "City", name: "Hričovské Podhradie" },
+      { "@type": "City", name: "Súľov-Hradná" },
+      { "@type": "City", name: "Považská Bystrica" },
+      { "@type": "City", name: "Žilina" },
+      { "@type": "AdministrativeArea", name: "okres Bytča" },
+      { "@type": "AdministrativeArea", name: "Žilinský kraj" },
+    ],
     sameAs: SHOP_SOCIAL_PROFILES,
     priceRange: "€€",
     currenciesAccepted: "EUR",
@@ -93,11 +103,45 @@ export function StructuredData({ openingHours, services }: StructuredDataProps) 
       : {}),
   };
 
+  const organizationLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "@id": `${PUBLIC_SITE_URL}/#organization`,
+    name: SHOP_LEGAL_NAME,
+    alternateName: ["Strojček Barbershop", SHOP_NAME],
+    legalName: SHOP_LEGAL_NAME,
+    url: PUBLIC_SITE_URL,
+    logo: `${PUBLIC_SITE_URL}/logo.jpg`,
+    image: `${PUBLIC_SITE_URL}/logo.jpg`,
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: SHOP_STREET,
+      addressLocality: SHOP_CITY,
+      postalCode: SHOP_POSTAL_CODE,
+      addressCountry: SHOP_COUNTRY,
+    },
+    contactPoint: {
+      "@type": "ContactPoint",
+      telephone: SHOP_PHONE_E164,
+      email: SHOP_EMAIL,
+      contactType: "customer service",
+      areaServed: "SK",
+      availableLanguage: ["sk"],
+    },
+    sameAs: SHOP_SOCIAL_PROFILES,
+  };
+
   return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationLd) }}
+      />
+    </>
   );
 }
 
