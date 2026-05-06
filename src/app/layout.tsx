@@ -50,7 +50,7 @@ export const metadata: Metadata = {
     type: "website",
     locale: "sk_SK",
     url: PUBLIC_SITE_URL,
-    siteName: "Strojček",
+    siteName: "Strojček Barbershop",
     title: "Strojček — Barbershop Bytča",
     description:
       "Pánsky barber shop v Bytči — Strojček barbershop. Strih, úprava brady, hot towel rituál. Rezervujte si termín online.",

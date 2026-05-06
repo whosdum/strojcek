@@ -1,6 +1,7 @@
 import {
   PUBLIC_SITE_URL,
   SHOP_NAME,
+  SHOP_LEGAL_NAME,
   SHOP_PHONE_E164,
   SHOP_EMAIL,
   SHOP_STREET,
@@ -41,7 +42,9 @@ export function StructuredData({ openingHours, services }: StructuredDataProps) 
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": ["BarberShop", "HairSalon"],
-    name: SHOP_NAME,
+    name: "Strojček Barbershop",
+    alternateName: SHOP_NAME,
+    legalName: SHOP_LEGAL_NAME,
     url: PUBLIC_SITE_URL,
     logo: `${PUBLIC_SITE_URL}/logo.jpg`,
     image: `${PUBLIC_SITE_URL}/logo.jpg`,
