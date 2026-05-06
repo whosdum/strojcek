@@ -180,6 +180,14 @@ export default async function HomePage() {
           nášho barbershopu na presný čas — bez čakania v rade a s istotou, že
           vás obslúžime kedy potrebujete.
         </p>
+        <p className="mt-4 text-[14px]">
+          <Link
+            href="/o-nas"
+            className="font-medium text-primary underline-offset-2 hover:underline"
+          >
+            Viac o našom príbehu, barberovi Martinovi a tipoch →
+          </Link>
+        </p>
 
         <div className="mt-8 grid gap-8 sm:grid-cols-2 sm:gap-10">
           <div>

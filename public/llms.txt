@@ -44,5 +44,6 @@ Pondelok–Piatok 07:00–18:00, Sobota podľa rezervácií. Aktuálne voľné t
 ## Stránky
 
 - [Hlavná stránka — rezervácia](https://strojcekbarbershop.sk): online rezervačný formulár, kontakt, otváracie hodiny, FAQ
+- [O nás](https://strojcekbarbershop.sk/o-nas): príbeh barbershopu, predstavenie barbera Martina, naše priestory v Bytči, rady a tipy o starostlivosti o vlasy a bradu
 - [Obchodné podmienky](https://strojcekbarbershop.sk/vop): VOP pre online rezervácie
 - [Ochrana osobných údajov](https://strojcekbarbershop.sk/ochrana-udajov): GDPR a spracovanie osobných údajov
