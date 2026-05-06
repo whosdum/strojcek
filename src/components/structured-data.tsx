@@ -12,6 +12,7 @@ import {
   SHOP_MAPS_URL,
   SHOP_SOCIAL_PROFILES,
 } from "@/lib/business-info";
+import { AGGREGATE_RATING, PUBLIC_REVIEWS } from "@/lib/reviews-data";
 
 interface OpeningHoursSpec {
   dayOfWeek: string;
@@ -74,6 +75,25 @@ export function StructuredData({ openingHours, services }: StructuredDataProps) 
       { "@type": "AdministrativeArea", name: "Žilinský kraj" },
     ],
     sameAs: SHOP_SOCIAL_PROFILES,
+    aggregateRating: {
+      "@type": "AggregateRating",
+      ratingValue: AGGREGATE_RATING.ratingValue.toFixed(1),
+      reviewCount: AGGREGATE_RATING.reviewCount,
+      bestRating: AGGREGATE_RATING.bestRating,
+    },
+    review: PUBLIC_REVIEWS.map((r) => ({
+      "@type": "Review",
+      author: { "@type": "Person", name: r.authorName },
+      datePublished: r.date,
+      reviewRating: {
+        "@type": "Rating",
+        ratingValue: r.rating,
+        bestRating: 5,
+      },
+      reviewBody: r.text,
+      publisher: { "@type": "Organization", name: "Google" },
+      ...(r.url ? { url: r.url } : {}),
+    })),
     priceRange: "€€",
     currenciesAccepted: "EUR",
     paymentAccepted: "Cash, Credit Card",
