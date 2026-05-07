@@ -139,8 +139,22 @@
 }
 
 /* ─── Booking calendar: full-width, touch-friendly ─── */
-.booking-calendar [data-slot="calendar"] {
-  width: 100%;
+/* react-day-picker v9 root has class `rdp-root` and the shared Calendar
+ * component slaps `w-fit` on it (so it can render compactly inside
+ * popovers). Inside the booking wizard we want the opposite — fill the
+ * section card and let the 7-column grid divide the available width — so
+ * we force `width: 100%` on the root and ALSO push `minmax(0, 1fr)` on
+ * the inner grids. The `minmax(0, ...)` is crucial: plain `1fr` honours
+ * the cell's intrinsic content width as a minimum, which on mobile makes
+ * the grid wider than its container and clips the 7th column ("ne") at
+ * the outer card's overflow boundary (where the partial "n" letter looked
+ * like a stray "r"). */
+.booking-calendar,
+.booking-calendar > *,
+.booking-calendar [data-slot="calendar"],
+.booking-calendar .rdp-root {
+  width: 100% !important;
+  max-width: 100%;
   padding: 0;
   background: transparent;
 }
@@ -175,8 +189,9 @@
 
 .booking-calendar .rdp-weekdays {
   display: grid !important;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
   gap: 2px;
+  width: 100%;
 }
 
 .booking-calendar .rdp-weekday {
@@ -191,9 +206,10 @@
 
 .booking-calendar .rdp-week {
   display: grid !important;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
   gap: 2px;
   margin-top: 2px;
+  width: 100%;
 }
 
 .booking-calendar .rdp-day {

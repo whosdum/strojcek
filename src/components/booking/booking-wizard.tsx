@@ -254,11 +254,11 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
       };
 
     case "SELECT_DATE":
-      // No follow-up fetch — slots come from the pre-loaded bundle. The
-      // wizard's render derives `<TimeSlots>` from slotsByDate[state.date].
+      // Date+time are now a single step (3 = "Dátum a čas"), so picking a
+      // date doesn't advance — it just reveals the slot grid below the
+      // calendar. The user advances by picking a slot.
       return {
         ...state,
-        step: 4,
         date: action.date,
         time: null,
         result: null,
@@ -267,7 +267,7 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
     case "SELECT_TIME":
       return {
         ...state,
-        step: 5,
+        step: 4,
         time: action.time,
         result: null,
       };
@@ -275,7 +275,7 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
     case "SET_CONTACT":
       return {
         ...state,
-        step: 6,
+        step: 5,
         contact: action.contact,
         result: null,
       };
@@ -325,12 +325,14 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
           slotsByDate: null,
         }),
         ...(s === 3 && {
+          // Combined Dátum + čas: clear both. Calendar + slot grid show
+          // again so the user can re-pick from scratch.
           date: null,
           time: null,
         }),
-        ...(s === 4 && {
-          time: null,
-        }),
+        // s === 4 (Kontakt) and s === 5 (Potvrdenie) clear nothing — the
+        // user already typed their contact details and we want them
+        // preserved when they go back to edit an earlier step.
       };
     }
 
@@ -343,15 +345,14 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
 // Helpers
 // ---------------------------------------------------------------------------
 
-const TOTAL_STEPS = 6;
+const TOTAL_STEPS = 5;
 
 const STEP_LABELS: Record<number, string> = {
   1: "Vyberte si službu",
   2: "Vyberte si barbera",
-  3: "Vyberte si dátum",
-  4: "Vyberte si čas",
-  5: "Vaše kontaktné údaje",
-  6: "Potvrdenie rezervácie",
+  3: "Vyberte si dátum a čas",
+  4: "Vaše kontaktné údaje",
+  5: "Potvrdenie rezervácie",
 };
 
 /** Format phone for display: "+421 903123456" → "+421 903 123 456" */
@@ -775,7 +776,7 @@ export function BookingWizard({
             variant="outline"
             size="sm"
             className="mt-2"
-            onClick={() => handleEdit(5)}
+            onClick={() => handleEdit(4)}
           >
             Upraviť kontaktné údaje
           </Button>
@@ -960,19 +961,28 @@ export function BookingWizard({
         </div>
       </SectionWrapper>
 
-      {/* 3 — Dátum */}
+      {/* 3 — Dátum a čas (combined) */}
+      {/* Calendar + slot grid live in the same section. Picking a date
+          reveals the slots inline below the calendar instead of advancing
+          to a separate step — earlier we had separate Dátum (3) and Čas
+          (4) steps but users got stuck on the slot grid because they
+          couldn't discover that the small "Štvrtok, 8. máj" summary above
+          was tappable to change the day. Single section makes the day
+          picker always visible. */}
       <SectionWrapper
         ref={setSectionRef(3)}
         stepNumber={3}
-        title="Dátum"
+        title="Dátum a čas"
         isActive={state.step === 3}
         isCompleted={state.step > 3}
         hasNext={state.step > 3}
         isFlashing={flashStep === 3}
         completedSummary={
-          state.date
-            ? format(parseISO(state.date), "EEEE, d. MMMM", { locale: sk })
-            : undefined
+          state.date && state.time
+            ? `${format(parseISO(state.date), "EEEE, d. MMMM", { locale: sk })} o ${state.time}`
+            : state.date
+              ? format(parseISO(state.date), "EEEE, d. MMMM", { locale: sk })
+              : undefined
         }
         onEdit={() => handleEdit(3)}
       >
@@ -1023,47 +1033,53 @@ export function BookingWizard({
             <p className="mt-2 text-center text-[12px] text-muted-foreground">
               Sivé dni nie sú dostupné — barber má voľno alebo sú mimo rezervačného obdobia.
             </p>
+
+            {/* Slot grid appears inline once a date is picked. Visually
+                separated by a divider + small heading so it reads as a
+                sub-step rather than a sibling step. */}
+            {state.date && state.slotsByDate && (
+              <div className="mt-5 border-t border-border/40 pt-4">
+                <p className="mb-3 text-center text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Voľné termíny —{" "}
+                  <span className="text-foreground">
+                    {format(parseISO(state.date), "EEEE d. MMMM", {
+                      locale: sk,
+                    })}
+                  </span>
+                </p>
+                <TimeSlots
+                  slots={state.slotsByDate[state.date] ?? []}
+                  selectedTime={state.time}
+                  onSelect={handleSelectTime}
+                  onChangeDate={() => {
+                    // Calendar is already visible — but the user clicked
+                    // "Zmeniť deň" inside the slot grid. Clear the date so
+                    // the slot grid hides and the user is nudged back to
+                    // pick from the calendar above.
+                    dispatch({ type: "EDIT_STEP", step: 3 });
+                  }}
+                />
+              </div>
+            )}
           </>
         )}
       </SectionWrapper>
 
-      {/* 4 — Čas */}
+      {/* 4 — Kontaktné údaje */}
       <SectionWrapper
         ref={setSectionRef(4)}
         stepNumber={4}
-        title="Čas"
+        title="Kontaktné údaje"
         isActive={state.step === 4}
         isCompleted={state.step > 4}
         hasNext={state.step > 4}
         isFlashing={flashStep === 4}
-        completedSummary={state.time ?? undefined}
-        onEdit={() => handleEdit(4)}
-      >
-        {state.date && state.slotsByDate ? (
-          <TimeSlots
-            slots={state.slotsByDate[state.date] ?? []}
-            selectedTime={state.time}
-            onSelect={handleSelectTime}
-            onChangeDate={() => handleEdit(3)}
-          />
-        ) : null}
-      </SectionWrapper>
-
-      {/* 5 — Kontaktné údaje */}
-      <SectionWrapper
-        ref={setSectionRef(5)}
-        stepNumber={5}
-        title="Kontaktné údaje"
-        isActive={state.step === 5}
-        isCompleted={state.step > 5}
-        hasNext={state.step > 5}
-        isFlashing={flashStep === 5}
         completedSummary={
           state.contact
             ? `${state.contact.firstName} ${state.contact.lastName}`
             : undefined
         }
-        onEdit={() => handleEdit(5)}
+        onEdit={() => handleEdit(4)}
       >
         <ContactForm
           onSubmit={handleContactSubmit}
@@ -1079,12 +1095,12 @@ export function BookingWizard({
         />
       </SectionWrapper>
 
-      {/* 6 — Potvrdenie */}
+      {/* 5 — Potvrdenie */}
       <SectionWrapper
-        ref={setSectionRef(6)}
-        stepNumber={6}
+        ref={setSectionRef(5)}
+        stepNumber={5}
         title="Potvrdenie"
-        isActive={state.step === 6}
+        isActive={state.step === 5}
         isCompleted={false}
       >
         {selectedService && selectedBarber && state.date && state.time && (
