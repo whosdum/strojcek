@@ -9,6 +9,7 @@ import {
   SHOP_PHONE_DISPLAY,
   SHOP_PHONE_E164,
 } from "@/lib/business-info";
+import { InstagramEmbed } from "@/components/instagram-embed";
 
 export const revalidate = 86400;
 
@@ -39,27 +40,27 @@ const INTERIOR_PHOTOS: Array<{
   caption: string;
 }> = [
   {
-    src: "/barbershop/interier-bytca-1.jpeg",
+    src: "/barbershop/interier-bytca-1-p.webp",
     alt: "Interiér barbershopu Strojček v Bytči — barberské kreslo a zrkadlo",
     caption: "Interiér Strojček Barbershop, Bytča",
   },
   {
-    src: "/barbershop/priestory-strojcek-bytca.jpeg",
+    src: "/barbershop/priestory-strojcek-bytca-p.webp",
     alt: "Priestory pánskeho barbershopu Strojček v Bytči",
     caption: "Naše priestory v centre Bytče",
   },
   {
-    src: "/barbershop/barberske-kreslo-bytca.jpeg",
+    src: "/barbershop/barberske-kreslo-bytca-p.webp",
     alt: "Barberské kreslo a pracovisko v Strojčeku Bytča",
     caption: "Pracovisko barbera",
   },
   {
-    src: "/barbershop/pracovisko-barber-bytca.jpeg",
+    src: "/barbershop/pracovisko-barber-bytca-p.webp",
     alt: "Detail pracoviska barbera v barbershope Strojček Bytča",
     caption: "Detail pracoviska",
   },
   {
-    src: "/barbershop/interier-bytca-2.jpeg",
+    src: "/barbershop/interier-bytca-2-p.webp",
     alt: "Interiér Strojček barbershopu v Bytči — pohľad na čakaciu zónu",
     caption: "Čakacia zóna",
   },
@@ -131,7 +132,7 @@ function AboutJsonLd() {
     },
     primaryImageOfPage: {
       "@type": "ImageObject",
-      url: `${PUBLIC_SITE_URL}/barbers/martin.png`,
+      url: `${PUBLIC_SITE_URL}/barbers/martin.webp`,
       caption: "Martin — barber a zakladateľ Strojček Barbershop",
     },
   };
@@ -146,7 +147,7 @@ function AboutJsonLd() {
       "@id": `${PUBLIC_SITE_URL}/#localbusiness`,
       name: "Strojček Barbershop",
     },
-    image: `${PUBLIC_SITE_URL}/barbers/martin.png`,
+    image: `${PUBLIC_SITE_URL}/barbers/martin.webp`,
     address: {
       "@type": "PostalAddress",
       streetAddress: "Moyzesova 379/2",
@@ -198,13 +199,13 @@ export default function AboutPage() {
     <div className="min-h-dvh bg-background text-foreground">
       <AboutJsonLd />
 
-      <div className="mx-auto max-w-2xl px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
+      <div className="mx-auto max-w-2xl px-4 pb-16 pt-6 sm:px-6 sm:pt-8">
         <Link
           href="/"
-          className="mb-8 inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+          aria-label="Späť na rezerváciu"
+          className="mb-5 inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-card text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
         >
           <ArrowLeftIcon className="size-4" />
-          Späť na rezerváciu
         </Link>
 
         <nav
@@ -225,41 +226,32 @@ export default function AboutPage() {
         <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
           O Strojčeku — pánsky barbershop v Bytči
         </h1>
-        <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">
-          Strojček Barbershop je pánsky barber v Bytči, ktorý vznikol z jedného
-          jednoduchého presvedčenia — že kvalitný strih a profesionálnu úpravu
-          brady by mal nájsť aj pán z menšieho mesta, nielen z Bratislavy či
-          Žiliny. Pracujeme pre zákazníkov z Bytče a širšieho okolia: Predmier,
-          Hričovské Podhradie, Súľov-Hradná aj Považská Bystrica.
-        </p>
 
-        <section className="mt-12">
-          <h2 className="text-lg font-semibold tracking-tight">
-            Náš príbeh
+        <section
+          aria-labelledby="rezervacia-cta"
+          className="mt-6 rounded-2xl border border-primary/30 bg-primary/5 p-6 text-center"
+        >
+          <h2 id="rezervacia-cta" className="text-base font-semibold tracking-tight">
+            Rezervujte si termín online
           </h2>
-          <div className="mt-4 space-y-4 text-[15px] leading-relaxed text-foreground/90">
-            <p>
-              Strojček vznikol z toho, že v Bytči dlho chýbalo miesto, kde sa
-              pán môže nechať ostrihať bez kompromisov. Pánska holičňa, kde
-              barber rozumie modernému fade strihu, ovláda klasické techniky,
-              ostrí britvu a vie, prečo treba pred holením použiť horúci uterák.
-              Také miesto, kam prídete, posadíte sa, otvoríte si telefón na pol
-              hodinu a odídete s pocitom, že to bol dobre strávený čas.
-            </p>
-            <p>
-              Začínali sme s jediným kreslom a postupne sme priestor doladili
-              tak, ako si predstavujeme barbershop — tlmené svetlo, drevo,
-              kvalitné nástroje a žiadne zbytočné rozptyľovanie. Nemáme
-              hudbu nahlas, nemáme reklamu na stenách. Záleží nám len na strihu,
-              brade a tom, aby ste odchádzali spokojní.
-            </p>
-            <p>
-              Online rezervačný systém spustil druhú vlnu zákazníkov — pánov,
-              ktorí nechcú čakať v rade ani volať, jednoducho si vyberú voľný
-              termín cez web a prídu presne, keď im to vyhovuje. To nám dáva čas
-              venovať sa každému zákazníkovi tak, ako si to služba zaslúži.
-            </p>
-          </div>
+          <p className="mt-2 text-[14px] text-muted-foreground">
+            Vyberte si službu, dátum a čas — celé to trvá menej ako minútu.
+          </p>
+          <Link
+            href="/"
+            className="mt-4 inline-flex items-center justify-center rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+          >
+            Rezervovať termín
+          </Link>
+          <p className="mt-3 text-[12px] text-muted-foreground">
+            Alebo nám zavolajte:{" "}
+            <a
+              href={`tel:${SHOP_PHONE_E164}`}
+              className="font-medium text-foreground underline-offset-2 hover:underline"
+            >
+              {SHOP_PHONE_DISPLAY}
+            </a>
+          </p>
         </section>
 
         <section className="mt-12">
@@ -269,7 +261,7 @@ export default function AboutPage() {
           <div className="mt-5 grid gap-5 sm:grid-cols-[140px_1fr] sm:items-start">
             <div className="relative aspect-square w-32 overflow-hidden rounded-2xl border border-border/40 bg-card sm:w-full">
               <Image
-                src="/barbers/martin.png"
+                src="/barbers/martin.webp"
                 alt="Martin — barber a zakladateľ Strojček Barbershop v Bytči"
                 fill
                 sizes="(min-width: 640px) 140px, 128px"
@@ -310,7 +302,7 @@ export default function AboutPage() {
                 key={photo.src}
                 className="overflow-hidden rounded-xl border border-border/40 bg-card"
               >
-                <div className="relative aspect-[4/3] w-full">
+                <div className="relative aspect-[3/4] w-full">
                   <Image
                     src={photo.src}
                     alt={photo.alt}
@@ -338,15 +330,10 @@ export default function AboutPage() {
             ukážky práce.
           </p>
 
-          <div className="mt-5 overflow-hidden rounded-xl border border-border/40 bg-card">
-            <iframe
+          <div className="mt-5">
+            <InstagramEmbed
               src={INSTAGRAM_REEL_EMBED}
               title="Strojček Barbershop — ukážka práce na Instagrame"
-              loading="lazy"
-              allow="encrypted-media"
-              allowFullScreen
-              className="block w-full"
-              style={{ height: 720, border: 0 }}
             />
           </div>
 
@@ -372,6 +359,42 @@ export default function AboutPage() {
         </section>
 
         <section className="mt-12">
+          <h2 className="text-lg font-semibold tracking-tight">
+            Náš príbeh
+          </h2>
+          <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">
+            Strojček Barbershop je pánsky barber v Bytči, ktorý vznikol z jedného
+            jednoduchého presvedčenia — že kvalitný strih a profesionálnu úpravu
+            brady by mal nájsť aj pán z menšieho mesta, nielen z Bratislavy či
+            Žiliny. Pracujeme pre zákazníkov z Bytče a širšieho okolia: Predmier,
+            Hričovské Podhradie, Súľov-Hradná aj Považská Bystrica.
+          </p>
+          <div className="mt-4 space-y-4 text-[15px] leading-relaxed text-foreground/90">
+            <p>
+              Strojček vznikol z toho, že v Bytči dlho chýbalo miesto, kde sa
+              pán môže nechať ostrihať bez kompromisov. Pánska holičňa, kde
+              barber rozumie modernému fade strihu, ovláda klasické techniky,
+              ostrí britvu a vie, prečo treba pred holením použiť horúci uterák.
+              Také miesto, kam prídete, posadíte sa, otvoríte si telefón na pol
+              hodinu a odídete s pocitom, že to bol dobre strávený čas.
+            </p>
+            <p>
+              Začínali sme s jediným kreslom a postupne sme priestor doladili
+              tak, ako si predstavujeme barbershop — tlmené svetlo, drevo,
+              kvalitné nástroje a žiadne zbytočné rozptyľovanie. Nemáme
+              hudbu nahlas, nemáme reklamu na stenách. Záleží nám len na strihu,
+              brade a tom, aby ste odchádzali spokojní.
+            </p>
+            <p>
+              Online rezervačný systém spustil druhú vlnu zákazníkov — pánov,
+              ktorí nechcú čakať v rade ani volať, jednoducho si vyberú voľný
+              termín cez web a prídu presne, keď im to vyhovuje. To nám dáva čas
+              venovať sa každému zákazníkovi tak, ako si to služba zaslúži.
+            </p>
+          </div>
+        </section>
+
+        <section className="mt-12">
           <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
             <ScissorsIcon className="size-4 text-primary" />
             Rady a tipy od barbera
@@ -393,30 +416,6 @@ export default function AboutPage() {
               </article>
             ))}
           </div>
-        </section>
-
-        <section className="mt-12 rounded-2xl border border-primary/30 bg-primary/5 p-6 text-center">
-          <h2 className="text-base font-semibold tracking-tight">
-            Rezervujte si termín online
-          </h2>
-          <p className="mt-2 text-[14px] text-muted-foreground">
-            Vyberte si službu, dátum a čas — celé to trvá menej ako minútu.
-          </p>
-          <Link
-            href="/"
-            className="mt-4 inline-flex items-center justify-center rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
-          >
-            Rezervovať termín
-          </Link>
-          <p className="mt-3 text-[12px] text-muted-foreground">
-            Alebo nám zavolajte:{" "}
-            <a
-              href={`tel:${SHOP_PHONE_E164}`}
-              className="font-medium text-foreground underline-offset-2 hover:underline"
-            >
-              {SHOP_PHONE_DISPLAY}
-            </a>
-          </p>
         </section>
 
         <footer className="mt-12 border-t border-border/40 pt-6 text-center text-[13px] text-muted-foreground">
