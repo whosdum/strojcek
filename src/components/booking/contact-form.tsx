@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ChevronDownIcon, Loader2Icon } from "lucide-react";
+import { ChevronDownIcon, Loader2Icon, PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -89,6 +89,12 @@ export function ContactForm(props: ContactFormProps) {
 
   const noteLength = watch("note")?.length ?? 0;
   const [phoneZeroHint, setPhoneZeroHint] = useState(false);
+  // Optional note hidden behind a toggle. Auto-opens when the user is
+  // returning to this step (e.g. server-side validation kicked them
+  // back) and they had previously typed something.
+  const [showNote, setShowNote] = useState(
+    Boolean(props.defaultValues?.note?.length)
+  );
 
   // Lightweight check for button — only enabled when required fields are
   // present and there are no Zod validation errors. Earlier we kept a
@@ -234,33 +240,49 @@ export function ContactForm(props: ContactFormProps) {
         )}
       </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="note" className="text-[15px] font-medium text-foreground">
-          Poznámka
-        </Label>
-        <Textarea
-          id="note"
-          rows={3}
-          maxLength={NOTE_MAX_LENGTH}
-          placeholder="Špeciálne požiadavky..."
-          className="bg-muted/30 text-foreground placeholder:text-muted-foreground/60"
-          aria-invalid={!!errors.note}
-          aria-describedby={errors.note ? "note-error" : undefined}
-          {...register("note")}
-        />
-        <div className="flex items-center justify-between">
-          {errors.note ? (
-            <p id="note-error" className="text-[13px] font-medium text-destructive">
-              {errors.note.message}
-            </p>
-          ) : (
-            <span />
-          )}
-          <span className={`text-[12px] tabular-nums ${noteLength > NOTE_MAX_LENGTH * 0.9 ? "text-destructive" : "text-muted-foreground/60"}`}>
-            {noteLength}/{NOTE_MAX_LENGTH}
-          </span>
+      {/* Note — optional, collapsed by default to keep the form short.
+          Visually de-emphasised so the user understands it's not required. */}
+      {showNote ? (
+        <div className="space-y-1.5">
+          <Label htmlFor="note" className="text-[15px] font-medium text-foreground">
+            Poznámka{" "}
+            <span className="font-normal text-muted-foreground">
+              (nepovinné)
+            </span>
+          </Label>
+          <Textarea
+            id="note"
+            rows={3}
+            maxLength={NOTE_MAX_LENGTH}
+            placeholder="Špeciálne požiadavky..."
+            className="bg-muted/30 text-foreground placeholder:text-muted-foreground/60"
+            aria-invalid={!!errors.note}
+            aria-describedby={errors.note ? "note-error" : undefined}
+            {...register("note")}
+          />
+          <div className="flex items-center justify-between">
+            {errors.note ? (
+              <p id="note-error" className="text-[13px] font-medium text-destructive">
+                {errors.note.message}
+              </p>
+            ) : (
+              <span />
+            )}
+            <span className={`text-[12px] tabular-nums ${noteLength > NOTE_MAX_LENGTH * 0.9 ? "text-destructive" : "text-muted-foreground/60"}`}>
+              {noteLength}/{NOTE_MAX_LENGTH}
+            </span>
+          </div>
         </div>
-      </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setShowNote(true)}
+          className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 -ml-2 text-[14px] font-medium text-primary/85 transition-colors hover:text-primary hover:bg-primary/5"
+        >
+          <PlusIcon className="size-4" />
+          Pridať poznámku (nepovinné)
+        </button>
+      )}
 
       <Button
         type="submit"
@@ -274,7 +296,7 @@ export function ContactForm(props: ContactFormProps) {
             Pokračovať...
           </>
         ) : (
-          "Ďalej"
+          "Pokračovať na potvrdenie"
         )}
       </Button>
     </form>

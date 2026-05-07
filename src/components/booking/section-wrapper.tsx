@@ -11,6 +11,15 @@ interface SectionWrapperProps {
   isCompleted: boolean;
   completedSummary?: string;
   onEdit?: () => void;
+  /** When true, briefly highlight the section with a primary ring — used
+   *  to confirm an auto-advance to the user (we just registered your
+   *  selection). Wizard sets this for ~700ms after a step completes. */
+  isFlashing?: boolean;
+  /** When true, render the vertical stepper connector line below this
+   *  section's number circle, bridging the inter-card gap to the next
+   *  rendered section. Only set for sections whose successor is also
+   *  visible (i.e., `state.step > stepNumber`). */
+  hasNext?: boolean;
   children: ReactNode;
 }
 
@@ -23,6 +32,8 @@ export const SectionWrapper = forwardRef<HTMLDivElement, SectionWrapperProps>(
       isCompleted,
       completedSummary,
       onEdit,
+      isFlashing,
+      hasNext,
       children,
     },
     ref
@@ -81,13 +92,34 @@ export const SectionWrapper = forwardRef<HTMLDivElement, SectionWrapperProps>(
     return (
       <section
         ref={ref}
+        aria-current={isActive ? "step" : undefined}
         className={cn(
-          "scroll-mt-6 rounded-2xl border transition-all duration-200",
+          "relative scroll-mt-6 rounded-2xl border transition-all duration-700",
           isActive && "border-border/60 bg-card shadow-lg shadow-black/10",
           isCompleted && "border-border/40 bg-card/80",
-          isLocked && "border-transparent bg-card/40 opacity-50"
+          isLocked && "border-transparent bg-card/40 opacity-50",
+          isFlashing && "ring-2 ring-primary/60 bg-primary/[0.06]"
         )}
       >
+        {/* Vertical stepper connector — bridges this section's number
+            circle to the next section's circle through the inter-card gap.
+            Geometry:
+              - Circle center X = p-4 (16) + size-9/2 (18) = 34px from card edge
+              - w-0.5 line is 2px wide → left = 34 - 1 = 33px
+              - Circle bottom Y = 16 + 36 = 52px from card top
+              - Next card's circle top Y = 16px from its own top
+              - With space-y-3 between cards (12px gap) the line spans
+                from current card's `top-[52px]` past `-bottom-7` (-28px)
+                so it ends 12px (gap) + 16px (next-card top padding) below
+                the current card edge — exactly at the next circle's top.
+            Always rendered in primary because `hasNext` is only true once
+            the user has progressed past this step, i.e. it's completed. */}
+        {hasNext && (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute left-[33px] top-[52px] -bottom-7 z-10 w-0.5 rounded-full bg-primary"
+          />
+        )}
         {/* Header */}
         {isCompleted ? (
           <button

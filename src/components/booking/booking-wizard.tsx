@@ -22,7 +22,7 @@ import {
   AlertCircleIcon,
   ScissorsIcon,
   CalendarCheckIcon,
-  ChevronLeftIcon,
+  InfoIcon,
 } from "lucide-react";
 
 import Link from "next/link";
@@ -36,12 +36,8 @@ import { TimeSlots } from "./time-slots";
 import { ContactForm } from "./contact-form";
 import { BookingSummary } from "./booking-summary";
 
-import {
-  fetchSlots,
-  fetchWorkingDays,
-  fetchScheduleEndTimes,
-  fetchUpcomingOverrides,
-} from "@/server/actions/slots";
+import { fetchAvailability } from "@/server/actions/slots";
+import type { AvailabilityBundle } from "@/server/queries/slots";
 import { createBooking } from "@/server/actions/booking";
 
 // ---------------------------------------------------------------------------
@@ -71,6 +67,16 @@ interface BookingWizardProps {
   services: ServiceData[];
   barbers: BarberWithServices[];
   initialServiceId?: string | null;
+  /**
+   * SSR-prefetched availability for the deep-link case where (?service=X)
+   * resolves to a single barber. When present, the wizard hydrates the
+   * calendar + slot map without a client round-trip — first paint already
+   * has working days marked and any clicked date resolves slots instantly.
+   */
+  initialAvailability?: AvailabilityBundle | null;
+  /** Barber the prefetched availability belongs to. Only honored if it
+   *  matches the auto-selected barber for `initialServiceId`. */
+  initialAvailabilityBarberId?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -93,7 +99,6 @@ interface WizardState {
   date: string | null;
   time: string | null;
   contact: ContactData | null;
-  slots: string[] | null;
   workingDays: number[] | null;
   scheduleEndTimes: Record<number, string> | null;
   /**
@@ -102,10 +107,15 @@ interface WizardState {
    * block a normally working day. Map<"YYYY-MM-DD", isAvailable>.
    */
   overrides: Record<string, boolean> | null;
+  /**
+   * Pre-computed slot list for every date in the booking horizon. Loaded in
+   * one batch alongside the calendar inputs (workingDays/end-times/overrides),
+   * so a date click resolves synchronously — no per-day server round-trip.
+   */
+  slotsByDate: Record<string, string[]> | null;
   /** True when the schedule fetch on barber-select failed; the calendar
    *  shows a retry button instead of an indefinite spinner. */
   calendarError: boolean;
-  loadingSlots: boolean;
   submitting: boolean;
   result: {
     success: boolean;
@@ -123,12 +133,11 @@ const initialState: WizardState = {
   date: null,
   time: null,
   contact: null,
-  slots: null,
   workingDays: null,
   scheduleEndTimes: null,
   overrides: null,
+  slotsByDate: null,
   calendarError: false,
-  loadingSlots: false,
   submitting: false,
   result: null,
 };
@@ -140,7 +149,9 @@ const initialState: WizardState = {
 function buildInitialState(
   initialServiceId: string | null,
   services: ServiceData[],
-  barbers: BarberWithServices[]
+  barbers: BarberWithServices[],
+  initialAvailability: AvailabilityBundle | null,
+  initialAvailabilityBarberId: string | null
 ): WizardState {
   if (!initialServiceId) return initialState;
   if (!services.some((s) => s.id === initialServiceId)) return initialState;
@@ -149,11 +160,23 @@ function buildInitialState(
     b.serviceIds.includes(initialServiceId)
   );
   if (available.length === 1) {
+    const barberId = available[0].id;
+    // The SSR prefetch only counts when its barber matches the one we're
+    // about to auto-select — guards against stale bundles arriving from a
+    // different deep-link path.
+    const seedBundle =
+      initialAvailability && initialAvailabilityBarberId === barberId
+        ? initialAvailability
+        : null;
     return {
       ...initialState,
       step: 3,
       serviceId: initialServiceId,
-      barberId: available[0].id,
+      barberId,
+      workingDays: seedBundle?.workingDays ?? null,
+      scheduleEndTimes: seedBundle?.scheduleEndTimes ?? null,
+      overrides: seedBundle?.overrides ?? null,
+      slotsByDate: seedBundle?.slotsByDate ?? null,
     };
   }
   return {
@@ -173,12 +196,16 @@ type WizardAction =
   | { type: "SELECT_DATE"; date: string }
   | { type: "SELECT_TIME"; time: string }
   | { type: "SET_CONTACT"; contact: ContactData }
-  | { type: "SET_SLOTS"; slots: string[] }
-  | { type: "SET_WORKING_DAYS"; workingDays: number[] }
-  | { type: "SET_SCHEDULE_END_TIMES"; endTimes: Record<number, string> }
-  | { type: "SET_OVERRIDES"; overrides: Record<string, boolean> }
+  | {
+      type: "SET_AVAILABILITY";
+      bundle: {
+        workingDays: number[];
+        scheduleEndTimes: Record<number, string>;
+        overrides: Record<string, boolean>;
+        slotsByDate: Record<string, string[]>;
+      };
+    }
   | { type: "SET_CALENDAR_ERROR"; error: boolean }
-  | { type: "SET_LOADING_SLOTS"; loading: boolean }
   | { type: "SUBMIT_START" }
   | {
       type: "SUBMIT_RESULT";
@@ -195,6 +222,9 @@ type WizardAction =
 function reducer(state: WizardState, action: WizardAction): WizardState {
   switch (action.type) {
     case "SELECT_SERVICE":
+      // The bundle's slotsByDate is service-dependent (duration + buffer),
+      // so a service change must invalidate the cached slots even if the
+      // barber stays the same.
       return {
         ...state,
         step: 2,
@@ -202,9 +232,10 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
         barberId: null,
         date: null,
         time: null,
-        slots: null,
         workingDays: null,
         scheduleEndTimes: null,
+        overrides: null,
+        slotsByDate: null,
         result: null,
       };
 
@@ -215,17 +246,21 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
         barberId: action.barberId,
         date: null,
         time: null,
-        slots: null,
+        workingDays: null,
+        scheduleEndTimes: null,
+        overrides: null,
+        slotsByDate: null,
         result: null,
       };
 
     case "SELECT_DATE":
+      // No follow-up fetch — slots come from the pre-loaded bundle. The
+      // wizard's render derives `<TimeSlots>` from slotsByDate[state.date].
       return {
         ...state,
         step: 4,
         date: action.date,
         time: null,
-        slots: null,
         result: null,
       };
 
@@ -245,23 +280,18 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
         result: null,
       };
 
-    case "SET_SLOTS":
-      return { ...state, slots: action.slots, loadingSlots: false };
-
-    case "SET_WORKING_DAYS":
-      return { ...state, workingDays: action.workingDays };
-
-    case "SET_SCHEDULE_END_TIMES":
-      return { ...state, scheduleEndTimes: action.endTimes };
-
-    case "SET_OVERRIDES":
-      return { ...state, overrides: action.overrides };
+    case "SET_AVAILABILITY":
+      return {
+        ...state,
+        workingDays: action.bundle.workingDays,
+        scheduleEndTimes: action.bundle.scheduleEndTimes,
+        overrides: action.bundle.overrides,
+        slotsByDate: action.bundle.slotsByDate,
+        calendarError: false,
+      };
 
     case "SET_CALENDAR_ERROR":
       return { ...state, calendarError: action.error };
-
-    case "SET_LOADING_SLOTS":
-      return { ...state, loadingSlots: action.loading };
 
     case "SUBMIT_START":
       return { ...state, submitting: true, result: null };
@@ -280,24 +310,23 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
           barberId: null,
           date: null,
           time: null,
-          slots: null,
           workingDays: null,
           scheduleEndTimes: null,
           overrides: null,
+          slotsByDate: null,
         }),
         ...(s === 2 && {
           barberId: null,
           date: null,
           time: null,
-          slots: null,
           workingDays: null,
           scheduleEndTimes: null,
           overrides: null,
+          slotsByDate: null,
         }),
         ...(s === 3 && {
           date: null,
           time: null,
-          slots: null,
         }),
         ...(s === 4 && {
           time: null,
@@ -316,6 +345,15 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
 
 const TOTAL_STEPS = 6;
 
+const STEP_LABELS: Record<number, string> = {
+  1: "Vyberte si službu",
+  2: "Vyberte si barbera",
+  3: "Vyberte si dátum",
+  4: "Vyberte si čas",
+  5: "Vaše kontaktné údaje",
+  6: "Potvrdenie rezervácie",
+};
+
 /** Format phone for display: "+421 903123456" → "+421 903 123 456" */
 function formatPhoneDisplay(prefix: string, phone: string): string {
   const formatted = phone.replace(/(\d{3})(?=\d)/g, "$1 ");
@@ -330,9 +368,17 @@ export function BookingWizard({
   services,
   barbers,
   initialServiceId = null,
+  initialAvailability = null,
+  initialAvailabilityBarberId = null,
 }: BookingWizardProps) {
   const [state, dispatch] = useReducer(reducer, null, () =>
-    buildInitialState(initialServiceId, services, barbers)
+    buildInitialState(
+      initialServiceId,
+      services,
+      barbers,
+      initialAvailability,
+      initialAvailabilityBarberId
+    )
   );
   const [isPending, startTransition] = useTransition();
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -357,61 +403,74 @@ export function BookingWizard({
   );
   const setSectionRef = (step: number) => sectionRefCallbacks[step];
 
-  // Per-fetch sequence ids so a fast user (barber A → barber B before
-  // A's response landed, or date A → date B before A's slots came back)
-  // can't have the late response overwrite the active selection's
-  // freshly-loaded data. Bumped on every entry; the async block discards
-  // its result if the ref has moved on.
-  const calendarFetchIdRef = useRef(0);
-  const slotsFetchIdRef = useRef(0);
+  // Per-fetch sequence id so a fast user (barber A → barber B before
+  // A's response landed) can't have the late response overwrite the
+  // active selection's freshly-loaded data. Bumped on every entry; the
+  // async block discards its result if the ref has moved on.
+  const availabilityFetchIdRef = useRef(0);
 
-  // Defined here (above useEffects that depend on it) so the deps array
+  // Single bulk fetch for the wizard's calendar AND every date's slots.
+  // Defined above the useEffects that depend on it so the deps array
   // doesn't read it through the temporal dead zone on first render.
   // Errors are explicitly caught and surfaced via SET_CALENDAR_ERROR — a
   // silent swallow used to leave the calendar stuck on "Načítavam..." if
-  // any of the three parallel server actions failed (network blip, cold
-  // start, transient Firestore error).
-  const loadBarberCalendar = useCallback((barberId: string) => {
-    const myId = ++calendarFetchIdRef.current;
-    dispatch({ type: "SET_CALENDAR_ERROR", error: false });
-    startTransition(async () => {
-      try {
-        const [days, endTimes, dateOverrides] = await Promise.all([
-          fetchWorkingDays(barberId),
-          fetchScheduleEndTimes(barberId),
-          fetchUpcomingOverrides(barberId),
-        ]);
-        if (calendarFetchIdRef.current !== myId) return; // superseded
-        dispatch({ type: "SET_WORKING_DAYS", workingDays: days });
-        dispatch({ type: "SET_SCHEDULE_END_TIMES", endTimes });
-        dispatch({
-          type: "SET_OVERRIDES",
-          overrides: Object.fromEntries(
-            dateOverrides.map((o) => [o.date, o.isAvailable])
-          ),
-        });
-      } catch (err) {
-        if (calendarFetchIdRef.current !== myId) return;
-        console.error("[booking-wizard] schedule fetch failed", err);
-        dispatch({ type: "SET_CALENDAR_ERROR", error: true });
-      }
-    });
-  }, []);
+  // the parallel reads failed (network blip, cold start, transient
+  // Firestore error).
+  const loadBarberAvailability = useCallback(
+    (barberId: string, serviceId: string) => {
+      const myId = ++availabilityFetchIdRef.current;
+      dispatch({ type: "SET_CALENDAR_ERROR", error: false });
+      startTransition(async () => {
+        try {
+          const bundle = await fetchAvailability(barberId, serviceId);
+          if (availabilityFetchIdRef.current !== myId) return; // superseded
+          dispatch({
+            type: "SET_AVAILABILITY",
+            bundle: {
+              workingDays: bundle.workingDays,
+              scheduleEndTimes: bundle.scheduleEndTimes,
+              overrides: bundle.overrides,
+              slotsByDate: bundle.slotsByDate,
+            },
+          });
+        } catch (err) {
+          if (availabilityFetchIdRef.current !== myId) return;
+          console.error("[booking-wizard] availability fetch failed", err);
+          dispatch({ type: "SET_CALENDAR_ERROR", error: true });
+        }
+      });
+    },
+    []
+  );
 
   // Deep-link from /cennik or /sluzby/[slug]: when the wizard mounts with
   // a pre-selected barber (single-barber service), fetch the calendar so
   // step 3 doesn't get stuck on "Načítavam rozvrh...". One-shot via ref
   // so the user can navigate back to step 1 without re-firing the fetch.
+  // If SSR already provided a hydration bundle (slotsByDate is populated),
+  // skip the fetch — the calendar is already usable on first paint.
   const calendarPrefetchedRef = useRef(false);
   useEffect(() => {
     if (calendarPrefetchedRef.current) return;
-    if (!state.barberId) return;
+    if (!state.barberId || !state.serviceId) return;
     calendarPrefetchedRef.current = true;
-    loadBarberCalendar(state.barberId);
+    if (state.slotsByDate) return; // SSR-prefetched, no client fetch needed
+    loadBarberAvailability(state.barberId, state.serviceId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Don't auto-scroll on the very first render of a plain home-page visit.
+  // The user lands on `/`, hits the logo + announcement first, and decides
+  // whether to scroll down themselves. We still auto-scroll when the wizard
+  // mounts already at a later step — the deep-link path (`?service=X` from
+  // /cennik or /sluzby/[slug]) — because the visitor came specifically to
+  // continue booking and shouldn't have to hunt for the form.
+  const hasMountedRef = useRef(false);
   useEffect(() => {
+    const isInitialRender = !hasMountedRef.current;
+    hasMountedRef.current = true;
+    if (isInitialRender && state.step === 1) return;
+
     const el = sectionRefs.current[state.step];
     if (!el) return;
 
@@ -463,6 +522,23 @@ export function BookingWizard({
     setShowTermsHint(false);
   }, [state.step]);
 
+  // Brief ring-flash on the just-completed section after an auto-advance.
+  // Without it the section silently collapses and a fast user is left
+  // wondering whether the click registered. Cleared after 700ms so the
+  // animation doesn't loop.
+  const prevStepRef = useRef(state.step);
+  const [flashStep, setFlashStep] = useState<number | null>(null);
+  useEffect(() => {
+    if (state.step > prevStepRef.current) {
+      const prev = prevStepRef.current;
+      setFlashStep(prev);
+      const t = setTimeout(() => setFlashStep(null), 700);
+      prevStepRef.current = state.step;
+      return () => clearTimeout(t);
+    }
+    prevStepRef.current = state.step;
+  }, [state.step]);
+
   // Refresh calendar/slot disabled-state once a minute. Previously a
   // single midnight setTimeout fired once per page-life; after the
   // first midnight the timer was never rescheduled and the calendar
@@ -507,44 +583,30 @@ export function BookingWizard({
       if (available.length === 1) {
         const barberId = available[0].id;
         dispatch({ type: "SELECT_BARBER", barberId });
-        loadBarberCalendar(barberId);
+        loadBarberAvailability(barberId, serviceId);
       }
     },
-    [barbers, loadBarberCalendar]
+    [barbers, loadBarberAvailability]
   );
 
   const handleSelectBarber = useCallback(
     (barberId: string) => {
+      if (!state.serviceId) return;
       dispatch({ type: "SELECT_BARBER", barberId });
-      loadBarberCalendar(barberId);
+      loadBarberAvailability(barberId, state.serviceId);
     },
-    [loadBarberCalendar]
+    [loadBarberAvailability, state.serviceId]
   );
 
   const handleSelectDate = useCallback(
     (date: Date | undefined) => {
-      if (!date || !state.barberId || !state.serviceId) return;
+      if (!date) return;
       const dateStr = format(date, "yyyy-MM-dd");
-      const myId = ++slotsFetchIdRef.current;
+      // Slots are already in state.slotsByDate from the bulk fetch on
+      // barber-select (or the SSR seed). No follow-up server call.
       dispatch({ type: "SELECT_DATE", date: dateStr });
-      dispatch({ type: "SET_LOADING_SLOTS", loading: true });
-      startTransition(async () => {
-        try {
-          const slots = await fetchSlots(
-            state.barberId!,
-            state.serviceId!,
-            dateStr
-          );
-          if (slotsFetchIdRef.current !== myId) return; // superseded
-          dispatch({ type: "SET_SLOTS", slots });
-        } catch (err) {
-          if (slotsFetchIdRef.current !== myId) return;
-          console.error("[booking-wizard] slot fetch failed", err);
-          dispatch({ type: "SET_SLOTS", slots: [] });
-        }
-      });
     },
-    [state.barberId, state.serviceId]
+    []
   );
 
   const handleSelectTime = useCallback((time: string) => {
@@ -624,21 +686,6 @@ export function BookingWizard({
 
     return (
       <div aria-live="polite" className="space-y-3">
-        {/* Completed progress bar */}
-        <div className="flex items-center gap-3 px-1">
-          <div className="size-11" />
-          <div className="flex flex-1 items-center gap-1.5">
-            {Array.from({ length: TOTAL_STEPS }, (_, i) => (
-              <div key={i} className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-                <div className="absolute inset-0 rounded-full bg-primary" />
-              </div>
-            ))}
-          </div>
-          <span className="text-[13px] tabular-nums text-muted-foreground">
-            {TOTAL_STEPS}/{TOTAL_STEPS}
-          </span>
-        </div>
-
         <div className="mx-auto max-w-md py-4 text-center">
           <div className="rounded-2xl border border-border/60 bg-card p-8">
             <div className="mx-auto flex size-20 items-center justify-center rounded-full bg-green-500/15">
@@ -827,51 +874,21 @@ export function BookingWizard({
           pointerEvents: "none",
         }}
       />
-      {/* Progress indicator */}
-      <div className="flex items-center gap-3 px-1">
-        <button
-          type="button"
-          onClick={() => handleEdit(state.step - 1)}
-          disabled={state.step <= 1}
-          className={cn(
-            "flex size-11 items-center justify-center rounded-lg transition-colors active:scale-95",
-            state.step > 1
-              ? "text-muted-foreground hover:bg-muted hover:text-foreground"
-              : "pointer-events-none opacity-0"
-          )}
-          aria-label="Späť"
-        >
-          <ChevronLeftIcon className="size-6" />
-        </button>
-        <div
-          className="flex flex-1 items-center gap-1.5"
-          role="progressbar"
-          aria-valuenow={state.step}
-          aria-valuemin={1}
-          aria-valuemax={TOTAL_STEPS}
-          aria-label={`Krok ${state.step} z ${TOTAL_STEPS}`}
-        >
-          {Array.from({ length: TOTAL_STEPS }, (_, i) => {
-            const filled = i + 1 <= state.step;
-            return (
-              <div
-                key={i}
-                className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-muted"
-              >
-                <div
-                  className={cn(
-                    "absolute inset-0 rounded-full bg-primary transition-all duration-500",
-                    filled ? "w-full" : "w-0"
-                  )}
-                />
-              </div>
-            );
-          })}
-        </div>
-        <span className="text-[13px] tabular-nums text-muted-foreground">
-          {state.step}/{TOTAL_STEPS}
-        </span>
-      </div>
+      {/* Progress is now communicated by the vertical stepper rail inside
+          each SectionWrapper (numbered circles + connector lines), so the
+          previous horizontal progress bar + back chevron are removed. The
+          back-button affordance is retained via clicking on any completed
+          section's header (its built-in Edit/pencil action). */}
+      <span
+        role="progressbar"
+        aria-valuenow={state.step}
+        aria-valuemin={1}
+        aria-valuemax={TOTAL_STEPS}
+        aria-label={`Krok ${state.step} z ${TOTAL_STEPS}`}
+        className="sr-only"
+      >
+        {STEP_LABELS[state.step]}
+      </span>
 
       {/* 1 — Služba */}
       <SectionWrapper
@@ -880,6 +897,8 @@ export function BookingWizard({
         title="Služba"
         isActive={state.step === 1}
         isCompleted={state.step > 1}
+        hasNext={state.step > 1}
+        isFlashing={flashStep === 1}
         completedSummary={
           selectedService
             ? `${selectedService.name} — ${parseFloat(effectivePrice ?? selectedService.price).toFixed(0)} €`
@@ -913,6 +932,8 @@ export function BookingWizard({
         title="Barber"
         isActive={state.step === 2}
         isCompleted={state.step > 2}
+        hasNext={state.step > 2}
+        isFlashing={flashStep === 2}
         completedSummary={
           selectedBarber
             ? `${selectedBarber.firstName} ${selectedBarber.lastName}`
@@ -946,6 +967,8 @@ export function BookingWizard({
         title="Dátum"
         isActive={state.step === 3}
         isCompleted={state.step > 3}
+        hasNext={state.step > 3}
+        isFlashing={flashStep === 3}
         completedSummary={
           state.date
             ? format(parseISO(state.date), "EEEE, d. MMMM", { locale: sk })
@@ -969,8 +992,12 @@ export function BookingWizard({
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => state.barberId && loadBarberCalendar(state.barberId)}
-              disabled={!state.barberId}
+              onClick={() =>
+                state.barberId &&
+                state.serviceId &&
+                loadBarberAvailability(state.barberId, state.serviceId)
+              }
+              disabled={!state.barberId || !state.serviceId}
             >
               Skúsiť znova načítať rozvrh
             </Button>
@@ -981,17 +1008,22 @@ export function BookingWizard({
             <span>Načítavam rozvrh...</span>
           </div>
         ) : (
-          <div className="booking-calendar">
-            <Calendar
-              mode="single"
-              locale={sk}
-              selected={state.date ? parseISO(state.date) : undefined}
-              onSelect={handleSelectDate}
-              disabled={calendarDisabledMatcher}
-              startMonth={todayStart}
-              endMonth={calendarToMonth}
-            />
-          </div>
+          <>
+            <div className="booking-calendar">
+              <Calendar
+                mode="single"
+                locale={sk}
+                selected={state.date ? parseISO(state.date) : undefined}
+                onSelect={handleSelectDate}
+                disabled={calendarDisabledMatcher}
+                startMonth={todayStart}
+                endMonth={calendarToMonth}
+              />
+            </div>
+            <p className="mt-2 text-center text-[12px] text-muted-foreground">
+              Sivé dni nie sú dostupné — barber má voľno alebo sú mimo rezervačného obdobia.
+            </p>
+          </>
         )}
       </SectionWrapper>
 
@@ -1002,17 +1034,14 @@ export function BookingWizard({
         title="Čas"
         isActive={state.step === 4}
         isCompleted={state.step > 4}
+        hasNext={state.step > 4}
+        isFlashing={flashStep === 4}
         completedSummary={state.time ?? undefined}
         onEdit={() => handleEdit(4)}
       >
-        {state.loadingSlots ? (
-          <div role="status" aria-live="polite" className="flex items-center justify-center gap-2 py-10 text-[15px] text-muted-foreground">
-            <Loader2Icon className="size-5 animate-spin text-primary" />
-            <span>Načítavam voľné termíny...</span>
-          </div>
-        ) : state.slots ? (
+        {state.date && state.slotsByDate ? (
           <TimeSlots
-            slots={state.slots}
+            slots={state.slotsByDate[state.date] ?? []}
             selectedTime={state.time}
             onSelect={handleSelectTime}
             onChangeDate={() => handleEdit(3)}
@@ -1027,6 +1056,8 @@ export function BookingWizard({
         title="Kontaktné údaje"
         isActive={state.step === 5}
         isCompleted={state.step > 5}
+        hasNext={state.step > 5}
+        isFlashing={flashStep === 5}
         completedSummary={
           state.contact
             ? `${state.contact.firstName} ${state.contact.lastName}`
@@ -1072,11 +1103,12 @@ export function BookingWizard({
               contactEmail={state.contact?.email || undefined}
             />
 
-            {/* Terms checkbox — visually emphasised so users notice the
-                consent gate before tapping the disabled submit button. */}
+            {/* Terms checkbox — visually emphasised AND placed directly
+                above the submit button so users tie the consent gate to
+                the action it gates. mt-3 (was mt-5) closes the gap. */}
             <label
               className={cn(
-                "mt-5 flex cursor-pointer items-start gap-3 rounded-xl border-2 p-4 transition-colors",
+                "mt-4 flex cursor-pointer items-start gap-3 rounded-xl border-2 p-3.5 transition-colors",
                 termsAccepted
                   ? "border-primary/50 bg-primary/5"
                   : "border-primary/40 bg-primary/5 ring-2 ring-primary/15",
@@ -1132,7 +1164,7 @@ export function BookingWizard({
             {errorBlock}
 
             <Button
-              className="mt-5 h-12 w-full text-base font-semibold"
+              className="mt-3 h-12 w-full text-base font-semibold"
               size="lg"
               disabled={state.submitting || isPending || !termsAccepted}
               onClick={handleSubmitBooking}
@@ -1175,13 +1207,34 @@ function ServiceCardWizard({
   onClick,
 }: ServiceCardWizardProps) {
   const priceNum = parseFloat(price);
+  const [expanded, setExpanded] = useState(false);
+
+  // Description is hidden by default — it clutters the scan-flow and at
+  // step 1 customers mostly need name, price, duration. The (i) button
+  // tucked in the bottom-right corner reveals it on demand and is
+  // intentionally outside the natural tap zone (which is the card body)
+  // so a stray tap on the card still selects the service.
+  const trimmed = description?.trim() ?? "";
+
+  // Outer is a div (not <button>) so the inner info-toggle can be a real
+  // button without nesting interactive elements. Keyboard a11y is
+  // restored by hand.
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onClick();
+    }
+  };
 
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
+      aria-pressed={isSelected}
       onClick={onClick}
+      onKeyDown={handleKeyDown}
       className={cn(
-        "flex w-full items-center gap-3 rounded-xl border p-3.5 text-left transition-all active:scale-[0.98] sm:p-4",
+        "flex w-full cursor-pointer items-start gap-3 rounded-xl border p-3.5 text-left transition-all outline-none focus-visible:ring-2 focus-visible:ring-primary/50 active:scale-[0.98] sm:p-4",
         isSelected
           ? "border-primary/60 bg-primary/10 shadow-sm"
           : "border-border/40 bg-muted/30 hover:border-border/70 hover:bg-muted/50"
@@ -1207,24 +1260,45 @@ function ServiceCardWizard({
             {priceNum.toFixed(0)} €
           </span>
         </div>
-        {description && (
-          <p className="mt-1 text-[15px] leading-snug text-muted-foreground">
-            {description}
+        <div className="mt-1.5 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1 text-[13px] text-muted-foreground">
+            <ClockIcon className="size-4" />
+            {durationMinutes} min
+          </div>
+          {trimmed && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setExpanded((v) => !v);
+              }}
+              aria-expanded={expanded}
+              aria-label={expanded ? "Skryť popis služby" : "Zobraziť popis služby"}
+              className={cn(
+                "-my-1.5 -mr-1.5 flex size-8 items-center justify-center rounded-full transition-colors active:scale-90",
+                expanded
+                  ? "bg-primary/15 text-primary"
+                  : "text-muted-foreground/60 hover:bg-muted hover:text-primary"
+              )}
+            >
+              <InfoIcon className="size-4" />
+            </button>
+          )}
+        </div>
+        {expanded && trimmed && (
+          <p className="mt-2 rounded-lg bg-background/60 p-2.5 text-[14px] leading-snug text-muted-foreground">
+            {trimmed}
           </p>
         )}
-        <div className="mt-1.5 flex items-center gap-1 text-[13px] text-muted-foreground">
-          <ClockIcon className="size-4" />
-          {durationMinutes} min
-        </div>
       </div>
 
       {/* Check */}
       {isSelected && (
-        <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary">
+        <div className="mt-1 flex size-6 shrink-0 items-center justify-center rounded-full bg-primary">
           <CheckCircle2Icon className="size-4 text-primary-foreground" />
         </div>
       )}
-    </button>
+    </div>
   );
 }
 
@@ -1293,15 +1367,12 @@ function BarberCardWizard({
         )}
       </div>
 
-      {/* Hint / Check */}
-      {isSelected ? (
+      {/* Check (only when selected — unselected state stays clean to match
+          the service card affordance, where the whole card is the tap area). */}
+      {isSelected && (
         <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary">
           <CheckCircle2Icon className="size-4 text-primary-foreground" />
         </div>
-      ) : (
-        <span className="mt-1 text-[13px] font-medium text-primary/70">
-          Klikni pre výber →
-        </span>
       )}
     </button>
   );

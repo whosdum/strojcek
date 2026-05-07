@@ -1,16 +1,25 @@
 export const revalidate = 1800;
 
 import type { Metadata } from "next";
+import { unstable_noStore as noStore } from "next/cache";
 import { getActiveServices } from "@/server/queries/services";
 import {
   getActiveBarbersWithServices,
   getShopOpeningHours,
 } from "@/server/queries/barbers";
+import {
+  getAvailabilityBundle,
+  type AvailabilityBundle,
+} from "@/server/queries/slots";
+import { getShopSettings } from "@/server/queries/settings";
 import { BookingWizard } from "@/components/booking/booking-wizard";
 import { BookingShell } from "@/components/booking/booking-shell";
 import { StructuredData } from "@/components/structured-data";
+
+const DEFAULT_BOOKING_HORIZON_WEEKS = 3;
 import Image from "next/image";
 import Link from "next/link";
+import { CalendarCheckIcon, ChevronDownIcon } from "lucide-react";
 import { ServicesSection } from "@/components/sections/services-section";
 import { ReviewsSection } from "@/components/sections/reviews-section";
 import { FaqSection, FaqJsonLd } from "@/components/sections/faq-section";
@@ -47,6 +56,40 @@ export default async function HomePage({
     ? services.find((s) => s.id === requestedServiceId)?.id ?? null
     : null;
 
+  // SSR prefetch for the deep-link path (?service=X). When the chosen
+  // service maps to exactly one barber, fetch the full availability bundle
+  // here so the wizard's calendar AND every date's slot list are populated
+  // on first paint — no client round-trip, no "Načítavam rozvrh..." spinner.
+  // noStore() opts this fetch out of ISR; the rest of the page still
+  // benefits from the file-level revalidate, but the slot map needs to be
+  // fresh because someone else may have just booked a slot.
+  let initialAvailability: AvailabilityBundle | null = null;
+  let initialAvailabilityBarberId: string | null = null;
+  if (initialServiceId) {
+    const candidates = barbers.filter((b) =>
+      b.serviceIds.includes(initialServiceId)
+    );
+    if (candidates.length === 1) {
+      noStore();
+      const barberId = candidates[0].id;
+      const horizonWeeks =
+        candidates[0].bookingHorizonWeeks ?? DEFAULT_BOOKING_HORIZON_WEEKS;
+      try {
+        const settings = await getShopSettings();
+        initialAvailability = await getAvailabilityBundle(
+          barberId,
+          initialServiceId,
+          horizonWeeks,
+          settings.slotIntervalMinutes
+        );
+        initialAvailabilityBarberId = barberId;
+      } catch (err) {
+        // Non-fatal — wizard will fall back to client fetch on mount.
+        console.error("[home-page] availability prefetch failed", err);
+      }
+    }
+  }
+
   return (
     <BookingShell>
       <StructuredData
@@ -57,7 +100,7 @@ export default async function HomePage({
           price: Number(s.price),
         }))}
       />
-      <header className="mb-6 flex flex-col items-center text-center sm:mb-8">
+      <header className="mb-5 flex flex-col items-center text-center sm:mb-6">
         <Image
           src="/logo.jpg"
           alt="Strojček — pánsky barbershop Bytča"
@@ -69,17 +112,53 @@ export default async function HomePage({
         <h1 className="mt-3 text-xl font-bold tracking-tight text-primary sm:text-2xl">
           Strojček — pánsky barbershop v Bytči
         </h1>
-        <p className="mt-1.5 text-[12px] font-medium uppercase tracking-widest text-muted-foreground">
-          Online rezervácia
-        </p>
       </header>
 
       <main>
-        <BookingWizard
-          services={serializedServices}
-          barbers={barbers}
-          initialServiceId={initialServiceId}
-        />
+        {/* Booking form is wrapped in a single bounded section so it's
+            visually obvious where the form begins and ends. The header
+            strip (announcement + chevron) is now the card's top, the
+            wizard fills the body, and the rounded bottom edge marks the
+            close — replaces the previous two-cards-stacked layout. */}
+        <section
+          aria-labelledby="rezervacia-heading"
+          className="overflow-hidden rounded-2xl border-2 border-primary/40 bg-card shadow-lg shadow-primary/5"
+        >
+          <div className="border-b border-border/40 bg-primary/[0.08] px-4 py-3.5 sm:px-5 sm:py-4">
+            <div className="flex items-center gap-3 sm:gap-3.5">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary sm:size-11">
+                <CalendarCheckIcon className="size-[18px] sm:size-5" />
+              </div>
+              <h2
+                id="rezervacia-heading"
+                className="min-w-0 flex-1 text-balance text-[14px] font-semibold leading-snug text-foreground sm:text-[15px]"
+              >
+                Rezervujte si termín online — celé to zaberie pár sekúnd.
+              </h2>
+            </div>
+            <div
+              aria-hidden="true"
+              className="mt-1.5 flex justify-center text-primary/70 sm:mt-2"
+            >
+              <ChevronDownIcon className="size-5 motion-safe:animate-bounce" />
+            </div>
+          </div>
+          <div className="p-4 sm:p-5">
+            <BookingWizard
+              services={serializedServices}
+              barbers={barbers}
+              initialServiceId={initialServiceId}
+              initialAvailability={initialAvailability}
+              initialAvailabilityBarberId={initialAvailabilityBarberId}
+            />
+          </div>
+          <div
+            aria-hidden="true"
+            className="border-t border-border/40 bg-muted/30 px-4 py-2.5 text-center text-[12px] text-muted-foreground sm:px-5"
+          >
+            Koniec rezervačného formulára
+          </div>
+        </section>
       </main>
       <noscript>
         <p className="p-8 text-center text-muted-foreground">

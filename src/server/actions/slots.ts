@@ -1,8 +1,18 @@
 "use server";
 
-import { getAvailableSlots, getWorkingDays, getScheduleEndTimes } from "@/server/queries/slots";
+import {
+  getAvailableSlots,
+  getWorkingDays,
+  getScheduleEndTimes,
+  getAvailabilityBundle,
+  type AvailabilityBundle,
+} from "@/server/queries/slots";
 import { getUpcomingOverrides } from "@/server/queries/barbers";
 import { getShopSettings } from "@/server/queries/settings";
+import { adminDb } from "@/server/lib/firebase-admin";
+import type { BarberDoc } from "@/server/types/firestore";
+
+const DEFAULT_BOOKING_HORIZON_WEEKS = 3;
 
 export async function fetchSlots(
   barberId: string,
@@ -48,4 +58,31 @@ export async function fetchUpcomingOverrides(
     const d = String(o.overrideDate.getDate()).padStart(2, "0");
     return { date: `${y}-${m}-${d}`, isAvailable: o.isAvailable };
   });
+}
+
+/**
+ * One-shot availability fetch for the booking wizard. Resolves the barber's
+ * booking horizon, then returns the calendar disabled-state inputs plus a
+ * pre-computed slot list for every date in the horizon — so a date click
+ * needs no follow-up server round-trip.
+ */
+export async function fetchAvailability(
+  barberId: string,
+  serviceId: string
+): Promise<AvailabilityBundle> {
+  const [barberSnap, settings] = await Promise.all([
+    adminDb.doc(`barbers/${barberId}`).get(),
+    getShopSettings(),
+  ]);
+  const horizonWeeks = barberSnap.exists
+    ? (barberSnap.data() as BarberDoc).bookingHorizonWeeks ??
+      DEFAULT_BOOKING_HORIZON_WEEKS
+    : DEFAULT_BOOKING_HORIZON_WEEKS;
+
+  return getAvailabilityBundle(
+    barberId,
+    serviceId,
+    horizonWeeks,
+    settings.slotIntervalMinutes
+  );
 }
