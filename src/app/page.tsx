@@ -125,15 +125,15 @@ export default async function HomePage({
           className="overflow-hidden rounded-2xl border-2 border-primary/40 bg-card shadow-lg shadow-primary/5"
         >
           <div className="border-b border-border/40 bg-primary/[0.08] px-4 py-3.5 sm:px-5 sm:py-4">
-            <div className="flex items-center gap-3 sm:gap-3.5">
+            <div className="flex items-center justify-center gap-3 sm:gap-3.5">
               <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary sm:size-11">
                 <CalendarCheckIcon className="size-[18px] sm:size-5" />
               </div>
               <h2
                 id="rezervacia-heading"
-                className="min-w-0 flex-1 text-balance text-[14px] font-semibold leading-snug text-foreground sm:text-[15px]"
+                className="text-center text-[16px] font-bold leading-snug tracking-tight text-foreground sm:text-[17px]"
               >
-                Rezervujte si termín online — celé to zaberie pár sekúnd.
+                Rezervačný formulár
               </h2>
             </div>
             <div
@@ -143,7 +143,11 @@ export default async function HomePage({
               <ChevronDownIcon className="size-5 motion-safe:animate-bounce" />
             </div>
           </div>
-          <div className="p-4 sm:p-5">
+          {/* Body padding kept minimal on mobile so the booking calendar's
+              7-day grid fits within the outer card without the last column
+              ("ne") overflowing — 12px outer + 16px section card = 28px
+              total side margin, which leaves enough room for the 7 cells. */}
+          <div className="px-3 py-4 sm:p-5">
             <BookingWizard
               services={serializedServices}
               barbers={barbers}
