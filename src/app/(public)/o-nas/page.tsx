@@ -10,6 +10,11 @@ import {
   SHOP_PHONE_E164,
 } from "@/lib/business-info";
 import { InstagramEmbed } from "@/components/instagram-embed";
+import { ReviewsSection } from "@/components/sections/reviews-section";
+import { ServicesSection } from "@/components/sections/services-section";
+import { FaqSection } from "@/components/sections/faq-section";
+import { SiteFooter } from "@/components/sections/site-footer";
+import { getShopOpeningHours } from "@/server/queries/barbers";
 
 export const revalidate = 86400;
 
@@ -194,7 +199,8 @@ function AboutJsonLd() {
   );
 }
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const openingHours = await getShopOpeningHours();
   return (
     <div className="min-h-dvh bg-background text-foreground">
       <AboutJsonLd />
@@ -418,28 +424,13 @@ export default function AboutPage() {
           </div>
         </section>
 
-        <footer className="mt-12 border-t border-border/40 pt-6 text-center text-[13px] text-muted-foreground">
-          <div className="flex items-center justify-center gap-3">
-            <Link
-              href="/vop"
-              prefetch={false}
-              className="underline-offset-2 hover:text-foreground hover:underline"
-            >
-              Obchodné podmienky
-            </Link>
-            <span className="text-border">|</span>
-            <Link
-              href="/ochrana-udajov"
-              prefetch={false}
-              className="underline-offset-2 hover:text-foreground hover:underline"
-            >
-              Ochrana osobných údajov
-            </Link>
-          </div>
-          <p className="mt-2">
-            © {new Date().getFullYear()} STROJČEK s.r.o.
-          </p>
-        </footer>
+        <ReviewsSection className="mt-12 rounded-2xl border border-border/40 bg-card/40 p-6 sm:p-8" />
+
+        <ServicesSection className="mt-8 rounded-2xl border border-border/40 bg-card/40 p-6 sm:p-8" />
+
+        <FaqSection className="mt-8 rounded-2xl border border-border/40 bg-card/40 p-6 sm:p-8" />
+
+        <SiteFooter hours={openingHours} />
       </div>
     </div>
   );
