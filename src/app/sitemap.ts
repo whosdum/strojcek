@@ -21,6 +21,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     ...serviceEntries,
     {
+      url: `${PUBLIC_SITE_URL}/cennik`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
       url: `${PUBLIC_SITE_URL}/o-nas`,
       lastModified: new Date(),
       changeFrequency: "monthly",

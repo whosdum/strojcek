@@ -20,11 +20,16 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
-export default async function HomePage() {
-  const [services, barbers, openingHours] = await Promise.all([
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ service?: string | string[] }>;
+}) {
+  const [services, barbers, openingHours, sp] = await Promise.all([
     getActiveServices(),
     getActiveBarbersWithServices(),
     getShopOpeningHours(),
+    searchParams ?? Promise.resolve(undefined),
   ]);
 
   const serializedServices = services.map((s) => ({
@@ -34,6 +39,13 @@ export default async function HomePage() {
     durationMinutes: s.durationMinutes,
     price: s.price.toString(),
   }));
+
+  const requestedServiceId = Array.isArray(sp?.service)
+    ? sp?.service[0]
+    : sp?.service;
+  const initialServiceId = requestedServiceId
+    ? services.find((s) => s.id === requestedServiceId)?.id ?? null
+    : null;
 
   return (
     <BookingShell>
@@ -63,7 +75,11 @@ export default async function HomePage() {
       </header>
 
       <main>
-        <BookingWizard services={serializedServices} barbers={barbers} />
+        <BookingWizard
+          services={serializedServices}
+          barbers={barbers}
+          initialServiceId={initialServiceId}
+        />
       </main>
       <noscript>
         <p className="p-8 text-center text-muted-foreground">
@@ -91,12 +107,18 @@ export default async function HomePage() {
           nášho barbershopu na presný čas — bez čakania v rade a s istotou, že
           vás obslúžime kedy potrebujete.
         </p>
-        <p className="mt-4 text-[14px]">
+        <p className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-[14px]">
           <Link
             href="/o-nas"
             className="font-medium text-primary underline-offset-2 hover:underline"
           >
             Viac o našom príbehu, barberovi Martinovi a tipoch →
+          </Link>
+          <Link
+            href="/cennik"
+            className="font-medium text-primary underline-offset-2 hover:underline"
+          >
+            Pozrieť cenník →
           </Link>
         </p>
       </section>

@@ -70,6 +70,7 @@ interface ServiceData {
 interface BookingWizardProps {
   services: ServiceData[];
   barbers: BarberWithServices[];
+  initialServiceId?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -131,6 +132,36 @@ const initialState: WizardState = {
   submitting: false,
   result: null,
 };
+
+// Builds the initial wizard state for a deep-link arriving with
+// ?service=<id> (from /cennik or /sluzby/[slug]). Pre-advances the
+// step so the user lands directly on barber/date selection instead
+// of seeing step 1 flash before jumping.
+function buildInitialState(
+  initialServiceId: string | null,
+  services: ServiceData[],
+  barbers: BarberWithServices[]
+): WizardState {
+  if (!initialServiceId) return initialState;
+  if (!services.some((s) => s.id === initialServiceId)) return initialState;
+
+  const available = barbers.filter((b) =>
+    b.serviceIds.includes(initialServiceId)
+  );
+  if (available.length === 1) {
+    return {
+      ...initialState,
+      step: 3,
+      serviceId: initialServiceId,
+      barberId: available[0].id,
+    };
+  }
+  return {
+    ...initialState,
+    step: 2,
+    serviceId: initialServiceId,
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Actions
@@ -295,8 +326,14 @@ function formatPhoneDisplay(prefix: string, phone: string): string {
 // Component
 // ---------------------------------------------------------------------------
 
-export function BookingWizard({ services, barbers }: BookingWizardProps) {
-  const [state, dispatch] = useReducer(reducer, initialState);
+export function BookingWizard({
+  services,
+  barbers,
+  initialServiceId = null,
+}: BookingWizardProps) {
+  const [state, dispatch] = useReducer(reducer, null, () =>
+    buildInitialState(initialServiceId, services, barbers)
+  );
   const [isPending, startTransition] = useTransition();
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showTermsHint, setShowTermsHint] = useState(false);
@@ -359,6 +396,19 @@ export function BookingWizard({ services, barbers }: BookingWizardProps) {
         dispatch({ type: "SET_CALENDAR_ERROR", error: true });
       }
     });
+  }, []);
+
+  // Deep-link from /cennik or /sluzby/[slug]: when the wizard mounts with
+  // a pre-selected barber (single-barber service), fetch the calendar so
+  // step 3 doesn't get stuck on "Načítavam rozvrh...". One-shot via ref
+  // so the user can navigate back to step 1 without re-firing the fetch.
+  const calendarPrefetchedRef = useRef(false);
+  useEffect(() => {
+    if (calendarPrefetchedRef.current) return;
+    if (!state.barberId) return;
+    calendarPrefetchedRef.current = true;
+    loadBarberCalendar(state.barberId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

@@ -17,7 +17,23 @@ export function SiteFooter({
       </section>
 
       <div className="mt-6 border-t border-border/40 pt-6 text-center text-[13px] text-muted-foreground">
-        <div className="flex items-center justify-center gap-3">
+        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5">
+          <Link
+            href="/cennik"
+            prefetch={false}
+            className="underline-offset-2 hover:text-foreground hover:underline"
+          >
+            Cenník
+          </Link>
+          <span className="text-border">|</span>
+          <Link
+            href="/o-nas"
+            prefetch={false}
+            className="underline-offset-2 hover:text-foreground hover:underline"
+          >
+            O nás
+          </Link>
+          <span className="text-border">|</span>
           <Link
             href="/vop"
             prefetch={false}
@@ -32,14 +48,6 @@ export function SiteFooter({
             className="underline-offset-2 hover:text-foreground hover:underline"
           >
             Ochrana osobných údajov
-          </Link>
-          <span className="text-border">|</span>
-          <Link
-            href="/o-nas"
-            prefetch={false}
-            className="underline-offset-2 hover:text-foreground hover:underline"
-          >
-            O nás
           </Link>
         </div>
         <p className="mt-2">

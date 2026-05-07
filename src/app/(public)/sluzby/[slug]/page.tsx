@@ -205,6 +205,14 @@ export default async function ServicePage({
           >
             Rezervovať {service.name.toLowerCase()}
           </Link>
+          <p className="mt-3 text-[12px] text-muted-foreground">
+            <Link
+              href="/cennik"
+              className="font-medium text-primary underline-offset-2 hover:underline"
+            >
+              Pozrieť celý cenník →
+            </Link>
+          </p>
         </section>
 
         {related.length > 0 && (
@@ -232,7 +240,23 @@ export default async function ServicePage({
         )}
 
         <footer className="mt-12 border-t border-border/40 pt-6 text-center text-[13px] text-muted-foreground">
-          <div className="flex items-center justify-center gap-3">
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5">
+            <Link
+              href="/cennik"
+              prefetch={false}
+              className="underline-offset-2 hover:text-foreground hover:underline"
+            >
+              Cenník
+            </Link>
+            <span className="text-border">|</span>
+            <Link
+              href="/o-nas"
+              prefetch={false}
+              className="underline-offset-2 hover:text-foreground hover:underline"
+            >
+              O nás
+            </Link>
+            <span className="text-border">|</span>
             <Link
               href="/vop"
               prefetch={false}
