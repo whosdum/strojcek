@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { sk } from "date-fns/locale";
@@ -9,6 +10,10 @@ import { CANCELLABLE_STATUSES, MIN_CANCEL_HOURS, TIMEZONE } from "@/lib/constant
 import { XCircleIcon, AlertTriangleIcon, CalendarXIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { addHours, isBefore } from "date-fns";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false, nocache: true },
+};
 
 function CancelPageFrame({ children }: { children: React.ReactNode }) {
   return (

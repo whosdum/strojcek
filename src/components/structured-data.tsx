@@ -151,6 +151,30 @@ export function StructuredData({ openingHours, services }: StructuredDataProps) 
     sameAs: SHOP_SOCIAL_PROFILES,
   };
 
+  // WebSite entity ties the brand to a stable @id Google can reference
+  // across the Knowledge Graph. potentialAction wires a SearchAction at
+  // /?service= so SERP *may* render a sitelinks search box for the brand
+  // query. Activation is rare and at Google's discretion — the entity
+  // linkage is the durable win regardless.
+  const websiteLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": `${PUBLIC_SITE_URL}/#website`,
+    url: PUBLIC_SITE_URL,
+    name: "Strojček Barbershop",
+    alternateName: SHOP_NAME,
+    inLanguage: "sk-SK",
+    publisher: { "@id": `${PUBLIC_SITE_URL}/#organization` },
+    potentialAction: {
+      "@type": "SearchAction",
+      target: {
+        "@type": "EntryPoint",
+        urlTemplate: `${PUBLIC_SITE_URL}/?service={search_term_string}`,
+      },
+      "query-input": "required name=search_term_string",
+    },
+  };
+
   return (
     <>
       <script
@@ -160,6 +184,10 @@ export function StructuredData({ openingHours, services }: StructuredDataProps) 
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteLd) }}
       />
     </>
   );

@@ -1,8 +1,13 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { PUBLIC_SITE_URL } from "@/lib/business-info";
 import "./globals.css";
+
+export const viewport: Viewport = {
+  themeColor: "#dd5a3b",
+  colorScheme: "dark",
+};
 
 const jakarta = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
@@ -55,21 +60,12 @@ export const metadata: Metadata = {
     title: "Strojček Barbershop Bytča — pánsky strih, fade, úprava brady",
     description:
       "Pánsky barber shop v Bytči — Strojček. Klasický pánsky strih, fade strih, úprava brady aj hot towel rituál. Rezervujte si termín online za 60 sekúnd.",
-    images: [
-      {
-        url: "/logo.jpg",
-        width: 800,
-        height: 600,
-        alt: "Strojček — barber shop Bytča",
-      },
-    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Strojček Barbershop Bytča — pánsky strih, fade, úprava brady",
     description:
       "Pánsky barber shop v Bytči — Strojček. Klasický pánsky strih, fade strih, úprava brady aj hot towel rituál. Rezervujte si termín online za 60 sekúnd.",
-    images: ["/logo.jpg"],
   },
   robots: {
     index: true,

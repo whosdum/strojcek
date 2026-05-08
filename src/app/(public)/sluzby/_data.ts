@@ -8,7 +8,13 @@ export interface ServiceContent {
   whyUs: string;
   durationLabel: string;
   relatedSlugs: string[];
+  lastUpdated: string;
 }
+
+// Bump only when service content (intro/howItWorks/whyUs) changes.
+// Used by sitemap.xml (lastmod) + JSON-LD dateModified — bumping on
+// every build trains Google to ignore lastmod entirely.
+const CONTENT_REV = "2026-05-08";
 
 export const SERVICES: ServiceContent[] = [
   {
@@ -34,6 +40,7 @@ export const SERVICES: ServiceContent[] = [
       "Robíme to, čo si zákazníci pochvaľujú — presné prechody, čisté kontúry a styling, ktorý vydrží. Pracujeme s profesionálnymi strojčekmi a kvalitnou pánskou kozmetikou.",
     durationLabel: "30–45 minút",
     relatedSlugs: ["fade-strih", "strojcek-ritual"],
+    lastUpdated: CONTENT_REV,
   },
   {
     slug: "fade-strih",
@@ -59,6 +66,7 @@ export const SERVICES: ServiceContent[] = [
       "Fade je technika, ktorá sa nedá odflákať — buď je perfektný, alebo viditeľne zlý. Pracujeme s ním každý deň a vieme, že rozdiel je v milimetri.",
     durationLabel: "45–60 minút",
     relatedSlugs: ["pansky-strih", "strojcek-ritual"],
+    lastUpdated: CONTENT_REV,
   },
   {
     slug: "uprava-brady",
@@ -83,6 +91,7 @@ export const SERVICES: ServiceContent[] = [
       "Britva je o detaile — milimetre rozhodujú. Neupravená brada vyzerá zanedbane, skutočne dobre tvarovaná dáva tvári hrany a charakter.",
     durationLabel: "30–45 minút",
     relatedSlugs: ["hot-towel-ritual", "strojcek-ritual"],
+    lastUpdated: CONTENT_REV,
   },
   {
     slug: "hot-towel-ritual",
@@ -108,6 +117,7 @@ export const SERVICES: ServiceContent[] = [
       "Túto procedúru nedokáže nahradiť strojček ani jednorazová britva. Klasická straight razor v rukách barbera je niečo úplne iné.",
     durationLabel: "30–45 minút",
     relatedSlugs: ["uprava-brady", "strojcek-ritual"],
+    lastUpdated: CONTENT_REV,
   },
   {
     slug: "strojcek-ritual",
@@ -132,6 +142,7 @@ export const SERVICES: ServiceContent[] = [
       "Strojček rituál je ako pol hodiny dovolenky. Vychutnajte si ten čas — telefón položte na stôl.",
     durationLabel: "približne 75 minút",
     relatedSlugs: ["pansky-strih", "uprava-brady"],
+    lastUpdated: CONTENT_REV,
   },
 ];
 
@@ -140,3 +151,9 @@ export function getServiceBySlug(slug: string): ServiceContent | undefined {
 }
 
 export const ALL_SERVICE_SLUGS: readonly string[] = SERVICES.map((s) => s.slug);
+
+// Date the static content of `/`, `/cennik`, `/o-nas` was last meaningfully
+// updated. Drives sitemap.xml lastmod + AboutPage JSON-LD dateModified.
+// Bump manually when content changes — never `new Date()` (Google starts
+// ignoring lastmod if every URL ticks on every build).
+export const SITE_CONTENT_LAST_UPDATED = "2026-05-08";

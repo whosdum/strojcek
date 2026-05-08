@@ -213,11 +213,37 @@ export default async function HomePage({
           Strojček je pánsky barber shop v Bytči — pánsky kaderník v okolí
           Žiliny pre všetkých, ktorí chcú profesionálny strih bez kompromisov.
           Chodia k nám zákazníci z Bytče, Predmiera, Hričovského Podhradia,
-          Súľova-Hradnej aj z Považskej Bystrice. Robíme klasický pánsky strih,
-          fade strih, úpravu brady aj úpravu fúzov, hot towel rituál a
-          komplexnú starostlivosť o vlasy. Vďaka online rezervácii prídete do
-          nášho barbershopu na presný čas — bez čakania v rade a s istotou, že
-          vás obslúžime kedy potrebujete.
+          Súľova-Hradnej aj z Považskej Bystrice. Robíme{" "}
+          <Link
+            href="/sluzby/pansky-strih"
+            className="font-medium text-foreground underline-offset-2 hover:text-primary hover:underline"
+          >
+            klasický pánsky strih
+          </Link>
+          ,{" "}
+          <Link
+            href="/sluzby/fade-strih"
+            className="font-medium text-foreground underline-offset-2 hover:text-primary hover:underline"
+          >
+            fade strih
+          </Link>
+          ,{" "}
+          <Link
+            href="/sluzby/uprava-brady"
+            className="font-medium text-foreground underline-offset-2 hover:text-primary hover:underline"
+          >
+            úpravu brady aj úpravu fúzov
+          </Link>
+          ,{" "}
+          <Link
+            href="/sluzby/hot-towel-ritual"
+            className="font-medium text-foreground underline-offset-2 hover:text-primary hover:underline"
+          >
+            hot towel rituál
+          </Link>{" "}
+          a komplexnú starostlivosť o vlasy. Vďaka online rezervácii prídete
+          do nášho barbershopu na presný čas — bez čakania v rade a s istotou,
+          že vás obslúžime kedy potrebujete.
         </p>
         <p className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-[14px]">
           <Link

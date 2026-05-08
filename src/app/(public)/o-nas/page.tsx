@@ -15,6 +15,7 @@ import { ServicesSection } from "@/components/sections/services-section";
 import { FaqSection } from "@/components/sections/faq-section";
 import { SiteFooter } from "@/components/sections/site-footer";
 import { getShopOpeningHours } from "@/server/queries/barbers";
+import { SITE_CONTENT_LAST_UPDATED } from "../sluzby/_data";
 
 export const revalidate = 86400;
 
@@ -129,6 +130,8 @@ function AboutJsonLd() {
     name: PAGE_TITLE,
     description: PAGE_DESCRIPTION,
     url: `${PUBLIC_SITE_URL}/o-nas`,
+    inLanguage: "sk-SK",
+    dateModified: SITE_CONTENT_LAST_UPDATED,
     mainEntity: {
       "@type": "BarberShop",
       "@id": `${PUBLIC_SITE_URL}/#localbusiness`,
