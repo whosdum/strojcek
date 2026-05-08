@@ -599,6 +599,13 @@ export function BookingWizard({
     [loadBarberAvailability, state.serviceId]
   );
 
+  // Ref + signal so an effect can scroll the slot grid into view AFTER it
+  // has rendered (the grid only mounts when state.date is set, so the ref
+  // is null at the time of the click handler — we have to wait one render).
+  const slotGridRef = useRef<HTMLDivElement | null>(null);
+  const slotScrollTokenRef = useRef(0);
+  const [slotScrollToken, setSlotScrollToken] = useState(0);
+
   const handleSelectDate = useCallback(
     (date: Date | undefined) => {
       if (!date) return;
@@ -606,9 +613,39 @@ export function BookingWizard({
       // Slots are already in state.slotsByDate from the bulk fetch on
       // barber-select (or the SSR seed). No follow-up server call.
       dispatch({ type: "SELECT_DATE", date: dateStr });
+      // Tick the token so the post-render effect re-fires even when the
+      // user picks the same date twice in a row (state.date wouldn't
+      // change in that case, but the user still expects feedback).
+      slotScrollTokenRef.current += 1;
+      setSlotScrollToken(slotScrollTokenRef.current);
     },
     []
   );
+
+  // After the slot grid mounts (or re-mounts on date change), nudge the
+  // viewport so the grid sits ~30% from the top — calendar stays visible
+  // above, slots are clearly the "next thing" without abruptly snapping.
+  useEffect(() => {
+    if (!slotScrollToken) return;
+    const el = slotGridRef.current;
+    if (!el) return;
+    const timer = setTimeout(() => {
+      const rect = el.getBoundingClientRect();
+      const desiredTop = window.innerHeight * 0.25;
+      // Skip only if the grid is already comfortably above the fold —
+      // anything below ~40% of the viewport is far enough to feel
+      // disconnected after a click, so we nudge up.
+      if (rect.top >= 0 && rect.top < window.innerHeight * 0.4) return;
+      const prefersReducedMotion = window.matchMedia(
+        "(prefers-reduced-motion: reduce)"
+      ).matches;
+      window.scrollTo({
+        top: window.scrollY + rect.top - desiredTop,
+        behavior: prefersReducedMotion ? "auto" : "smooth",
+      });
+    }, 80);
+    return () => clearTimeout(timer);
+  }, [slotScrollToken]);
 
   const handleSelectTime = useCallback((time: string) => {
     dispatch({ type: "SELECT_TIME", time });
@@ -895,7 +932,7 @@ export function BookingWizard({
       <SectionWrapper
         ref={setSectionRef(1)}
         stepNumber={1}
-        title="Služba"
+        title="Vyberte si službu"
         isActive={state.step === 1}
         isCompleted={state.step > 1}
         hasNext={state.step > 1}
@@ -930,7 +967,7 @@ export function BookingWizard({
       <SectionWrapper
         ref={setSectionRef(2)}
         stepNumber={2}
-        title="Barber"
+        title="Vyberte barbera"
         isActive={state.step === 2}
         isCompleted={state.step > 2}
         hasNext={state.step > 2}
@@ -972,7 +1009,7 @@ export function BookingWizard({
       <SectionWrapper
         ref={setSectionRef(3)}
         stepNumber={3}
-        title="Dátum a čas"
+        title="Vyberte termín"
         isActive={state.step === 3}
         isCompleted={state.step > 3}
         hasNext={state.step > 3}
@@ -1031,14 +1068,17 @@ export function BookingWizard({
               />
             </div>
             <p className="mt-2 text-center text-[12px] text-muted-foreground">
-              Sivé dni nie sú dostupné — barber má voľno alebo sú mimo rezervačného obdobia.
+              Sivé dni nie sú dostupné.
             </p>
 
             {/* Slot grid appears inline once a date is picked. Visually
                 separated by a divider + small heading so it reads as a
                 sub-step rather than a sibling step. */}
             {state.date && state.slotsByDate && (
-              <div className="mt-5 border-t border-border/40 pt-4">
+              <div
+                ref={slotGridRef}
+                className="mt-5 scroll-mt-24 border-t border-border/40 pt-4"
+              >
                 <p className="mb-3 text-center text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Voľné termíny —{" "}
                   <span className="text-foreground">
@@ -1069,7 +1109,7 @@ export function BookingWizard({
       <SectionWrapper
         ref={setSectionRef(4)}
         stepNumber={4}
-        title="Kontaktné údaje"
+        title="Vyplňte kontakt"
         isActive={state.step === 4}
         isCompleted={state.step > 4}
         hasNext={state.step > 4}
@@ -1271,11 +1311,32 @@ function ServiceCardWizard({
       {/* Content */}
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline justify-between gap-2">
-          <h3 className="text-[17px] font-semibold leading-tight text-foreground">{name}</h3>
+          <h3 className="text-[17px] font-semibold leading-tight text-foreground">
+            {/* Service names with " – ..." trailers (e.g. "Strojček Rituál
+                – kompletný strih, brada, vosk a hot towel") render as a
+                short title + smaller subtitle. Otherwise the long name
+                wraps into two heavy lines and the price column gets
+                squeezed against it. */}
+            {(() => {
+              const sepIdx = name.search(/ [–—] /);
+              if (sepIdx === -1) return name;
+              return name.slice(0, sepIdx);
+            })()}
+          </h3>
           <span className="shrink-0 text-[15px] font-bold text-primary tabular-nums">
             {priceNum.toFixed(0)} €
           </span>
         </div>
+        {(() => {
+          const sepIdx = name.search(/ [–—] /);
+          if (sepIdx === -1) return null;
+          const subtitle = name.slice(sepIdx + 3).trim();
+          return (
+            <p className="mt-0.5 text-[13px] leading-snug text-muted-foreground">
+              {subtitle}
+            </p>
+          );
+        })()}
         <div className="mt-1.5 flex items-center justify-between gap-2">
           <div className="flex items-center gap-1 text-[13px] text-muted-foreground">
             <ClockIcon className="size-4" />

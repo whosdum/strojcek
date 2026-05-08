@@ -19,7 +19,8 @@ import { StructuredData } from "@/components/structured-data";
 const DEFAULT_BOOKING_HORIZON_WEEKS = 3;
 import Image from "next/image";
 import Link from "next/link";
-import { CalendarCheckIcon, ChevronDownIcon } from "lucide-react";
+import { PhoneIcon } from "lucide-react";
+import { SHOP_PHONE_E164, SHOP_PHONE_DISPLAY } from "@/lib/business-info";
 import { ServicesSection } from "@/components/sections/services-section";
 import { ReviewsSection } from "@/components/sections/reviews-section";
 import { FaqSection, FaqJsonLd } from "@/components/sections/faq-section";
@@ -124,24 +125,16 @@ export default async function HomePage({
           aria-labelledby="rezervacia-heading"
           className="overflow-hidden rounded-2xl border-2 border-primary/40 bg-card shadow-lg shadow-primary/5"
         >
-          <div className="border-b border-border/40 bg-primary/[0.08] px-4 py-3.5 sm:px-5 sm:py-4">
-            <div className="flex items-center justify-center gap-3 sm:gap-3.5">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary sm:size-11">
-                <CalendarCheckIcon className="size-[18px] sm:size-5" />
-              </div>
-              <h2
-                id="rezervacia-heading"
-                className="text-center text-[16px] font-bold leading-snug tracking-tight text-foreground sm:text-[17px]"
-              >
-                Rezervačný formulár
-              </h2>
-            </div>
-            <div
-              aria-hidden="true"
-              className="mt-1.5 flex justify-center text-primary/70 sm:mt-2"
+          <div className="border-b border-border/40 bg-primary/[0.08] px-4 py-3.5 text-center sm:px-5 sm:py-4">
+            <h2
+              id="rezervacia-heading"
+              className="text-[16px] font-bold leading-snug tracking-tight text-foreground sm:text-[17px]"
             >
-              <ChevronDownIcon className="size-5 motion-safe:animate-bounce" />
-            </div>
+              Objednajte sa online
+            </h2>
+            <p className="mt-0.5 text-[12px] font-medium text-muted-foreground sm:text-[13px]">
+              Len za 60 sekúnd
+            </p>
           </div>
           {/* Body padding kept minimal on mobile so the booking calendar's
               7-day grid fits within the outer card without the last column
@@ -163,6 +156,28 @@ export default async function HomePage({
             Koniec rezervačného formulára
           </div>
         </section>
+
+        {/* Phone fallback CTA — placed directly below the booking form so
+            users who'd rather call (often older customers, or anyone
+            unsure about the online flow) don't have to scroll all the way
+            to the footer to find the number. Margin is generous so it
+            visually detaches from the form above (avoiding "is this part
+            of the form?" confusion). */}
+        <aside
+          aria-label="Telefonická rezervácia"
+          className="mt-8 flex flex-col items-center gap-2.5 rounded-2xl border border-border/50 bg-card/60 px-4 py-4 text-center sm:mt-10 sm:flex-row sm:justify-center sm:gap-4 sm:py-3.5"
+        >
+          <p className="text-[14px] text-muted-foreground sm:text-[15px]">
+            Radšej zavoláte? Sme tu pre vás.
+          </p>
+          <a
+            href={`tel:${SHOP_PHONE_E164}`}
+            className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-[15px] font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 active:scale-[0.98]"
+          >
+            <PhoneIcon className="size-4" />
+            {SHOP_PHONE_DISPLAY}
+          </a>
+        </aside>
       </main>
       <noscript>
         <p className="p-8 text-center text-muted-foreground">
@@ -172,7 +187,7 @@ export default async function HomePage({
 
       <section
         aria-labelledby="o-barbershope"
-        className="mt-12 rounded-2xl border border-border/40 bg-card/40 p-6 sm:p-8"
+        className="mt-20 rounded-2xl border border-border/40 bg-card/40 p-6 sm:mt-24 sm:p-8"
       >
         <h2
           id="o-barbershope"

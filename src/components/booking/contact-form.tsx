@@ -296,7 +296,7 @@ export function ContactForm(props: ContactFormProps) {
             Pokračovať...
           </>
         ) : (
-          "Pokračovať na potvrdenie"
+          "Skontrolovať a odoslať"
         )}
       </Button>
     </form>

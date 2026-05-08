@@ -1,7 +1,7 @@
 export const FAQ: Array<{ q: string; a: string }> = [
   {
     q: "Ako sa objednám na termín?",
-    a: "Rezerváciu spravíte priamo na tejto stránke v 6 krokoch — vyberiete službu, barbera, dátum, voľný čas, vyplníte kontakt a potvrdíte. Potvrdenie príde emailom a deň pred termínom dostanete pripomienku.",
+    a: "Rezerváciu spravíte priamo na tejto stránke v 5 krokoch — vyberiete službu, barbera, dátum a čas, vyplníte kontakt a potvrdíte. Potvrdenie príde emailom a deň pred termínom dostanete pripomienku.",
   },
   {
     q: "Koľko trvá pánsky strih?",
