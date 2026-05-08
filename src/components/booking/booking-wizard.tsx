@@ -537,17 +537,6 @@ export function BookingWizard({
     };
   }, [state.step]);
 
-  // Reset terms checkbox when service/barber changes (price may differ).
-  // react-hooks/set-state-in-effect flags any sync setState in an effect.
-  // Here the resets don't cascade (the deps don't include the states
-  // being set), so the warning is a false positive.
-  useEffect(() => {
-    /* eslint-disable react-hooks/set-state-in-effect */
-    setTermsAccepted(false);
-    setShowTermsHint(false);
-    /* eslint-enable react-hooks/set-state-in-effect */
-  }, [state.serviceId, state.barberId]);
-
   // Show terms hint after a short delay once user reaches the confirm step.
   useEffect(() => {
     if (state.step === TOTAL_STEPS) {
