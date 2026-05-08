@@ -99,6 +99,15 @@ interface WizardState {
   date: string | null;
   time: string | null;
   contact: ContactData | null;
+  /**
+   * Auto-saved partial contact form values. Populated whenever the
+   * ContactForm unmounts (e.g. user goes back to change the date), so when
+   * the user returns to step 4 the inputs are pre-filled with whatever
+   * they had typed — even if they hadn't yet pressed "Skontrolovať a
+   * odoslať" (which is the only thing that sets `contact`). Cleared on
+   * page refresh along with the rest of the in-memory wizard state.
+   */
+  contactDraft: ContactData | null;
   workingDays: number[] | null;
   scheduleEndTimes: Record<number, string> | null;
   /**
@@ -133,6 +142,7 @@ const initialState: WizardState = {
   date: null,
   time: null,
   contact: null,
+  contactDraft: null,
   workingDays: null,
   scheduleEndTimes: null,
   overrides: null,
@@ -196,6 +206,7 @@ type WizardAction =
   | { type: "SELECT_DATE"; date: string }
   | { type: "SELECT_TIME"; time: string }
   | { type: "SET_CONTACT"; contact: ContactData }
+  | { type: "SET_CONTACT_DRAFT"; contact: ContactData }
   | {
       type: "SET_AVAILABILITY";
       bundle: {
@@ -257,8 +268,18 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
       // Date+time are now a single step (3 = "Dátum a čas"), so picking a
       // date doesn't advance — it just reveals the slot grid below the
       // calendar. The user advances by picking a slot.
+      // Same-date click is a no-op so we don't strobe the slot grid or
+      // bounce the user back to step 3 unnecessarily.
+      if (state.date === action.date) return state;
+      // The calendar stays expanded once the user has reached step 3, so
+      // a date change can come from step 4 (Kontakt) or step 5
+      // (Potvrdenie) too. In those cases time is no longer valid, so
+      // reset back to step 3 and force the user to pick a fresh slot —
+      // otherwise they'd land on Potvrdenie with `state.time === null`
+      // and an empty summary.
       return {
         ...state,
+        step: state.step > 3 ? 3 : state.step,
         date: action.date,
         time: null,
         result: null,
@@ -277,7 +298,16 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
         ...state,
         step: 5,
         contact: action.contact,
+        contactDraft: action.contact,
         result: null,
+      };
+
+    case "SET_CONTACT_DRAFT":
+      // Save-on-unmount path. Doesn't change step or set the validated
+      // `contact`. Used only to repopulate the inputs on remount.
+      return {
+        ...state,
+        contactDraft: action.contact,
       };
 
     case "SET_AVAILABILITY":
@@ -467,10 +497,17 @@ export function BookingWizard({
   // /cennik or /sluzby/[slug]) — because the visitor came specifically to
   // continue booking and shouldn't have to hunt for the form.
   const hasMountedRef = useRef(false);
+  const prevScrollStepRef = useRef(state.step);
   useEffect(() => {
     const isInitialRender = !hasMountedRef.current;
+    const prevStep = prevScrollStepRef.current;
     hasMountedRef.current = true;
+    prevScrollStepRef.current = state.step;
     if (isInitialRender && state.step === 1) return;
+    // Backward transitions (e.g. user changes date in the still-expanded
+    // calendar at step 4 — reducer pushes them back to 3) are skipped so
+    // the page doesn't jolt up to a section the user is already looking at.
+    if (prevStep > state.step) return;
 
     const el = sectionRefs.current[state.step];
     if (!el) return;
@@ -653,6 +690,14 @@ export function BookingWizard({
 
   const handleContactSubmit = useCallback((data: ContactData) => {
     dispatch({ type: "SET_CONTACT", contact: data });
+  }, []);
+
+  // Persists whatever the user has typed into the contact form even when
+  // they navigate back to change date/time. ContactForm fires this on
+  // unmount with its current values; we keep them under `contactDraft`
+  // and re-feed them as defaultValues when the form remounts.
+  const handleContactDraftChange = useCallback((data: ContactData) => {
+    dispatch({ type: "SET_CONTACT_DRAFT", contact: data });
   }, []);
 
   // Synchronous lock against double-submit. React state updates are
@@ -1013,6 +1058,12 @@ export function BookingWizard({
         isActive={state.step === 3}
         isCompleted={state.step > 3}
         hasNext={state.step > 3}
+        // Calendar stays visible only while editing contact (step 4) so
+        // the user can re-pick a date without an extra "edit" click.
+        // Once they reach Potvrdenie (step 5) the calendar collapses to
+        // a compact "completed" header — keeps the summary screen
+        // focused and shorter.
+        keepBodyVisible={state.step === 4}
         isFlashing={flashStep === 3}
         completedSummary={
           state.date && state.time
@@ -1123,7 +1174,8 @@ export function BookingWizard({
       >
         <ContactForm
           onSubmit={handleContactSubmit}
-          defaultValues={state.contact ?? undefined}
+          onDraftChange={handleContactDraftChange}
+          defaultValues={state.contact ?? state.contactDraft ?? undefined}
           serverError={
             state.result &&
             !state.result.success &&
@@ -1166,7 +1218,7 @@ export function BookingWizard({
               className={cn(
                 "mt-4 flex cursor-pointer items-start gap-3 rounded-xl border-2 p-3.5 transition-colors",
                 termsAccepted
-                  ? "border-primary/50 bg-primary/5"
+                  ? "border-emerald-500/60 bg-emerald-500/[0.07] ring-2 ring-emerald-500/15"
                   : "border-primary/40 bg-primary/5 ring-2 ring-primary/15",
                 showTermsHint &&
                   !termsAccepted &&
@@ -1178,7 +1230,12 @@ export function BookingWizard({
                 onCheckedChange={(checked) => setTermsAccepted(checked === true)}
                 aria-label="Súhlasím s obchodnými podmienkami a zásadami ochrany osobných údajov"
                 aria-required="true"
-                className="mt-0.5 size-[22px] shrink-0 border-2 border-primary/70 bg-background [&_svg]:size-4"
+                className={cn(
+                  "mt-0.5 size-[22px] shrink-0 border-2 bg-background [&_svg]:size-4",
+                  termsAccepted
+                    ? "border-emerald-500 data-[checked]:border-emerald-500 data-[checked]:bg-emerald-500"
+                    : "border-primary/70"
+                )}
               />
               <span
                 className={cn(

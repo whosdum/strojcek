@@ -20,6 +20,11 @@ interface SectionWrapperProps {
    *  rendered section. Only set for sections whose successor is also
    *  visible (i.e., `state.step > stepNumber`). */
   hasNext?: boolean;
+  /** Keeps the section body rendered even after the section has moved
+   *  to "completed" state. Used by step 3 (Dátum a čas) so the calendar
+   *  + slot grid stay visible while the user is on the contact form —
+   *  the date is editable in place instead of behind an edit pencil. */
+  keepBodyVisible?: boolean;
   children: ReactNode;
 }
 
@@ -34,6 +39,7 @@ export const SectionWrapper = forwardRef<HTMLDivElement, SectionWrapperProps>(
       onEdit,
       isFlashing,
       hasNext,
+      keepBodyVisible,
       children,
     },
     ref
@@ -77,8 +83,10 @@ export const SectionWrapper = forwardRef<HTMLDivElement, SectionWrapperProps>(
           )}
         </div>
 
-        {/* Edit icon (decorative — parent button handles interaction) */}
-        {isCompleted && onEdit && (
+        {/* Edit icon (decorative — parent button handles interaction).
+         *  Hidden when keepBodyVisible: the body IS the editor, no
+         *  pencil-then-collapse roundtrip is needed. */}
+        {isCompleted && onEdit && !keepBodyVisible && (
           <span
             aria-hidden="true"
             className="flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95"
@@ -88,6 +96,13 @@ export const SectionWrapper = forwardRef<HTMLDivElement, SectionWrapperProps>(
         )}
       </>
     );
+
+    // When the section's body is kept visible past completion (e.g. step
+    // 3's calendar persists into step 4), we don't want the inline edit
+    // pencil — the body itself IS the editor — and we render the header
+    // as a static div instead of a button.
+    const bodyVisible = isActive || (isCompleted && Boolean(keepBodyVisible));
+    const headerIsButton = isCompleted && !keepBodyVisible;
 
     return (
       <section
@@ -101,27 +116,29 @@ export const SectionWrapper = forwardRef<HTMLDivElement, SectionWrapperProps>(
           isFlashing && "ring-2 ring-primary/60 bg-primary/[0.06]"
         )}
       >
-        {/* Vertical stepper connector — bridges this section's number
-            circle to the next section's circle through the inter-card gap.
-            Geometry:
-              - Circle center X = p-4 (16) + size-9/2 (18) = 34px from card edge
-              - w-0.5 line is 2px wide → left = 34 - 1 = 33px
-              - Circle bottom Y = 16 + 36 = 52px from card top
-              - Next card's circle top Y = 16px from its own top
-              - With space-y-3 between cards (12px gap) the line spans
-                from current card's `top-[52px]` past `-bottom-7` (-28px)
-                so it ends 12px (gap) + 16px (next-card top padding) below
-                the current card edge — exactly at the next circle's top.
-            Always rendered in primary because `hasNext` is only true once
-            the user has progressed past this step, i.e. it's completed. */}
+        {/* Vertical stepper connector — sits ONLY in the inter-section gap
+            (and a few px into the next card's top padding to meet the
+            next circle). Earlier we drew it from circle bottom all the
+            way through the section interior, but with `keepBodyVisible`
+            section 3 expands to ~600px and the line ran straight through
+            the calendar grid. The gap-only positioning sidesteps that:
+              - `-bottom-7` puts the line's bottom edge 28px below the
+                section card.
+              - `h-7` (28px) makes the top edge sit exactly on the
+                section's bottom edge.
+              - Visible portion: 12px (space-y-3 gap) + 16px (next card's
+                p-4 top padding) = lands at the next circle's top.
+              - left-[33px] aligns with the size-9 circle's vertical
+                center (16px padding + 18px half-circle, minus 1px for
+                the 2px line width). */}
         {hasNext && (
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute left-[33px] top-[52px] -bottom-7 z-10 w-0.5 rounded-full bg-primary"
+            className="pointer-events-none absolute left-[33px] -bottom-7 z-10 h-7 w-0.5 rounded-full bg-primary"
           />
         )}
         {/* Header */}
-        {isCompleted ? (
+        {headerIsButton ? (
           <button
             type="button"
             aria-label={`Upraviť krok ${stepNumber}: ${title}`}
@@ -134,7 +151,7 @@ export const SectionWrapper = forwardRef<HTMLDivElement, SectionWrapperProps>(
           <div
             className={cn(
               "flex items-center gap-3 rounded-xl p-4 outline-none",
-              isActive && "pb-2"
+              bodyVisible && "pb-2"
             )}
           >
             {headerContent}
@@ -142,7 +159,7 @@ export const SectionWrapper = forwardRef<HTMLDivElement, SectionWrapperProps>(
         )}
 
         {/* Content */}
-        {isActive && <div className="px-4 pb-5 pt-1">{children}</div>}
+        {bodyVisible && <div className="px-4 pb-5 pt-1">{children}</div>}
       </section>
     );
   }

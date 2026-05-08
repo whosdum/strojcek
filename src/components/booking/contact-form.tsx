@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ChevronDownIcon, Loader2Icon, PlusIcon } from "lucide-react";
+import { CheckIcon, ChevronDownIcon, Loader2Icon, PlusIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -46,6 +47,14 @@ type ContactFormValues = z.infer<typeof contactSchema>;
 interface ContactFormProps {
   onSubmit: (data: ContactFormValues) => void;
   defaultValues?: Partial<ContactFormValues>;
+  /**
+   * Fired on unmount with whatever the user has typed so the wizard can
+   * persist it as a draft. The wizard re-feeds these values via
+   * `defaultValues` if the user navigates back to this step (e.g. after
+   * changing date/time). Without this hook, anything typed is lost
+   * because RHF's internal state dies with the component.
+   */
+  onDraftChange?: (data: ContactFormValues) => void;
   /** When the server rejects the booking with a per-field error (e.g.
    *  email-rate-limit), the wizard sends the user back to this step
    *  with `serverError` set so it can be surfaced inline at the right
@@ -63,6 +72,7 @@ export function ContactForm(props: ContactFormProps) {
     watch,
     setError,
     setValue,
+    getValues,
     formState: { errors, touchedFields, isSubmitting },
   } = useForm<ContactFormValues>({
     resolver: zodResolver(contactSchema),
@@ -77,6 +87,51 @@ export function ContactForm(props: ContactFormProps) {
       ...props.defaultValues,
     },
   });
+
+  // When the form remounts with a draft (user filled some fields, went
+  // back to change date, came back) RHF re-seeds the inputs from
+  // `defaultValues` but `touchedFields` is empty — so the green success
+  // indicator wouldn't fire even though the values are valid. Re-set
+  // each non-empty pre-filled field with `shouldTouch + shouldValidate`
+  // so it's marked as touched and re-validated on mount.
+  useEffect(() => {
+    const dv = props.defaultValues;
+    if (!dv) return;
+    const fields = ["firstName", "lastName", "phone", "email"] as const;
+    for (const f of fields) {
+      const v = dv[f];
+      if (v) setValue(f, v, { shouldTouch: true, shouldValidate: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Save-on-unmount draft hook. Stash the latest callback in a ref so
+  // the cleanup effect's deps stay empty — otherwise a parent that
+  // re-creates the callback on every render would fire cleanup→effect
+  // every render and the unmount snapshot would never run.
+  const onDraftChangeRef = useRef(props.onDraftChange);
+  useEffect(() => {
+    onDraftChangeRef.current = props.onDraftChange;
+  });
+  useEffect(() => {
+    return () => {
+      const cb = onDraftChangeRef.current;
+      if (!cb) return;
+      const values = getValues();
+      // Skip empty unmounts so we don't overwrite a real draft with a
+      // fresh-mount snapshot during e.g. an HMR reload.
+      if (
+        !values.firstName &&
+        !values.lastName &&
+        !values.phone &&
+        !values.email &&
+        !values.note
+      ) {
+        return;
+      }
+      cb(values);
+    };
+  }, [getValues]);
 
   // When the parent passes a server-side rejection (e.g. email-rate-limit),
   // surface it on the matching field. The user can fix the value and the
@@ -108,6 +163,24 @@ export function ContactForm(props: ContactFormProps) {
   const hasFieldErrors = Boolean(
     errors.firstName || errors.lastName || errors.phone || errors.email
   );
+  // Per-field "happy path" indicator — true when the user has interacted
+  // with the field AND the value passes Zod validation. Drives a green
+  // ring + checkmark icon so each correctly filled field gives positive
+  // visual feedback (more motivating than "no error" silence).
+  const isFirstNameValid =
+    touchedFields.firstName && !errors.firstName && !!firstName;
+  const isLastNameValid =
+    touchedFields.lastName && !errors.lastName && !!lastName;
+  const isPhoneValid =
+    touchedFields.phone && !errors.phone && phone.length === 9;
+  const isEmailValid = touchedFields.email && !errors.email && !!email;
+
+  // Reused Tailwind class strings — green ring on the input + a checkmark
+  // icon absolutely positioned on the right edge.
+  const successInputCls = "border-emerald-500/70 ring-2 ring-emerald-500/20";
+  const successIconCls =
+    "pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-emerald-500";
+
   const canSubmit =
     !!firstName &&
     !!lastName &&
@@ -122,17 +195,25 @@ export function ContactForm(props: ContactFormProps) {
           <Label htmlFor="firstName" className="text-[15px] font-medium text-foreground">
             Meno <span className="text-primary">*</span>
           </Label>
-          <Input
-            id="firstName"
-            className="h-11 bg-muted/30 text-foreground placeholder:text-muted-foreground/60"
-            placeholder="Ján"
-            autoComplete="given-name"
-            maxLength={NAME_MAX_LENGTH}
-            aria-required
-            aria-invalid={!!errors.firstName}
-            aria-describedby={errors.firstName ? "firstName-error" : undefined}
-            {...register("firstName")}
-          />
+          <div className="relative">
+            <Input
+              id="firstName"
+              className={cn(
+                "h-11 bg-muted/30 pr-9 text-foreground placeholder:text-muted-foreground/60",
+                isFirstNameValid && successInputCls
+              )}
+              placeholder="Ján"
+              autoComplete="given-name"
+              maxLength={NAME_MAX_LENGTH}
+              aria-required
+              aria-invalid={!!errors.firstName}
+              aria-describedby={errors.firstName ? "firstName-error" : undefined}
+              {...register("firstName")}
+            />
+            {isFirstNameValid && (
+              <CheckIcon className={successIconCls} aria-hidden="true" />
+            )}
+          </div>
           {touchedFields.firstName && errors.firstName && (
             <p id="firstName-error" className="text-[13px] font-medium text-destructive">
               {errors.firstName.message}
@@ -143,17 +224,25 @@ export function ContactForm(props: ContactFormProps) {
           <Label htmlFor="lastName" className="text-[15px] font-medium text-foreground">
             Priezvisko <span className="text-primary">*</span>
           </Label>
-          <Input
-            id="lastName"
-            className="h-11 bg-muted/30 text-foreground placeholder:text-muted-foreground/60"
-            placeholder="Novák"
-            autoComplete="family-name"
-            maxLength={NAME_MAX_LENGTH}
-            aria-required
-            aria-invalid={!!errors.lastName}
-            aria-describedby={errors.lastName ? "lastName-error" : undefined}
-            {...register("lastName")}
-          />
+          <div className="relative">
+            <Input
+              id="lastName"
+              className={cn(
+                "h-11 bg-muted/30 pr-9 text-foreground placeholder:text-muted-foreground/60",
+                isLastNameValid && successInputCls
+              )}
+              placeholder="Novák"
+              autoComplete="family-name"
+              maxLength={NAME_MAX_LENGTH}
+              aria-required
+              aria-invalid={!!errors.lastName}
+              aria-describedby={errors.lastName ? "lastName-error" : undefined}
+              {...register("lastName")}
+            />
+            {isLastNameValid && (
+              <CheckIcon className={successIconCls} aria-hidden="true" />
+            )}
+          </div>
           {touchedFields.lastName && errors.lastName && (
             <p id="lastName-error" className="text-[13px] font-medium text-destructive">
               {errors.lastName.message}
@@ -177,18 +266,22 @@ export function ContactForm(props: ContactFormProps) {
             </select>
             <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           </div>
-          <Input
-            id="phone"
-            type="tel"
-            inputMode="numeric"
-            maxLength={9}
-            placeholder="9XX XXX XXX"
-            className="h-11 bg-muted/30 text-foreground placeholder:text-muted-foreground/60"
-            autoComplete="tel-local"
-            aria-required
-            aria-invalid={!!errors.phone}
-            aria-describedby={errors.phone ? "phone-error" : undefined}
-            {...register("phone", {
+          <div className="relative flex-1">
+            <Input
+              id="phone"
+              type="tel"
+              inputMode="numeric"
+              maxLength={9}
+              placeholder="9XX XXX XXX"
+              className={cn(
+                "h-11 bg-muted/30 pr-9 text-foreground placeholder:text-muted-foreground/60",
+                isPhoneValid && successInputCls
+              )}
+              autoComplete="tel-local"
+              aria-required
+              aria-invalid={!!errors.phone}
+              aria-describedby={errors.phone ? "phone-error" : undefined}
+              {...register("phone", {
               // Use setValue (not e.target.value mutation) so RHF's internal
               // value stays in sync with the DOM — direct mutation only
               // updates the input visually and leaves form.getValues().phone
@@ -204,6 +297,10 @@ export function ContactForm(props: ContactFormProps) {
               },
             })}
           />
+            {isPhoneValid && (
+              <CheckIcon className={successIconCls} aria-hidden="true" />
+            )}
+          </div>
         </div>
         {phoneZeroHint && (
           <p className="text-[13px] font-medium text-primary">
@@ -221,18 +318,26 @@ export function ContactForm(props: ContactFormProps) {
         <Label htmlFor="email" className="text-[15px] font-medium text-foreground">
           Email <span className="text-primary">*</span>
         </Label>
-        <Input
-          id="email"
-          type="email"
-          placeholder="jan.novak@email.sk"
-          className="h-11 bg-muted/30 text-foreground placeholder:text-muted-foreground/60"
-          autoComplete="email"
-          maxLength={EMAIL_MAX_LENGTH}
-          aria-required
-          aria-invalid={!!errors.email}
-          aria-describedby={errors.email ? "email-error" : undefined}
-          {...register("email")}
-        />
+        <div className="relative">
+          <Input
+            id="email"
+            type="email"
+            placeholder="jan.novak@email.sk"
+            className={cn(
+              "h-11 bg-muted/30 pr-9 text-foreground placeholder:text-muted-foreground/60",
+              isEmailValid && successInputCls
+            )}
+            autoComplete="email"
+            maxLength={EMAIL_MAX_LENGTH}
+            aria-required
+            aria-invalid={!!errors.email}
+            aria-describedby={errors.email ? "email-error" : undefined}
+            {...register("email")}
+          />
+          {isEmailValid && (
+            <CheckIcon className={successIconCls} aria-hidden="true" />
+          )}
+        </div>
         {touchedFields.email && errors.email && (
           <p id="email-error" className="text-[13px] font-medium text-destructive">
             {errors.email.message}

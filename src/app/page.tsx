@@ -25,6 +25,7 @@ import { ServicesSection } from "@/components/sections/services-section";
 import { ReviewsSection } from "@/components/sections/reviews-section";
 import { FaqSection, FaqJsonLd } from "@/components/sections/faq-section";
 import { SiteFooter } from "@/components/sections/site-footer";
+import { BookingCta } from "@/components/sections/booking-cta";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
@@ -185,9 +186,22 @@ export default async function HomePage({
         </p>
       </noscript>
 
+      {/* Visual break between the booking flow (form + phone CTA) and the
+          supplementary SEO content below — gradient hairline with a small
+          centered chip so it reads as "you've left the booking section." */}
+      <div
+        aria-hidden="true"
+        className="relative my-16 flex items-center justify-center sm:my-20"
+      >
+        <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-gradient-to-r from-transparent via-border to-transparent" />
+        <span className="relative rounded-full border border-border/60 bg-background px-3.5 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+          Viac o nás
+        </span>
+      </div>
+
       <section
         aria-labelledby="o-barbershope"
-        className="mt-20 rounded-2xl border border-border/40 bg-card/40 p-6 sm:mt-24 sm:p-8"
+        className="rounded-2xl border border-border/40 bg-card/40 p-6 sm:p-8"
       >
         <h2
           id="o-barbershope"
@@ -228,6 +242,8 @@ export default async function HomePage({
       <FaqSection />
 
       <FaqJsonLd />
+
+      <BookingCta />
 
       <SiteFooter hours={openingHours} />
     </BookingShell>
