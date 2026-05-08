@@ -1178,7 +1178,7 @@ export function BookingWizard({
                 onCheckedChange={(checked) => setTermsAccepted(checked === true)}
                 aria-label="Súhlasím s obchodnými podmienkami a zásadami ochrany osobných údajov"
                 aria-required="true"
-                className="mt-0.5 size-5 shrink-0"
+                className="mt-0.5 size-[22px] shrink-0 border-2 border-primary/70 bg-background [&_svg]:size-4"
               />
               <span
                 className={cn(
