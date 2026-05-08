@@ -1,11 +1,25 @@
 import { ImageResponse } from "next/og";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+import { loadJakartaFonts } from "./_og-fonts";
 
 export const alt =
   "Strojček Barbershop Bytča — pánsky strih, fade, úprava brady";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
+export const runtime = "nodejs";
+
+async function loadLogoDataUrl() {
+  const buf = await readFile(join(process.cwd(), "public/logo.jpg"));
+  return `data:image/jpeg;base64,${buf.toString("base64")}`;
+}
 
 export default async function OpengraphImage() {
+  const [logoSrc, fonts] = await Promise.all([
+    loadLogoDataUrl(),
+    loadJakartaFonts(),
+  ]);
+
   return new ImageResponse(
     (
       <div
@@ -14,41 +28,26 @@ export default async function OpengraphImage() {
           height: "100%",
           display: "flex",
           flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
           background:
-            "linear-gradient(135deg, #0a0a0a 0%, #1a0f08 50%, #2a1810 100%)",
-          color: "#fafafa",
-          fontFamily: "system-ui, sans-serif",
-          padding: 80,
+            "linear-gradient(135deg, #fff7f2 0%, #fdebe0 50%, #fbd9c5 100%)",
+          fontFamily: "Plus Jakarta Sans, system-ui, sans-serif",
           position: "relative",
         }}
       >
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            height: 8,
-            background: "#dd5a3b",
-          }}
-        />
-
+        {/* Decorative giant "S" — anchors the right edge so logo doesn't
+            float in empty space, low opacity reads as texture. */}
         <div
           style={{
             display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: 168,
-            height: 168,
-            background: "#dd5a3b",
-            borderRadius: 36,
-            color: "#0a0a0a",
-            fontSize: 110,
+            position: "absolute",
+            right: -60,
+            bottom: -160,
+            fontSize: 720,
             fontWeight: 800,
-            marginBottom: 40,
-            boxShadow: "0 12px 40px rgba(221, 90, 59, 0.3)",
+            color: "#dd5a3b",
+            opacity: 0.08,
+            letterSpacing: -24,
+            lineHeight: 1,
           }}
         >
           S
@@ -56,55 +55,74 @@ export default async function OpengraphImage() {
 
         <div
           style={{
-            fontSize: 84,
-            fontWeight: 800,
-            letterSpacing: -3,
-            lineHeight: 1,
-            textAlign: "center",
+            display: "flex",
+            width: "100%",
+            height: 12,
+            background: "#dd5a3b",
+          }}
+        />
+
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            flex: 1,
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px 80px",
           }}
         >
-          Strojček Barbershop
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={logoSrc}
+            alt="Strojček"
+            width={760}
+            height={412}
+            style={{
+              objectFit: "contain",
+              borderRadius: 32,
+              boxShadow: "0 28px 70px rgba(221, 90, 59, 0.35)",
+            }}
+          />
         </div>
 
         <div
           style={{
-            fontSize: 44,
-            color: "#dd5a3b",
-            marginTop: 16,
-            fontWeight: 700,
-            letterSpacing: -1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "0 60px 36px 60px",
           }}
         >
-          Bytča
-        </div>
-
-        <div
-          style={{
-            fontSize: 28,
-            color: "#a0a0a0",
-            marginTop: 36,
-            fontWeight: 500,
-            letterSpacing: 0.5,
-          }}
-        >
-          Pánsky strih  ·  Fade  ·  Úprava brady
-        </div>
-
-        <div
-          style={{
-            position: "absolute",
-            bottom: 48,
-            fontSize: 20,
-            color: "#707070",
-            letterSpacing: 2,
-            textTransform: "uppercase",
-            fontWeight: 600,
-          }}
-        >
-          strojcekbarbershop.sk
+          <div
+            style={{
+              display: "flex",
+              fontSize: 22,
+              color: "#7a4a30",
+              fontWeight: 700,
+              letterSpacing: 0.5,
+            }}
+          >
+            Pánsky barbershop · Bytča
+          </div>
+          <div
+            style={{
+              display: "flex",
+              fontSize: 18,
+              color: "#b87858",
+              letterSpacing: 3,
+              textTransform: "uppercase",
+              fontWeight: 800,
+            }}
+          >
+            strojcekbarbershop.sk
+          </div>
         </div>
       </div>
     ),
-    { ...size }
+    {
+      ...size,
+      fonts,
+    }
   );
 }
