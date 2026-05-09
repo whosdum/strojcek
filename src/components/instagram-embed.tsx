@@ -5,9 +5,14 @@ import { useState } from "react";
 interface InstagramEmbedProps {
   src: string;
   title: string;
+  height?: number;
 }
 
-export function InstagramEmbed({ src, title }: InstagramEmbedProps) {
+export function InstagramEmbed({
+  src,
+  title,
+  height = 720,
+}: InstagramEmbedProps) {
   const [loaded, setLoaded] = useState(false);
 
   if (loaded) {
@@ -20,7 +25,7 @@ export function InstagramEmbed({ src, title }: InstagramEmbedProps) {
           allow="encrypted-media"
           allowFullScreen
           className="block w-full"
-          style={{ height: 720, border: 0 }}
+          style={{ height, border: 0 }}
         />
       </div>
     );

@@ -26,6 +26,8 @@ import { ReviewsSection } from "@/components/sections/reviews-section";
 import { FaqSection, FaqJsonLd } from "@/components/sections/faq-section";
 import { SiteFooter } from "@/components/sections/site-footer";
 import { BookingCta } from "@/components/sections/booking-cta";
+import { InstagramEmbed } from "@/components/instagram-embed";
+import { InstagramIcon } from "@/components/icons/instagram-icon";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
@@ -212,8 +214,9 @@ export default async function HomePage({
         <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">
           Strojček je pánsky barber shop v Bytči — pánsky kaderník v okolí
           Žiliny pre všetkých, ktorí chcú profesionálny strih bez kompromisov.
-          Chodia k nám zákazníci z Bytče, Predmiera, Hričovského Podhradia,
-          Súľova-Hradnej aj z Považskej Bystrice. Robíme{" "}
+          Chodia k nám zákazníci z Bytče, Malej Bytče, Predmiera, Hričovského
+          Podhradia, Súľova-Hradnej, Hvozdnice, Štiavnika, Hliníka nad Váhom,
+          Kotešovej aj z Považskej Bystrice. Robíme{" "}
           <Link
             href="/sluzby/pansky-strih"
             className="font-medium text-foreground underline-offset-2 hover:text-primary hover:underline"
@@ -314,6 +317,39 @@ export default async function HomePage({
             Pozrieť cenník →
           </Link>
         </p>
+
+        {/* Instagram reel — click-to-load to avoid Meta cookies/scripts
+            on first paint and keep the homepage fast. Height reduced vs
+            /o-nas (560 vs 720) since this is a secondary placement. */}
+        <div className="mt-6">
+          <p className="mb-3 text-[13px] font-medium text-muted-foreground">
+            Pozri nás v akcii na Instagrame
+          </p>
+          <InstagramEmbed
+            src="https://www.instagram.com/p/DSb9TjJjci1/embed"
+            title="Strojček Barbershop — ukážka práce na Instagrame"
+            height={560}
+          />
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+            <a
+              href="https://www.instagram.com/p/DSb9TjJjci1/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-border/60 bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary hover:text-primary"
+            >
+              <InstagramIcon className="size-4" />
+              Otvoriť na Instagrame
+            </a>
+            <a
+              href="https://www.instagram.com/strojcek_/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-border/60 bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary hover:text-primary"
+            >
+              @strojcek_
+            </a>
+          </div>
+        </div>
       </section>
 
       <ServicesSection />
