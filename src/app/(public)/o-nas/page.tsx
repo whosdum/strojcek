@@ -365,7 +365,9 @@ export default async function AboutPage() {
             brady by mal nájsť aj pán z menšieho mesta, nielen z Bratislavy či
             Žiliny. Pracujeme pre zákazníkov z Bytče a širšieho okolia: Malá
             Bytča, Predmier, Hričovské Podhradie, Súľov-Hradná, Hvozdnica,
-            Štiavnik, Hliník nad Váhom, Kotešová aj Považská Bystrica.
+            Štiavnik, Hliník nad Váhom, Kotešová, Veľké Rovné, Petrovice,
+            Kolárovice, Jablonové, Dolný Hričov, Horný Hričov aj Považská
+            Bystrica.
           </p>
           <div className="mt-4 space-y-4 text-[15px] leading-relaxed text-foreground/90">
             <p>

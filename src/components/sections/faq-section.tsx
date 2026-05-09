@@ -17,7 +17,7 @@ export const FAQ: Array<{ q: string; a: string }> = [
   },
   {
     q: "Z akých miest k vám chodia zákazníci?",
-    a: "Okrem Bytče k nám chodia pánski zákazníci aj z okolia — Malá Bytča, Predmier, Hričovské Podhradie, Súľov-Hradná, Hvozdnica, Štiavnik, Hliník nad Váhom, Kotešová, Považská Bystrica aj zo Žiliny. Bytča je dostupná z celého Žilinského kraja a online rezervácia šetrí čas — prídete na presný termín bez čakania.",
+    a: "Okrem Bytče k nám chodia pánski zákazníci aj z okolia — Malá Bytča, Predmier, Hričovské Podhradie, Súľov-Hradná, Hvozdnica, Štiavnik, Hliník nad Váhom, Kotešová, Veľké Rovné, Petrovice, Kolárovice, Jablonové, Dolný Hričov, Horný Hričov, Považská Bystrica aj zo Žiliny. Bytča je dostupná z celého Žilinského kraja a online rezervácia šetrí čas — prídete na presný termín bez čakania.",
   },
   {
     q: "Robíte fade strih a úpravu fúzov?",

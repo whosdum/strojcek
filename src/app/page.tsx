@@ -216,7 +216,8 @@ export default async function HomePage({
           Žiliny pre všetkých, ktorí chcú profesionálny strih bez kompromisov.
           Chodia k nám zákazníci z Bytče, Malej Bytče, Predmiera, Hričovského
           Podhradia, Súľova-Hradnej, Hvozdnice, Štiavnika, Hliníka nad Váhom,
-          Kotešovej aj z Považskej Bystrice. Robíme{" "}
+          Kotešovej, Veľkého Rovného, Petrovíc, Kolárovíc, Jablonového, Dolného
+          Hričova, Horného Hričova aj z Považskej Bystrice. Robíme{" "}
           <Link
             href="/sluzby/pansky-strih"
             className="font-medium text-foreground underline-offset-2 hover:text-primary hover:underline"
