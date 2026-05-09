@@ -47,7 +47,7 @@ export function bookingCancellationHtml({
   <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto;">
     <tr>
       <td style="background-color: #1a1a2e; padding: 24px; text-align: center; border-radius: 8px 8px 0 0;">
-        <h1 style="color: #ff703a; margin: 0; font-size: 24px; font-weight: bold;">Strojček</h1>
+        <h1 style="color: #fc873a; margin: 0; font-size: 24px; font-weight: bold;">Strojček</h1>
         <p style="color: #999; margin: 4px 0 0; font-size: 13px;">Barbershop</p>
       </td>
     </tr>
@@ -78,7 +78,7 @@ export function bookingCancellationHtml({
         </table>
         <p class="email-muted" style="color: #666; margin: 24px 0 16px; font-size: 14px;">Chcete si vytvoriť novú rezerváciu?</p>
         <div style="text-align: center;">
-          <a href="${bookUrl}" style="display: inline-block; padding: 12px 32px; background-color: #ff703a; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px;">Nová rezervácia</a>
+          <a href="${bookUrl}" style="display: inline-block; padding: 12px 32px; background-color: #fc873a; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px;">Nová rezervácia</a>
         </div>
       </td>
     </tr>

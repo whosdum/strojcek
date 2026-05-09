@@ -82,7 +82,7 @@ export function bookingConfirmationHtml({
   <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto;">
     <tr>
       <td style="background-color: #1a1a2e; padding: 24px; text-align: center; border-radius: 8px 8px 0 0;">
-        <h1 style="color: #ff703a; margin: 0; font-size: 24px; font-weight: bold;">Strojček</h1>
+        <h1 style="color: #fc873a; margin: 0; font-size: 24px; font-weight: bold;">Strojček</h1>
         <p style="color: #999; margin: 4px 0 0; font-size: 13px;">Barbershop</p>
       </td>
     </tr>
@@ -112,7 +112,7 @@ export function bookingConfirmationHtml({
           </tr>
           <tr>
             <td class="email-row-label" style="padding: 12px 0; color: #888; font-size: 14px;">Cena</td>
-            <td style="padding: 12px 0; font-weight: bold; font-size: 16px; text-align: right; color: #ff703a;">${safePrice} €</td>
+            <td style="padding: 12px 0; font-weight: bold; font-size: 16px; text-align: right; color: #fc873a;">${safePrice} €</td>
           </tr>
         </table>
         <p class="email-muted" style="color: #666; margin: 24px 0 8px; font-size: 13px;">Pridať do kalendára:</p>
