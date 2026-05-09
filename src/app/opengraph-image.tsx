@@ -44,7 +44,7 @@ export default async function OpengraphImage() {
             bottom: -160,
             fontSize: 720,
             fontWeight: 800,
-            color: "#dd5a3b",
+            color: "#fc873a",
             opacity: 0.08,
             letterSpacing: -24,
             lineHeight: 1,
@@ -58,7 +58,7 @@ export default async function OpengraphImage() {
             display: "flex",
             width: "100%",
             height: 12,
-            background: "#dd5a3b",
+            background: "#fc873a",
           }}
         />
 
@@ -81,7 +81,7 @@ export default async function OpengraphImage() {
             style={{
               objectFit: "contain",
               borderRadius: 32,
-              boxShadow: "0 28px 70px rgba(221, 90, 59, 0.35)",
+              boxShadow: "0 28px 70px rgba(252, 135, 58, 0.35)",
             }}
           />
         </div>

@@ -5,7 +5,7 @@ import { PUBLIC_SITE_URL } from "@/lib/business-info";
 import "./globals.css";
 
 export const viewport: Viewport = {
-  themeColor: "#dd5a3b",
+  themeColor: "#fc873a",
   colorScheme: "dark",
 };
 

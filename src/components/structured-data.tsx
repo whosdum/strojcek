@@ -47,8 +47,8 @@ export function StructuredData({ openingHours, services }: StructuredDataProps) 
     alternateName: [SHOP_NAME, "STROJČEK BARBERSHOP"],
     legalName: SHOP_LEGAL_NAME,
     url: PUBLIC_SITE_URL,
-    logo: `${PUBLIC_SITE_URL}/logo.jpg`,
-    image: `${PUBLIC_SITE_URL}/logo.jpg`,
+    logo: `${PUBLIC_SITE_URL}/logo-square.jpg`,
+    image: `${PUBLIC_SITE_URL}/logo-wide.jpg`,
     telephone: SHOP_PHONE_E164,
     email: SHOP_EMAIL,
     address: {
@@ -142,8 +142,8 @@ export function StructuredData({ openingHours, services }: StructuredDataProps) 
     alternateName: ["Strojček Barbershop", SHOP_NAME],
     legalName: SHOP_LEGAL_NAME,
     url: PUBLIC_SITE_URL,
-    logo: `${PUBLIC_SITE_URL}/logo.jpg`,
-    image: `${PUBLIC_SITE_URL}/logo.jpg`,
+    logo: `${PUBLIC_SITE_URL}/logo-square.jpg`,
+    image: `${PUBLIC_SITE_URL}/logo-wide.jpg`,
     address: {
       "@type": "PostalAddress",
       streetAddress: SHOP_STREET,

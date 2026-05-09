@@ -67,7 +67,7 @@ export default async function ServiceOgImage({
             bottom: -200,
             fontSize: 720,
             fontWeight: 800,
-            color: "#dd5a3b",
+            color: "#fc873a",
             opacity: 0.08,
             letterSpacing: -24,
             lineHeight: 1,
@@ -81,7 +81,7 @@ export default async function ServiceOgImage({
             display: "flex",
             width: "100%",
             height: 12,
-            background: "#dd5a3b",
+            background: "#fc873a",
           }}
         />
 
@@ -102,7 +102,7 @@ export default async function ServiceOgImage({
             style={{
               objectFit: "contain",
               borderRadius: 14,
-              boxShadow: "0 10px 28px rgba(221, 90, 59, 0.25)",
+              boxShadow: "0 10px 28px rgba(252, 135, 58, 0.25)",
             }}
           />
           <div
@@ -152,7 +152,7 @@ export default async function ServiceOgImage({
               display: "flex",
               width: 6,
               height: 280,
-              background: "#dd5a3b",
+              background: "#fc873a",
               borderRadius: 3,
               marginRight: 32,
             }}
@@ -168,7 +168,7 @@ export default async function ServiceOgImage({
               style={{
                 display: "flex",
                 fontSize: 22,
-                color: "#dd5a3b",
+                color: "#fc873a",
                 letterSpacing: 4,
                 textTransform: "uppercase",
                 fontWeight: 800,
