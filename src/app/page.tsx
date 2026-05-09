@@ -245,6 +245,61 @@ export default async function HomePage({
           do nášho barbershopu na presný čas — bez čakania v rade a s istotou,
           že vás obslúžime kedy potrebujete.
         </p>
+
+        {/* Photo peek — wraps the row in a single Link so the whole strip
+            (and each thumbnail) is one big tap target heading to /o-nas.
+            Goal is to entice the click rather than to be a real gallery,
+            so we show 4 thumbs with a "+1" overlay on the last tile. */}
+        <Link
+          href="/o-nas#priestory"
+          aria-label="Pozrieť priestory a celú galériu na stránke O nás"
+          className="group mt-5 block focus:outline-none"
+        >
+          <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
+            {[
+              {
+                src: "/barbershop/interier-bytca-1-p.webp",
+                alt: "Interiér barbershopu Strojček v Bytči",
+              },
+              {
+                src: "/barbershop/barberske-kreslo-bytca-p.webp",
+                alt: "Barberské kreslo a pracovisko v Strojčeku Bytča",
+              },
+              {
+                src: "/barbershop/pracovisko-barber-bytca-p.webp",
+                alt: "Detail pracoviska barbera v Strojčeku Bytča",
+              },
+              {
+                src: "/barbershop/priestory-strojcek-bytca-p.webp",
+                alt: "Priestory pánskeho barbershopu Strojček v Bytči",
+              },
+            ].map((photo, i, arr) => (
+              <div
+                key={photo.src}
+                className="relative aspect-[4/5] overflow-hidden rounded-lg border border-border/40 bg-card transition-all duration-300 group-hover:border-primary/40 group-focus-visible:ring-2 group-focus-visible:ring-primary/60"
+              >
+                <Image
+                  src={photo.src}
+                  alt={photo.alt}
+                  fill
+                  sizes="(min-width: 640px) 130px, 22vw"
+                  className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+                />
+                {i === arr.length - 1 ? (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-t from-black/65 via-black/30 to-transparent">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-white sm:text-[12px]">
+                      +1 viac
+                    </span>
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </div>
+          <span className="mt-2 inline-block text-[12px] text-muted-foreground transition-colors group-hover:text-primary">
+            Galéria priestorov v Bytči →
+          </span>
+        </Link>
+
         <p className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-[14px]">
           <Link
             href="/o-nas"

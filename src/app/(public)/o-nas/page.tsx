@@ -295,7 +295,7 @@ export default async function AboutPage() {
           </div>
         </section>
 
-        <section className="mt-12">
+        <section id="priestory" className="mt-12 scroll-mt-6">
           <h2 className="text-lg font-semibold tracking-tight">
             Naše priestory
           </h2>
