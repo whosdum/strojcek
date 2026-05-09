@@ -47,3 +47,7 @@ firestore-debug.log
 ui-debug.log
 /firebase-data/
 
+# OG image drafts in repo root (final OG images are generated dynamically
+# via src/app/**/opengraph-image.tsx)
+/og-*.png
+
