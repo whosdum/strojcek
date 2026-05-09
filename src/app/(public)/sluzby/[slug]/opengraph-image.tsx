@@ -93,7 +93,7 @@ export default async function ServiceOgImage({
             padding: "40px 72px 0 72px",
           }}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
+          { }
           <img
             src={logoSrc}
             alt="Strojček"

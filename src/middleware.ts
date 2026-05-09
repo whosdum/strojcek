@@ -60,10 +60,23 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // Run on everything except Next.js internals + static assets. The www
-  // redirect must catch landing pages (/), legal pages, and assets so
-  // a customer who saw a www-prefixed URL anywhere lands on apex.
+  // Run on routes only — exclude Next.js internals and ANY path that
+  // looks like a file (contains a dot before its end). On Firebase App
+  // Hosting (Next.js adapter ~14), middleware running on /public asset
+  // paths and returning NextResponse.next() does NOT fall through to
+  // the static-file handler — the request continues into the App Router
+  // which has no matching route, returning 404. `next dev` has a
+  // different request flow so the same matcher worked locally.
+  //
+  // The previous explicit allowlist (logo.jpg, robots.txt, sitemap.xml)
+  // was incomplete: it broke /barbershop/*.webp, /barbers/*.webp,
+  // /llms.txt, /BingSiteAuth.xml, and any future asset added under
+  // /public.
+  //
+  // Trade-off: a www-prefixed asset URL no longer 308-redirects to apex.
+  // That's acceptable — Google ranks pages, not asset paths, and asset
+  // requests resolve to the right content either way.
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|logo.jpg|robots.txt|sitemap.xml).*)",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)",
   ],
 };
