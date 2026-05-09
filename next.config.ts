@@ -18,12 +18,7 @@ const nextConfig: NextConfig = {
   // deployed). `npm run start` locally served them fine because that
   // path doesn't go through the standalone bundle.
   outputFileTracingIncludes: {
-    "*": [
-      "./public/barbers/**/*",
-      "./public/barbershop/**/*",
-      "./public/llms.txt",
-      "./public/BingSiteAuth.xml",
-    ],
+    "*": ["./public/**/*"],
   },
 };
 
