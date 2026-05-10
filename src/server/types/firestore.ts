@@ -118,6 +118,12 @@ export type AppointmentDoc = {
   cancellationEmailError: string | null;
   cancellationEmailAttempts: number;
 
+  /** Manual-only review request email. Optional — older docs predate
+   *  the field and have no value at all (treated the same as null). */
+  reviewEmailSentAt?: Timestamp | null;
+  reviewEmailError?: string | null;
+  reviewEmailAttempts?: number;
+
   telegramAlertSentAt: Timestamp | null;
   telegramAlertError: string | null;
 
@@ -187,6 +193,7 @@ export type NotificationKind =
   | "email-confirmation"
   | "email-cancellation"
   | "email-reminder"
+  | "email-review"
   | "sms-reminder"
   | "telegram-alert";
 

@@ -12,6 +12,7 @@ import {
 import { bookingConfirmationHtml } from "@/emails/booking-confirmation";
 import { bookingCancellationHtml } from "@/emails/booking-cancellation";
 import { bookingReminderHtml } from "@/emails/booking-reminder";
+import { bookingReviewHtml } from "@/emails/booking-review";
 import { TIMEZONE } from "@/lib/constants";
 import {
   PUBLIC_SITE_URL,
@@ -110,6 +111,46 @@ export async function resendCancellationEmail(
 
   await recordNotification({
     kind: "email-cancellation",
+    status: result.success ? "sent" : "failed",
+    appointmentId,
+    recipient: a.customerEmail,
+    error: result.success ? null : extractSendError(result.error),
+    durationMs: Date.now() - start,
+    trigger: "manual",
+  });
+
+  revalidatePath(`/admin/reservations/${appointmentId}`);
+  revalidatePath("/admin/notifications");
+  return result.success
+    ? { success: true }
+    : { success: false, error: "Email sa nepodarilo odoslať." };
+}
+
+export async function sendReviewEmail(
+  appointmentId: string
+): Promise<ActionResult> {
+  if (!(await getSession())) return UNAUTH;
+  const snap = await adminDb.doc(`appointments/${appointmentId}`).get();
+  if (!snap.exists) return { success: false, error: "Rezervácia nenájdená." };
+  const a = snap.data() as AppointmentDoc;
+  if (a.status === "CANCELLED")
+    return { success: false, error: "Zrušenej rezervácii nemožno poslať žiadosť o recenziu." };
+  if (!a.customerEmail)
+    return { success: false, error: "Zákazník nemá email." };
+
+  const start = Date.now();
+  const result = await sendEmail({
+    to: a.customerEmail,
+    subject: "Ako sa vám páčilo u nás? — Strojček",
+    html: bookingReviewHtml({
+      customerName: a.customerName?.split(" ")[0] ?? "zákazník",
+      serviceName: a.serviceName,
+      barberName: a.barberName,
+    }),
+  }).catch((err) => ({ success: false, error: err }) as const);
+
+  await recordNotification({
+    kind: "email-review",
     status: result.success ? "sent" : "failed",
     appointmentId,
     recipient: a.customerEmail,

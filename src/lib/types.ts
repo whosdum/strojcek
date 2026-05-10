@@ -256,6 +256,12 @@ export interface AppointmentNotificationStatusView {
     attempts: number;
     recipient: string | null;
   };
+  review: {
+    sentAt: Date | null;
+    error: string | null;
+    attempts: number;
+    recipient: string | null;
+  };
   reminderEmail: {
     sentAt: Date | null;
     lockedAt: Date | null;

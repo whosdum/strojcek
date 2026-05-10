@@ -11,6 +11,7 @@ import { ResendButton } from "@/components/admin/resend-button";
 import {
   resendConfirmationEmail,
   resendCancellationEmail,
+  sendReviewEmail,
 } from "@/server/actions/notifications";
 import {
   CheckCircle2Icon,
@@ -18,6 +19,7 @@ import {
   MailIcon,
   MessageSquareIcon,
   SendIcon,
+  StarIcon,
   XCircleIcon,
 } from "lucide-react";
 import type {
@@ -75,6 +77,27 @@ export function NotificationStatusPanel({
               ? {
                   label: "Resend",
                   fn: resendCancellationEmail.bind(null, appointmentId),
+                }
+              : null
+          }
+        />
+        <Row
+          icon={<StarIcon className="size-4" />}
+          label="Hodnotiaci mail"
+          recipient={status.review.recipient}
+          sentAt={status.review.sentAt}
+          error={status.review.error}
+          attempts={status.review.attempts}
+          neutralWhenEmpty={
+            status.review.recipient
+              ? "Pošle sa len ručne."
+              : "Zákazník nemá email."
+          }
+          action={
+            status.review.recipient && appointmentStatus !== "CANCELLED"
+              ? {
+                  label: status.review.sentAt ? "Poslať znova" : "Poslať",
+                  fn: sendReviewEmail.bind(null, appointmentId),
                 }
               : null
           }

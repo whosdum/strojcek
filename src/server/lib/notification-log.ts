@@ -65,6 +65,11 @@ const APPOINTMENT_FIELD_MAP: Partial<
     error: "cancellationEmailError",
     attempts: "cancellationEmailAttempts",
   },
+  "email-review": {
+    sentAt: "reviewEmailSentAt",
+    error: "reviewEmailError",
+    attempts: "reviewEmailAttempts",
+  },
   "telegram-alert": {
     sentAt: "telegramAlertSentAt",
     error: "telegramAlertError",

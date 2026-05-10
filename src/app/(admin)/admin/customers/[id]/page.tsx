@@ -63,11 +63,6 @@ export default async function CustomerDetailPage({
               <span className="text-muted-foreground">Email</span>
               <span className="break-words sm:text-right">{customer.email || "—"}</span>
             </div>
-            <Separator />
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-              <span className="text-muted-foreground">Počet návštev</span>
-              <span className="font-medium">{customer.visitCount}</span>
-            </div>
             {customer.notes && (
               <>
                 <Separator />

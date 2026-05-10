@@ -3,7 +3,7 @@ import { adminDb } from "@/server/lib/firebase-admin";
 import { Timestamp } from "firebase-admin/firestore";
 import { dateKey, tsToDate, tsToDateOrNull } from "@/server/lib/firestore-utils";
 import { PAGE_SIZE, TIMEZONE } from "@/lib/constants";
-import { startOfDay, startOfMonth } from "date-fns";
+import { startOfDay } from "date-fns";
 import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import type {
   AppointmentView,
@@ -317,39 +317,3 @@ export async function getDayStats(date: Date = nowInTz()): Promise<{
   };
 }
 
-export async function getServicePopularity(
-  limit = 5
-): Promise<Array<{ serviceName: string; count: number; revenue: number }>> {
-  const monthStart = startOfMonth(nowInTz());
-  const snap = await adminDb
-    .collection("appointments")
-    .where("startTime", ">=", Timestamp.fromDate(monthStart))
-    .limit(2000)
-    .get();
-
-  const stats = new Map<string, { name: string; count: number; revenueCents: number }>();
-  for (const d of snap.docs) {
-    const data = d.data() as AppointmentDoc;
-    if (data.status === "CANCELLED" || data.status === "NO_SHOW") continue;
-    const existing = stats.get(data.serviceId);
-    if (existing) {
-      existing.count++;
-      existing.revenueCents += data.priceExpectedCents;
-    } else {
-      stats.set(data.serviceId, {
-        name: data.serviceName,
-        count: 1,
-        revenueCents: data.priceExpectedCents,
-      });
-    }
-  }
-
-  return [...stats.values()]
-    .sort((a, b) => b.count - a.count)
-    .slice(0, limit)
-    .map((s) => ({
-      serviceName: s.name,
-      count: s.count,
-      revenue: s.revenueCents / 100,
-    }));
-}

@@ -202,6 +202,12 @@ export async function getAppointmentNotificationStatus(
       attempts: d.cancellationEmailAttempts ?? 0,
       recipient: d.customerEmail ?? null,
     },
+    review: {
+      sentAt: tsToDateOrNull(d.reviewEmailSentAt ?? null),
+      error: d.reviewEmailError ?? null,
+      attempts: d.reviewEmailAttempts ?? 0,
+      recipient: d.customerEmail ?? null,
+    },
     reminderEmail: {
       sentAt: tsToDateOrNull(d.reminderEmailSentAt),
       lockedAt: tsToDateOrNull(d.reminderEmailLockedAt),
