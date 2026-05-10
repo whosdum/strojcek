@@ -194,6 +194,7 @@ export type NotificationKind =
   | "email-cancellation"
   | "email-reminder"
   | "email-review"
+  | "email-marketing"
   | "sms-reminder"
   | "telegram-alert";
 

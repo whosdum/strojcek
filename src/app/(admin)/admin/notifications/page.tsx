@@ -36,6 +36,7 @@ const KIND_LABELS: Record<string, string> = {
   "email-confirmation": "Potvrdzovací email",
   "email-cancellation": "Email o zrušení",
   "email-review": "Hodnotiaci mail",
+  "email-marketing": "Marketing mail",
   "email-reminder": "Pripomienka (email)",
   "sms-reminder": "Pripomienka (SMS)",
   "telegram-alert": "Telegram alert",
