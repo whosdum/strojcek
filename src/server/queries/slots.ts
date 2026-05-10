@@ -19,6 +19,85 @@ interface TimeRange {
   end: Date;
 }
 
+interface SlotGenInputs {
+  workingStartUtc: Date;
+  workingEndUtc: Date;
+  intervalMinutes: number;
+  duration: number;
+  buffer: number;
+  breaks: TimeRange[];
+  bookedRanges: TimeRange[];
+  earliestStartMs: number;
+}
+
+/**
+ * Generates the set of bookable slot start-times for a single day.
+ *
+ * Candidates come from three sources:
+ *  1. The fixed grid (workStart, workStart+interval, …) — the usual case.
+ *  2. The end of every existing booking (incl. its post-buffer). Without
+ *     this, a 14:30-15:15 booking on a :30 grid would dead-zone the 15:15
+ *     gap because no grid candidate lands at :15.
+ *  3. The end of every break (regular days). Same reasoning.
+ *
+ * Each candidate is then validated against working hours, lead time,
+ * breaks and other bookings — same checks as before.
+ */
+function generateSlotStrings({
+  workingStartUtc,
+  workingEndUtc,
+  intervalMinutes,
+  duration,
+  buffer,
+  breaks,
+  bookedRanges,
+  earliestStartMs,
+}: SlotGenInputs): string[] {
+  const startMs = workingStartUtc.getTime();
+  const endMs = workingEndUtc.getTime();
+  const stepMs = intervalMinutes * 60_000;
+
+  const candidateMs = new Set<number>();
+  for (let t = startMs; t < endMs; t += stepMs) candidateMs.add(t);
+  for (const r of bookedRanges) {
+    const t = r.end.getTime();
+    if (t >= startMs && t < endMs) candidateMs.add(t);
+  }
+  for (const b of breaks) {
+    const t = b.end.getTime();
+    if (t >= startMs && t < endMs) candidateMs.add(t);
+  }
+
+  const sorted = [...candidateMs].sort((a, b) => a - b);
+  const slots: string[] = [];
+  for (const ms of sorted) {
+    const candidate = new Date(ms);
+    const slotEnd = addMinutes(candidate, duration);
+    const blockEnd = addMinutes(candidate, duration + buffer);
+
+    if (isAfter(slotEnd, workingEndUtc)) continue;
+    if (ms < earliestStartMs) continue;
+    if (
+      breaks.some(
+        (b) => isBefore(candidate, b.end) && isAfter(blockEnd, b.start)
+      )
+    )
+      continue;
+    if (
+      bookedRanges.some(
+        (a) => isBefore(candidate, a.end) && isAfter(blockEnd, a.start)
+      )
+    )
+      continue;
+
+    const local = toZonedTime(candidate, TIMEZONE);
+    const hh = local.getHours().toString().padStart(2, "0");
+    const mm = local.getMinutes().toString().padStart(2, "0");
+    slots.push(`${hh}:${mm}`);
+  }
+  return slots;
+}
+
 export async function getAvailableSlots(
   barberId: string,
   serviceId: string,
@@ -111,41 +190,16 @@ export async function getAvailableSlots(
   // that starts within MIN_BOOKING_LEAD_MINUTES from now.
   const earliestStartMs = nowUtc.getTime() + MIN_BOOKING_LEAD_MINUTES * 60_000;
 
-  const slots: string[] = [];
-  let candidate = workingStartUtc;
-  while (isBefore(candidate, workingEndUtc)) {
-    const slotEnd = addMinutes(candidate, duration);
-    const blockEnd = addMinutes(candidate, duration + buffer);
-
-    const fitsInWorkingHours = !isAfter(slotEnd, workingEndUtc);
-    const notInPast = candidate.getTime() >= earliestStartMs;
-    // A slot whose post-service buffer extends into a break shouldn't be
-    // offered — the booking transaction wouldn't notice (it only checks
-    // appointment overlap), and the customer would arrive to find the
-    // barber already on a scheduled break.
-    const noBreakOverlap = !breaks.some(
-      (b) => isBefore(candidate, b.end) && isAfter(blockEnd, b.start)
-    );
-    const noAppointmentOverlap = !bookedRanges.some(
-      (a) => isBefore(candidate, a.end) && isAfter(blockEnd, a.start)
-    );
-
-    if (
-      fitsInWorkingHours &&
-      notInPast &&
-      noBreakOverlap &&
-      noAppointmentOverlap
-    ) {
-      const local = toZonedTime(candidate, TIMEZONE);
-      const hours = local.getHours().toString().padStart(2, "0");
-      const mins = local.getMinutes().toString().padStart(2, "0");
-      slots.push(`${hours}:${mins}`);
-    }
-
-    candidate = addMinutes(candidate, intervalMinutes);
-  }
-
-  return slots;
+  return generateSlotStrings({
+    workingStartUtc,
+    workingEndUtc,
+    intervalMinutes,
+    duration,
+    buffer,
+    breaks,
+    bookedRanges,
+    earliestStartMs,
+  });
 }
 
 export async function getWorkingDays(barberId: string): Promise<number[]> {
@@ -199,11 +253,6 @@ export interface AvailabilityBundle {
    *  resolve to []. The wizard reads this map directly on date-click — no
    *  follow-up fetch required. */
   slotsByDate: Record<string, string[]>;
-}
-
-interface TimeRangeUtc {
-  start: Date;
-  end: Date;
 }
 
 /**
@@ -348,14 +397,14 @@ export async function getAvailabilityBundle(
       workEnd = sched.endTime;
     }
 
-    const breaks: TimeRangeUtc[] = isOverrideDay
+    const breaks: TimeRange[] = isOverrideDay
       ? []
       : (breaksByDow.get(dayOfWeek) ?? []).map((b) => ({
           start: fromZonedTime(`${dateKey}T${b.startTime}:00`, TIMEZONE),
           end: fromZonedTime(`${dateKey}T${b.endTime}:00`, TIMEZONE),
         }));
 
-    const bookedRanges: TimeRangeUtc[] = (apptsByDate.get(dateKey) ?? []).map(
+    const bookedRanges: TimeRange[] = (apptsByDate.get(dateKey) ?? []).map(
       (a) => ({
         start: tsToDate(a.startTime),
         end: addMinutes(tsToDate(a.endTime), a.serviceBufferMinutes ?? 0),
@@ -368,37 +417,16 @@ export async function getAvailabilityBundle(
     );
     const workingEndUtc = fromZonedTime(`${dateKey}T${workEnd}:00`, TIMEZONE);
 
-    const slots: string[] = [];
-    let candidate = workingStartUtc;
-    while (isBefore(candidate, workingEndUtc)) {
-      const slotEnd = addMinutes(candidate, duration);
-      const blockEnd = addMinutes(candidate, duration + buffer);
-
-      const fitsInWorkingHours = !isAfter(slotEnd, workingEndUtc);
-      const notInPast = candidate.getTime() >= earliestStartMs;
-      const noBreakOverlap = !breaks.some(
-        (b) => isBefore(candidate, b.end) && isAfter(blockEnd, b.start)
-      );
-      const noAppointmentOverlap = !bookedRanges.some(
-        (a) => isBefore(candidate, a.end) && isAfter(blockEnd, a.start)
-      );
-
-      if (
-        fitsInWorkingHours &&
-        notInPast &&
-        noBreakOverlap &&
-        noAppointmentOverlap
-      ) {
-        const local = toZonedTime(candidate, TIMEZONE);
-        const hours = local.getHours().toString().padStart(2, "0");
-        const mins = local.getMinutes().toString().padStart(2, "0");
-        slots.push(`${hours}:${mins}`);
-      }
-
-      candidate = addMinutes(candidate, intervalMinutes);
-    }
-
-    slotsByDate[dateKey] = slots;
+    slotsByDate[dateKey] = generateSlotStrings({
+      workingStartUtc,
+      workingEndUtc,
+      intervalMinutes,
+      duration,
+      buffer,
+      breaks,
+      bookedRanges,
+      earliestStartMs,
+    });
   }
 
   return {
