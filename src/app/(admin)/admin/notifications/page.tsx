@@ -122,19 +122,23 @@ export default async function NotificationsPage({ searchParams }: PageProps) {
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold sm:text-3xl">Notifikácie</h1>
         <div className="flex flex-col items-end gap-1">
-          <RunRemindersButton />
+          <RunRemindersButton
+            emailPending={tomorrow.emailPending}
+            smsPending={tomorrow.smsPending}
+          />
           {(tomorrow.emailPending > 0 || tomorrow.smsPending > 0) && (
             <p className="text-xs text-muted-foreground">
-              Zajtra ({tomorrow.dateKey}) sa pošle:{" "}
+              Pri najbližšom behu cronu (~16:00) sa pošle:{" "}
               <span className="font-medium text-foreground">
                 {tomorrow.emailPending} email
                 {tomorrow.smsPending > 0 && ` + ${tomorrow.smsPending} SMS`}
-              </span>
+              </span>{" "}
+              — rezervácie na {tomorrow.dateKey}
             </p>
           )}
           {tomorrow.emailPending === 0 && tomorrow.smsPending === 0 && (
             <p className="text-xs text-muted-foreground">
-              Zajtra ({tomorrow.dateKey}) — žiadne pripomienky.
+              Žiadne pripomienky na {tomorrow.dateKey}.
             </p>
           )}
         </div>
