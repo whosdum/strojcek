@@ -157,7 +157,15 @@ export default async function NotificationsPage({ searchParams }: PageProps) {
                   <span className="text-destructive">
                     ⚠ Posledný beh pred{" "}
                     {formatDistanceToNow(lastCron.lastRunAt, { locale: sk })}{" "}
-                    — skontroluj GitHub Actions
+                    — skontroluj{" "}
+                    <a
+                      href="https://github.com/whosdum/strojcek/actions"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline underline-offset-2 hover:opacity-80"
+                    >
+                      GitHub Actions
+                    </a>
                   </span>
                 ) : (
                   <span className="text-emerald-700 dark:text-emerald-400">
@@ -173,7 +181,16 @@ export default async function NotificationsPage({ searchParams }: PageProps) {
             ) : (
               <p className="text-destructive">
                 ⚠ Reminder cron ešte nikdy nezbehol (alebo všetky záznamy už
-                expirovali). Skontroluj GitHub Actions workflow.
+                expirovali). Skontroluj{" "}
+                <a
+                  href="https://github.com/whosdum/strojcek/actions"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline underline-offset-2 hover:opacity-80"
+                >
+                  GitHub Actions
+                </a>{" "}
+                workflow.
               </p>
             )}
           </CardContent>
