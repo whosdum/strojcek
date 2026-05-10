@@ -2,8 +2,8 @@ name: Cron Jobs
 
 on:
   schedule:
-    # Reminders — daily at 16:00 UTC (18:00 Bratislava summer / 17:00 winter)
-    - cron: "0 16 * * *"
+    # Reminders — daily at 14:00 UTC (16:00 Bratislava summer / 15:00 winter)
+    - cron: "0 14 * * *"
   workflow_dispatch: # allow manual trigger of the reminder run
 
 # Block concurrent runs of the same trigger so a manual dispatch landing
@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   reminders:
-    if: github.event.schedule == '0 16 * * *' || github.event_name == 'workflow_dispatch'
+    if: github.event.schedule == '0 14 * * *' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

@@ -34,7 +34,7 @@ firebase deploy --only firestore:rules,firestore:indexes  # Deploy security rule
 - `src/app/api/`
   - `/auth/session` — POST creates `__session` cookie via `createSessionCookie()`, DELETE clears
   - `/admin/calendar`, `/admin/services` — guarded JSON endpoints
-  - `/cron/reminders` (daily 16:00 UTC) — `Authorization: Bearer $CRON_SECRET`. Also performs the daily GC pass on `counters/global_bookings.hourly`.
+  - `/cron/reminders` (daily 14:00 UTC) — `Authorization: Bearer $CRON_SECRET`. Also performs the daily GC pass on `counters/global_bookings.hourly`.
 
 ### Server Layer (`src/server/`)
 

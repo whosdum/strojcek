@@ -48,7 +48,7 @@ const KIND_FILTERS: Array<{ value: NotificationKind | "email"; label: string }> 
 ];
 
 /** "Reminder cron je staršia ako N hodín → varovať." Reminder beží denne
- *  o 16:00 UTC; po >25h od posledného úspešného behu niečo zlyhalo. */
+ *  o 14:00 UTC; po >25h od posledného úspešného behu niečo zlyhalo. */
 const CRON_STALE_HOURS = 25;
 
 interface PageProps {
