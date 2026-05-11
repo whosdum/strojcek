@@ -1,0 +1,26 @@
+{
+  "name": "strojcek-functions",
+  "private": true,
+  "version": "1.0.0",
+  "main": "lib/index.js",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "lint": "echo 'no lint configured for functions'",
+    "serve": "npm run build && firebase emulators:start --only functions",
+    "shell": "npm run build && firebase functions:shell",
+    "deploy:staging": "firebase deploy --only functions --project strojcek-staging",
+    "deploy:prod": "firebase deploy --only functions --project strojcek-production",
+    "logs:staging": "firebase functions:log --only sendReminders --project strojcek-staging",
+    "logs:prod": "firebase functions:log --only sendReminders --project strojcek-production"
+  },
+  "dependencies": {
+    "firebase-functions": "^6.6.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}

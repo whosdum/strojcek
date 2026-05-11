@@ -34,7 +34,7 @@ firebase deploy --only firestore:rules,firestore:indexes  # Deploy security rule
 - `src/app/api/`
   - `/auth/session` — POST creates `__session` cookie via `createSessionCookie()`, DELETE clears
   - `/admin/calendar`, `/admin/services` — guarded JSON endpoints
-  - `/cron/reminders` (daily 14:00 UTC) — `Authorization: Bearer $CRON_SECRET`. Also performs the daily GC pass on `counters/global_bookings.hourly`.
+  - `/cron/reminders` — `Authorization: Bearer $CRON_SECRET`. Scheduled by Firebase Scheduled Function `sendReminders` ([functions/src/index.ts](functions/src/index.ts)) daily at 14:00 UTC. Also performs the daily GC pass on `counters/global_bookings.hourly`.
 
 ### Server Layer (`src/server/`)
 
@@ -181,10 +181,39 @@ git push origin feat/firebase-firestore-rewrite
 
 After deploy, update `NEXT_PUBLIC_APP_URL` in `apphosting.yaml` to the actual backend URL (Console shows it after first deploy), then commit + push.
 
+## Scheduled Functions (cron)
+
+The `functions/` directory holds Firebase Scheduled Functions. Currently one function: `sendReminders` (daily 14:00 UTC, region europe-west1, 1 retry with 60s min-backoff) → HTTP-calls `${NEXT_PUBLIC_APP_URL}/api/cron/reminders` with Bearer `CRON_SECRET` and a 120s `AbortSignal` timeout. Logic lives in the Next.js endpoint; the function is just the scheduler.
+
+```bash
+# Build + deploy
+cd functions && npm run build && cd ..
+firebase deploy --only functions --project strojcek-staging
+firebase deploy --only functions --project strojcek-production
+# (or from inside functions/: npm run deploy:staging / deploy:prod)
+
+# Inspect / manage
+firebase functions:log --only sendReminders --project strojcek-production
+# Or: Firebase Console → Build → Functions → sendReminders → Logs
+# Or: GCP Console → Cloud Scheduler → firebase-schedule-sendReminders-europe-west1 → "Force run"
+```
+
+**Pre-deploy checklist (one-time per project):**
+
+1. Confirm both `CRON_SECRET` and `NEXT_PUBLIC_APP_URL` exist in Cloud Secret Manager for the target project. App Hosting already uses both, so they should be present. Verify:
+   ```bash
+   gcloud secrets list --project=strojcek-staging | grep -E "CRON_SECRET|NEXT_PUBLIC_APP_URL"
+   ```
+2. On first `firebase deploy --only functions`, the CLI will prompt: *"The following secrets need access granted to the runtime service account... Grant access? (Y/n)"* → answer **Y**. Without this, the function deploys but crashes at runtime with `PERMISSION_DENIED` reading secrets.
+3. Cloud Scheduler API auto-enables on first deploy via interactive CLI. For CI/SA deploys, pre-enable: `gcloud services enable cloudscheduler.googleapis.com cloudfunctions.googleapis.com pubsub.googleapis.com eventarc.googleapis.com --project=<project-id>`.
+
+**Deploy order when migrating from GitHub Actions:** deploy the function FIRST (it has its own schedule), THEN merge the `.github/workflows/cron.yml` change to default branch. If you merge first, you have a window where neither scheduler runs.
+
+`.github/workflows/cron.yml` is kept as a manual-only fallback (`workflow_dispatch`) — the scheduled trigger has moved to Firebase.
+
 ## Other notes
 
 - `Audit.md` is a 45-item UI/UX audit (P0–P3 priorities) — consult it before making UI changes
-- `.github/workflows/cron.yml` schedules cron HTTP calls to `/api/cron/*` — when deployed to App Hosting, set the GitHub Actions `APP_URL` repo secret to the backend URL
 - `docs/archive/2026-pre-firebase/` contains the original implementation plans/specs from the Postgres + Prisma + Better Auth + Vercel era — kept for historical reference only, not for current development
 - **Firestore TTL setup**: four collections rely on Firestore native TTL for retention (replaces the old cleanup cron). One-time per project:
 

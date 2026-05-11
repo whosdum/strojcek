@@ -1,17 +1,19 @@
-name: Cron Jobs
+name: Cron Jobs (manual fallback)
+
+# The scheduled cron has moved to Firebase Scheduled Functions
+# (functions/src/index.ts → sendReminders). This workflow is kept ONLY as
+# a manual emergency trigger — if the Firebase function is down or you
+# want to replay the daily run, dispatch this workflow from the GitHub UI
+# or via `gh workflow run cron.yml`.
+#
+# To remove this fallback entirely once you are confident in the Firebase
+# function: delete this file.
 
 on:
-  schedule:
-    # Reminders — daily at 14:00 UTC (16:00 Bratislava summer / 15:00 winter)
-    - cron: "0 14 * * *"
-  workflow_dispatch: # allow manual trigger of the reminder run
+  workflow_dispatch: # manual trigger only
 
-# Block concurrent runs of the same trigger so a manual dispatch landing
-# on top of a scheduled run does not produce two simultaneous HTTP calls
-# to /api/cron/*. Reminders rely on lock-then-send for correctness, but
-# we still avoid the wasted invocations.
 concurrency:
-  group: cron-${{ github.event.schedule || github.event_name }}
+  group: cron-${{ github.event_name }}
   cancel-in-progress: false
 
 permissions:
@@ -19,7 +21,6 @@ permissions:
 
 jobs:
   reminders:
-    if: github.event.schedule == '0 14 * * *' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
