@@ -200,3 +200,5 @@ After deploy, update `NEXT_PUBLIC_APP_URL` in `apphosting.yaml` to the actual ba
   ```
 
   Retention windows: `notificationLog` 90d, `history` 365d, `counters/phone_*` + `counters/email_*` 24h after last booking. `counters/global_bookings` has no `expireAt` field so TTL skips it (trimmed inline by booking.ts + reminder cron).
+
+- **Firestore scheduled backups**: two complementary schedules per project — daily (7d retention) for recent mistakes, weekly Sunday (14w retention) for late-detected corruption. Set up via `scripts/setup-firestore-backups.sh <project>` (requires `gcloud` CLI) or manually in Firebase Console → Firestore Database → Backups. Storage cost is negligible (~$0.01–0.10/mo at current scale). Auth users are *not* covered — export occasionally with `firebase auth:export users.json` if needed.
