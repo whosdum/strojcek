@@ -52,7 +52,7 @@ firebase deploy --only firestore:rules,firestore:indexes  # Deploy security rule
 - `firebase-client.ts` — initializes the Web SDK from `NEXT_PUBLIC_FIREBASE_*` env. Optionally binds to local emulators when `NEXT_PUBLIC_USE_FIREBASE_EMULATORS=true`
 - `types.ts` — Shared `AppointmentStatus`, view models (`AppointmentView`, `BarberView`, etc.). UI components import enums + types from here, never from anywhere Postgres-flavored
 - `validators.ts` — Zod schemas for all entities
-- `constants.ts` — Business rules: `MIN_CANCEL_HOURS = 2`, `PAGE_SIZE = 25`, `GLOBAL_BOOKING_LIMIT = 30`, `PHONE_BOOKING_LIMIT_24H = 3`, `SLOT_GROUP_BOUNDARIES`, `VALID_STATUS_TRANSITIONS`, `formatCurrency()`. `SLOT_INTERVAL_MINUTES = 60` is a fallback — actual value is read from `shopSettings/default` at runtime
+- `constants.ts` — Business rules: `MIN_CANCEL_HOURS = 2`, `PAGE_SIZE = 25`, `GLOBAL_BOOKING_LIMIT = 30`, `PHONE_BOOKING_LIMIT_24H = 5`, `SLOT_GROUP_BOUNDARIES`, `VALID_STATUS_TRANSITIONS`, `formatCurrency()`. `SLOT_INTERVAL_MINUTES = 60` is a fallback — actual value is read from `shopSettings/default` at runtime
 
 ### Firestore data model
 
