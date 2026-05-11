@@ -1137,6 +1137,16 @@ export function BookingWizard({
                     // the slot grid hides and the user is nudged back to
                     // pick from the calendar above.
                     dispatch({ type: "EDIT_STEP", step: 3 });
+                    const section = sectionRefs.current[3];
+                    if (!section) return;
+                    const prefersReducedMotion = window.matchMedia(
+                      "(prefers-reduced-motion: reduce)"
+                    ).matches;
+                    const rect = section.getBoundingClientRect();
+                    window.scrollTo({
+                      top: window.scrollY + rect.top - 24,
+                      behavior: prefersReducedMotion ? "auto" : "smooth",
+                    });
                   }}
                 />
               </div>
