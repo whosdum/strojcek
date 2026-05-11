@@ -32,11 +32,16 @@ export default async function EditReservationPage({
   // Ensure the current barber/service appear in the dropdowns even if they
   // have since become inactive — admin needs to be able to load and adjust
   // the appointment.
-  const serviceList = services.map((s) => ({ id: s.id, name: s.name }));
+  const serviceList = services.map((s) => ({
+    id: s.id,
+    name: s.name,
+    durationMinutes: s.durationMinutes,
+  }));
   if (!serviceList.some((s) => s.id === appointment.serviceId)) {
     serviceList.unshift({
       id: appointment.serviceId,
       name: `${appointment.service.name} (neaktívna)`,
+      durationMinutes: appointment.service.durationMinutes,
     });
   }
   const barberList = barbers.map((b) => ({
@@ -74,7 +79,7 @@ export default async function EditReservationPage({
       </nav>
       <h1 className="mb-6 text-2xl font-bold sm:text-3xl">Upraviť rezerváciu</h1>
 
-      <div className="max-w-2xl">
+      <div className="max-w-2xl lg:max-w-5xl">
         <AppointmentForm
           mode="edit"
           services={serviceList}

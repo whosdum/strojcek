@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
+import { sk } from "date-fns/locale/sk";
 import { toZonedTime } from "date-fns-tz";
-import { Loader2Icon } from "lucide-react";
+import { ChevronDownIcon, Loader2Icon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -20,12 +21,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { SlotChip } from "@/components/booking/slot-chip";
 
 import { fetchSlots } from "@/server/actions/slots";
 import {
   createAppointmentAdmin,
+  fetchDayAppointments,
   updateAppointment,
+  type DayAppointmentSummary,
 } from "@/server/actions/appointments";
 import {
   SLOT_GROUP_BOUNDARIES,
@@ -44,6 +57,9 @@ interface BarberOption {
 interface ServiceOption {
   id: string;
   name: string;
+  /** Used to draw a "draft" ghost entry in the day-overview panel — admin
+   *  sees where the new reservation would land before submitting. */
+  durationMinutes: number;
 }
 
 interface AppointmentInitial {
@@ -118,6 +134,33 @@ function todayIso() {
   return format(now, "yyyy-MM-dd");
 }
 
+// Force the browser-native date/time popup to open. Safari (and older Chrome
+// on some platforms) doesn't open the picker when the user clicks the field
+// background — only when they hit the tiny chevron. Calling showPicker()
+// from a user gesture restores the expected click-anywhere behavior.
+function openNativePicker(e: React.SyntheticEvent<HTMLInputElement>) {
+  const el = e.currentTarget;
+  if (typeof el.showPicker !== "function") return;
+  try {
+    el.showPicker();
+  } catch {
+    // showPicker throws if the input is hidden, disabled, or the gesture
+    // requirement is not met. Silent fail — user can still type the value.
+  }
+}
+
+/** "75 min" → "1h 15min"; "60" → "1h"; "45" → "45min". Used as a
+ *  human-readable companion to the raw-minute trvanie in the confirm
+ *  dialog so the admin doesn't have to do mental math. */
+function formatDurationHours(minutes: number): string {
+  if (!Number.isFinite(minutes) || minutes <= 0) return "";
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h === 0) return `${m}min`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}min`;
+}
+
 function splitPhone(phone: string): { prefix: "+421" | "+420"; digits: string } {
   if (phone.startsWith("+420")) {
     return { prefix: "+420", digits: phone.slice(4) };
@@ -138,6 +181,17 @@ export function AppointmentForm({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [slotData, setSlotData] = useState<{ key: string; slots: string[] } | null>(null);
+  const [dayData, setDayData] = useState<{
+    key: string;
+    appointments: DayAppointmentSummary[];
+  } | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  // Mobile-only collapsible state for the day panel. Default collapsed
+  // to save vertical space. When a new conflict appears we auto-open
+  // once (so the warning isn't tucked away) but a subsequent user
+  // collapse is respected — see the useEffect below.
+  const [dayPanelOpen, setDayPanelOpen] = useState(false);
+  const prevDayConflictsRef = useRef(false);
 
   const limited = !!initial && (initial.status === "IN_PROGRESS" || initial.status === "COMPLETED");
 
@@ -164,7 +218,7 @@ export function AppointmentForm({
       notes: initial?.notes ?? "",
       ignoreSchedule: editingWalkIn,
       priceFinal: initial?.priceFinal != null ? String(initial.priceFinal) : "",
-      walkIn: initialIsWalkIn,
+      walkIn: initialIsWalkIn || mode === "create",
       label: initialIsWalkIn ? initial?.customerName?.trim() || "Walk-in" : "",
       customDurationMinutes:
         initialIsWalkIn && initial?.durationMinutes
@@ -208,13 +262,15 @@ export function AppointmentForm({
     [eligibleBarbers]
   );
 
-  // Visible barberId — auto-falls back to "" when current barber doesn't offer
-  // the selected service. Storing this as derived state avoids mutating form
-  // inside a useEffect.
+  // Visible barberId — auto-falls back to first eligible in create mode so
+  // the field doesn't go blank when service changes. Edit mode keeps strict
+  // matching so we don't silently swap the barber on a saved appointment.
   const effectiveBarberId =
     form.barberId && eligibleBarbers.some((b) => b.id === form.barberId)
       ? form.barberId
-      : "";
+      : mode === "create"
+        ? eligibleBarbers[0]?.id ?? ""
+        : "";
 
   // Build a "fetch key" — null means we don't fetch (override or missing inputs)
   const fetchKey =
@@ -242,6 +298,33 @@ export function AppointmentForm({
   const slotsLoading = fetchKey !== null && slotData?.key !== fetchKey;
   const slots = fetchKey !== null && slotData?.key === fetchKey ? slotData.slots : null;
 
+  // Day panel data — fetched independently of slot availability so the
+  // admin sees the day's existing reservations even when ignoreSchedule is
+  // on (which is the typical walk-in scenario).
+  const dayKey =
+    effectiveBarberId && form.date
+      ? `${effectiveBarberId}|${form.date}`
+      : null;
+
+  useEffect(() => {
+    if (!dayKey) return;
+    let cancelled = false;
+    fetchDayAppointments(effectiveBarberId, form.date, initial?.id)
+      .then((res) => {
+        if (!cancelled) setDayData({ key: dayKey, appointments: res });
+      })
+      .catch(() => {
+        if (!cancelled) setDayData({ key: dayKey, appointments: [] });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [dayKey, effectiveBarberId, form.date, initial?.id]);
+
+  const dayLoading = dayKey !== null && dayData?.key !== dayKey;
+  const dayAppointments =
+    dayKey !== null && dayData?.key === dayKey ? dayData.appointments : null;
+
   const groupedSlots = useMemo(() => {
     if (!slots) return [];
     return Object.entries(SLOT_GROUP_BOUNDARIES)
@@ -260,41 +343,411 @@ export function AppointmentForm({
     setForm((s) => ({ ...s, [key]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
+  /** Pretty Slovak "pondelok, 11. mája 2026" for the dialog + day panel. */
+  const formattedDate = useMemo(() => {
+    if (!form.date) return "";
+    try {
+      return format(parseISO(form.date), "EEEE d. MMMM yyyy", { locale: sk });
+    } catch {
+      return form.date;
+    }
+  }, [form.date]);
 
-    if (!limited) {
-      if (!form.serviceId) {
-        setError("Vyberte službu.");
-        return;
-      }
-      if (!effectiveBarberId) {
-        setError("Vyberte barbera.");
-        return;
-      }
-      if (!form.date || !form.time) {
-        setError("Vyberte dátum a čas.");
-        return;
-      }
-      if (!form.walkIn) {
-        if (!form.firstName.trim()) {
-          setError("Zadajte meno zákazníka.");
-          return;
-        }
-        if (!/^[1-9]\d{8}$/.test(form.phoneDigits)) {
-          setError("Zadajte 9-miestne telefónne číslo bez úvodnej nuly (napr. 903123456).");
-          return;
-        }
-        // Email is required for create (so customer gets confirmation + reminder).
-        // For edit it stays optional — legacy reservations may not have one.
-        if (mode === "create" && !form.email.trim()) {
-          setError("Email je povinný — zákazník dostane potvrdenie a pripomienku.");
-          return;
-        }
-      }
+  const summaryService = services.find((s) => s.id === form.serviceId)?.name ?? "—";
+  const summaryBarber = (() => {
+    const b = barbers.find((x) => x.id === effectiveBarberId);
+    return b ? `${b.firstName} ${b.lastName}` : "—";
+  })();
+  const summaryWho = form.walkIn
+    ? form.label.trim() || "Walk-in"
+    : `${form.firstName.trim()} ${form.lastName.trim()}`.trim() || "—";
+
+  /** Ghost row for the day panel — visualises where the in-progress
+   *  reservation would land. Null when there's not enough info yet
+   *  (missing time or unknown duration). Wraps over midnight via mod-24
+   *  so a 22:00 + 4h still shows a sensible 02:00 end. */
+  const draftEntry = useMemo<{
+    startTime: string;
+    endTime: string;
+    title: string;
+  } | null>(() => {
+    if (!form.time || !/^\d{1,2}:\d{2}$/.test(form.time)) return null;
+    const customDur =
+      form.walkIn && form.customDurationMinutes.trim() !== ""
+        ? Number(form.customDurationMinutes)
+        : null;
+    const serviceDur = services.find((s) => s.id === form.serviceId)?.durationMinutes ?? null;
+    const dur = customDur && customDur > 0 ? customDur : serviceDur;
+    if (!dur || dur < 1) return null;
+    const [h, m] = form.time.split(":").map(Number);
+    if (Number.isNaN(h) || Number.isNaN(m)) return null;
+    const totalMin = h * 60 + m + dur;
+    const endH = Math.floor(totalMin / 60) % 24;
+    const endM = totalMin % 60;
+    const endTime = `${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}`;
+    const startTime = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+    const title = form.walkIn
+      ? form.label.trim() || "Walk-in"
+      : `${form.firstName.trim()} ${form.lastName.trim()}`.trim() || "Nový zákazník";
+    return { startTime, endTime, title };
+  }, [
+    form.time,
+    form.walkIn,
+    form.customDurationMinutes,
+    form.serviceId,
+    form.firstName,
+    form.lastName,
+    form.label,
+    services,
+  ]);
+
+  /** Merged list of real bookings + the in-progress draft, sorted by
+   *  start time. Each row carries flags so the panel can highlight
+   *  conflicts (draft overlapping an existing booking) in red. */
+  type DayPanelRow =
+    | (DayAppointmentSummary & { isDraft?: false; isConflict?: boolean })
+    | {
+        id: "__draft__";
+        startTime: string;
+        endTime: string;
+        title: string;
+        isDraft: true;
+        hasConflicts: boolean;
+      };
+  const combinedDay = useMemo<DayPanelRow[] | null>(() => {
+    if (!dayAppointments) return null;
+
+    // Convert "HH:mm" → minutes; wrap end past midnight so a 22:00 + 4h
+    // draft is still compared correctly against a 23:00 booking.
+    const toMin = (s: string) => {
+      const [h, m] = s.split(":").map(Number);
+      return h * 60 + m;
+    };
+    let draftStart = -1;
+    let draftEnd = -1;
+    if (draftEntry) {
+      draftStart = toMin(draftEntry.startTime);
+      draftEnd = toMin(draftEntry.endTime);
+      if (draftEnd <= draftStart) draftEnd += 24 * 60;
     }
 
+    const list: DayPanelRow[] = dayAppointments.map((a) => {
+      if (!draftEntry) return a;
+      const aStart = toMin(a.startTime);
+      let aEnd = toMin(a.endTime);
+      if (aEnd <= aStart) aEnd += 24 * 60;
+      // Standard half-open interval overlap: [aStart, aEnd) ∩ [draftStart, draftEnd).
+      // Touching edges (15:00–16:00 vs 16:00–17:00) is NOT a conflict.
+      const isConflict = aStart < draftEnd && draftStart < aEnd;
+      return { ...a, isConflict };
+    });
+
+    if (draftEntry) {
+      const hasConflicts = list.some(
+        (x) => !x.isDraft && x.isConflict === true,
+      );
+      list.push({ id: "__draft__", ...draftEntry, isDraft: true, hasConflicts });
+    }
+    list.sort((a, b) => a.startTime.localeCompare(b.startTime));
+    return list;
+  }, [dayAppointments, draftEntry]);
+
+  /** True when the draft overlaps any existing booking. Surfaced as a
+   *  banner above the timeline so the admin doesn't have to spot it from
+   *  the colored blocks alone. */
+  const draftHasConflicts =
+    combinedDay?.some(
+      (row): row is DayPanelRow & { isDraft: true; hasConflicts: true } =>
+        row.isDraft === true && row.hasConflicts === true,
+    ) ?? false;
+
+  // Auto-open the mobile day panel the moment a new conflict appears —
+  // a force-open via `isOpen = open || conflicts` was the previous
+  // attempt but it locked the user out of collapsing while the conflict
+  // existed. With a ref we only push open on the false→true transition,
+  // so a manual collapse afterwards sticks.
+  useEffect(() => {
+    if (draftHasConflicts && !prevDayConflictsRef.current) {
+      setDayPanelOpen(true);
+    }
+    prevDayConflictsRef.current = draftHasConflicts;
+  }, [draftHasConflicts]);
+
+  /** Geometric layout for the day-overview timeline. Each row is placed
+   *  in a "lane" — the first one where it doesn't overlap a previously
+   *  placed item — so two reservations starting at the same time render
+   *  side-by-side instead of stacked. Heights and y-positions are in
+   *  pixels (PX_PER_MIN px per minute) relative to the visible window. */
+  const timelineLayout = useMemo(() => {
+    if (!combinedDay || combinedDay.length === 0) return null;
+
+    const toMinutes = (hhmm: string) => {
+      const [h, m] = hhmm.split(":").map(Number);
+      return h * 60 + m;
+    };
+
+    const items = combinedDay.map((row) => {
+      const startMin = toMinutes(row.startTime);
+      let endMin = toMinutes(row.endTime);
+      if (endMin <= startMin) endMin += 24 * 60;
+      return { ...row, startMin, endMin };
+    });
+
+    const minStart = Math.min(...items.map((i) => i.startMin));
+    const maxEnd = Math.max(...items.map((i) => i.endMin));
+    const windowStart = Math.floor(minStart / 60) * 60;
+    const windowEnd = Math.ceil(maxEnd / 60) * 60;
+
+    // Sweep-line lane assignment: scan by start time, place into the
+    // first lane whose last booking ends ≤ this start. Greedy but
+    // optimal for the side-by-side-when-overlapping visual we want.
+    const sorted = [...items].sort((a, b) => a.startMin - b.startMin);
+    const laneEnds: number[] = [];
+    const placed = sorted.map((it) => {
+      let lane = laneEnds.findIndex((end) => end <= it.startMin);
+      if (lane === -1) {
+        lane = laneEnds.length;
+        laneEnds.push(it.endMin);
+      } else {
+        laneEnds[lane] = it.endMin;
+      }
+      return { ...it, lane };
+    });
+
+    // Width/left percentages — each item is sized to the max lane count
+    // among items overlapping it, not the global max, so a lone booking
+    // in a quiet hour still takes full width.
+    const positioned = placed.map((it) => {
+      const concurrent = placed.filter(
+        (o) => o.startMin < it.endMin && it.startMin < o.endMin,
+      );
+      const totalLanes = Math.max(...concurrent.map((o) => o.lane)) + 1;
+      return {
+        ...it,
+        widthPct: 100 / totalLanes,
+        leftPct: (it.lane / totalLanes) * 100,
+      };
+    });
+
+    const hours: number[] = [];
+    for (let m = windowStart; m <= windowEnd; m += 60) hours.push(m);
+
+    return {
+      items: positioned,
+      hours,
+      windowStart,
+      totalMin: windowEnd - windowStart,
+    };
+  }, [combinedDay]);
+
+  // Slovak plural for "rezervácie" — 1: rezervácia, 2-4: rezervácie,
+  // else: rezervácií. Used in the panel header so the collapsed mobile
+  // state still tells the admin "how many" at a glance.
+  const pluralRezervacii = (n: number): string => {
+    if (n === 1) return "rezervácia";
+    if (n >= 2 && n <= 4) return "rezervácie";
+    return "rezervácií";
+  };
+  const dayBookingCount = dayAppointments?.length ?? 0;
+
+  /** Header bit shown both in the desktop sidebar (static) and as a
+   *  mobile toggle button label. Adds a booking-count line so the
+   *  collapsed mobile state still gives a quick "how busy" cue. */
+  const dayPanelHeader = (
+    <div className="min-w-0 text-left">
+      <h3 className="text-sm font-semibold text-foreground">Tento deň</h3>
+      <p className="truncate text-xs text-muted-foreground">
+        {formattedDate || "Vyberte dátum"}
+        {summaryBarber !== "—" ? ` · ${summaryBarber}` : ""}
+      </p>
+      {effectiveBarberId && form.date && dayAppointments && (
+        <p
+          className={`text-xs ${
+            draftHasConflicts ? "font-medium text-destructive" : "text-muted-foreground"
+          }`}
+        >
+          {dayBookingCount === 0
+            ? "Žiadne rezervácie · celý deň je voľný"
+            : `${dayBookingCount} ${pluralRezervacii(dayBookingCount)}`}
+          {draftHasConflicts ? " · prekryv s novou" : ""}
+        </p>
+      )}
+    </div>
+  );
+
+  /** Timeline body — the actual visual content (loading state, empty
+   *  state, or the timeline grid). Wrapped in a `<>` so it can be
+   *  conditionally mounted by the mobile collapsible without changing
+   *  the rendered tree shape. */
+  const dayPanelContent = (
+    <>
+      {!effectiveBarberId || !form.date ? (
+        <p className="text-sm text-muted-foreground">Vyberte barbera a dátum.</p>
+      ) : dayLoading || !combinedDay ? (
+        <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
+          <Loader2Icon className="size-4 animate-spin" />
+          Načítavam…
+        </div>
+      ) : combinedDay.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          Žiadne rezervácie. Celý deň je voľný.
+        </p>
+      ) : (
+        <>
+          {draftHasConflicts && (
+            <p className="mb-2 rounded-lg border border-destructive/40 bg-destructive/10 px-2 py-1.5 text-xs font-medium text-destructive">
+              Nová rezervácia sa prekrýva s existujúcou.
+            </p>
+          )}
+          {timelineLayout && (() => {
+            // 0.8px/min → 48px per hour. Tight but readable; 30-min blocks
+            // (24px) fit the title, 60-min blocks (48px) also show subtitle.
+            const PX_PER_MIN = 0.8;
+            const HOUR_GUTTER = 36;
+            return (
+              <div
+                className="relative"
+                style={{
+                  height: `${timelineLayout.totalMin * PX_PER_MIN}px`,
+                }}
+              >
+                {/* Hour labels (gutter) */}
+                <div
+                  className="absolute left-0 top-0 bottom-0"
+                  style={{ width: `${HOUR_GUTTER}px` }}
+                >
+                  {timelineLayout.hours.map((mins) => (
+                    <span
+                      key={mins}
+                      className="absolute right-2 -translate-y-1/2 text-[10px] font-mono tabular-nums text-muted-foreground"
+                      style={{
+                        top: `${(mins - timelineLayout.windowStart) * PX_PER_MIN}px`,
+                      }}
+                    >
+                      {String(Math.floor(mins / 60) % 24).padStart(2, "0")}:00
+                    </span>
+                  ))}
+                </div>
+
+                {/* Body — grid lines + appointments */}
+                <div
+                  className="absolute right-0 top-0 bottom-0"
+                  style={{ left: `${HOUR_GUTTER}px` }}
+                >
+                  {/* Hour grid */}
+                  {timelineLayout.hours.map((mins) => (
+                    <div
+                      key={mins}
+                      className="absolute left-0 right-0 border-t border-border/30"
+                      style={{
+                        top: `${(mins - timelineLayout.windowStart) * PX_PER_MIN}px`,
+                      }}
+                    />
+                  ))}
+
+                  {/* Appointment blocks */}
+                  {timelineLayout.items.map((a) => {
+                    const top =
+                      (a.startMin - timelineLayout.windowStart) * PX_PER_MIN;
+                    const height = Math.max(
+                      16,
+                      (a.endMin - a.startMin) * PX_PER_MIN,
+                    );
+                    const conflictClass = a.isDraft
+                      ? "border-dashed border-primary bg-primary/15"
+                      : a.isConflict
+                        ? "border-destructive/70 bg-destructive/15"
+                        : "border-border/50 bg-muted/60";
+                    const showSubtitle = height >= 30;
+                    const subtitle = a.isDraft
+                      ? "Nová rezervácia"
+                      : `${a.source === "walk-in" ? "Walk-in" : a.serviceName}${
+                          a.status !== "CONFIRMED" && a.status !== "PENDING"
+                            ? ` · ${STATUS_LABELS[a.status]}`
+                            : ""
+                        }`;
+                    return (
+                      <div
+                        key={a.id}
+                        className={`absolute overflow-hidden rounded-md border px-1.5 py-0.5 text-[11px] leading-tight ${conflictClass}`}
+                        style={{
+                          top: `${top}px`,
+                          height: `${height}px`,
+                          left: `calc(${a.leftPct}% + 2px)`,
+                          width: `calc(${a.widthPct}% - 4px)`,
+                        }}
+                        title={`${a.startTime}–${a.endTime} ${a.title}`}
+                      >
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
+                            {a.startTime}
+                          </span>
+                          <span className="truncate font-medium text-foreground">
+                            {a.title}
+                          </span>
+                        </div>
+                        {showSubtitle && (
+                          <div
+                            className={`truncate text-[10px] ${
+                              a.isDraft
+                                ? "text-primary"
+                                : a.isConflict
+                                  ? "text-destructive"
+                                  : "text-muted-foreground"
+                            }`}
+                          >
+                            {subtitle}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
+        </>
+      )}
+    </>
+  );
+
+  /** Validate current form state — returns true if OK, otherwise sets the
+   *  inline error and returns false. Used both before opening the confirm
+   *  dialog (create mode) and as the fallback path for edit mode. */
+  const validate = (): boolean => {
+    if (limited) return true;
+    if (!form.serviceId) {
+      setError("Vyberte službu.");
+      return false;
+    }
+    if (!effectiveBarberId) {
+      setError("Vyberte barbera.");
+      return false;
+    }
+    if (!form.date || !form.time) {
+      setError("Vyberte dátum a čas.");
+      return false;
+    }
+    if (!form.walkIn) {
+      if (!form.firstName.trim()) {
+        setError("Zadajte meno zákazníka.");
+        return false;
+      }
+      if (!/^[1-9]\d{8}$/.test(form.phoneDigits)) {
+        setError("Zadajte 9-miestne telefónne číslo bez úvodnej nuly (napr. 903123456).");
+        return false;
+      }
+      // Email is required for create (so customer gets confirmation + reminder).
+      // For edit it stays optional — legacy reservations may not have one.
+      if (mode === "create" && !form.email.trim()) {
+        setError("Email je povinný — zákazník dostane potvrdenie a pripomienku.");
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const performSubmit = () => {
     startTransition(async () => {
       const fullPhone = form.walkIn
         ? ""
@@ -341,14 +794,34 @@ export function AppointmentForm({
         }
         router.refresh();
       } else {
+        setConfirmOpen(false);
         setError(result.error ?? "Nastala chyba.");
         toast.error(result.error ?? "Nepodarilo sa uložiť rezerváciu");
       }
     });
   };
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (!validate()) return;
+    // Create gets a confirmation dialog (rezervácia odošle email/SMS, walk-in
+    // blokuje slot — chcem ti dať sekundu na overenie). Edit + limited mode
+    // submit directly; admin is just patching an existing record.
+    if (mode === "create" && !limited) {
+      setConfirmOpen(true);
+      return;
+    }
+    performSubmit();
+  };
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <>
+    <form
+      onSubmit={handleSubmit}
+      className="lg:grid lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start lg:gap-8"
+    >
+      <div className="space-y-6 lg:min-w-0">
       {limited && (
         <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">
           Termín už prebieha alebo je dokončený ({STATUS_LABELS[initial!.status]}).
@@ -478,6 +951,8 @@ export function AppointmentForm({
             value={form.date}
             min={form.ignoreSchedule ? undefined : todayIso()}
             onChange={(e) => updateField("date", e.target.value)}
+            onClick={openNativePicker}
+            onFocus={openNativePicker}
             disabled={limited}
           />
         </div>
@@ -498,6 +973,8 @@ export function AppointmentForm({
               type="time"
               value={form.time}
               onChange={(e) => updateField("time", e.target.value)}
+              onClick={openNativePicker}
+              onFocus={openNativePicker}
               disabled={limited}
             />
           ) : !effectiveBarberId || !form.serviceId || !form.date ? (
@@ -560,6 +1037,35 @@ export function AppointmentForm({
         </div>
       </div>
 
+      {/* Mobile-only inline day overview — collapsible to save vertical
+          space. Header always visible (gives summary at a glance); the
+          full timeline is hidden until the admin taps to expand. Forced
+          open when the draft overlaps an existing booking so the warning
+          isn't tucked away behind a click. */}
+      <div
+        aria-label="Rezervácie v zvolený deň"
+        className="rounded-2xl border border-border/60 bg-card shadow-sm lg:hidden"
+      >
+        <button
+          type="button"
+          onClick={() => setDayPanelOpen((o) => !o)}
+          aria-expanded={dayPanelOpen}
+          className="flex w-full items-start justify-between gap-3 p-4 text-left"
+        >
+          {dayPanelHeader}
+          <ChevronDownIcon
+            className={`mt-0.5 size-5 shrink-0 text-muted-foreground transition-transform ${
+              dayPanelOpen ? "rotate-180" : ""
+            }`}
+          />
+        </button>
+        {dayPanelOpen && (
+          <div className="border-t border-border/60 px-4 pb-4 pt-3">
+            {dayPanelContent}
+          </div>
+        )}
+      </div>
+
       {/* Zákazník — for walk-ins, the whole contact fieldset is replaced
           with a label + optional duration override. */}
       {form.walkIn ? (
@@ -589,7 +1095,7 @@ export function AppointmentForm({
               type="number"
               inputMode="numeric"
               min={5}
-              max={480}
+              max={720}
               step={5}
               placeholder="napr. 210 pre 3h 30min"
               value={form.customDurationMinutes}
@@ -599,25 +1105,25 @@ export function AppointmentForm({
               disabled={limited}
             />
             <div className="flex flex-wrap gap-1.5">
-              {[60, 120, 180, 240].map((mins) => {
-                const value = String(mins);
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((hours) => {
+                const value = String(hours * 60);
                 const active = form.customDurationMinutes === value;
                 return (
                   <Button
-                    key={mins}
+                    key={hours}
                     type="button"
                     variant={active ? "default" : "outline"}
                     size="sm"
                     disabled={limited}
                     onClick={() => updateField("customDurationMinutes", value)}
                   >
-                    {mins} min
+                    {hours}h
                   </Button>
                 );
               })}
             </div>
             <p className="text-xs text-muted-foreground">
-              Override pre dĺžku rezervácie 5–480 min. Prázdne = použije sa
+              Override pre dĺžku rezervácie 5–720 min. Prázdne = použije sa
               trvanie vybranej služby. Pre voľne zadaný čas zapnite
               „Ignorovať rozvrh&quot; — slot-picker nevie o vlastnom trvaní.
             </p>
@@ -757,6 +1263,102 @@ export function AppointmentForm({
           {mode === "create" ? "Vytvoriť rezerváciu" : "Uložiť zmeny"}
         </Button>
       </div>
+      </div>
+
+      {/* Desktop sidebar — sticky, only visible on lg+. Always expanded
+          since the sidebar has plenty of vertical space and stays visible
+          as the admin scrolls. */}
+      <aside
+        aria-label="Rezervácie v zvolený deň"
+        className="mt-8 hidden lg:sticky lg:top-6 lg:mt-0 lg:block"
+      >
+        <div className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
+          <div className="mb-3">{dayPanelHeader}</div>
+          {dayPanelContent}
+        </div>
+      </aside>
     </form>
+
+    <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>
+            {form.walkIn ? "Vytvoriť walk-in / blok?" : "Vytvoriť rezerváciu?"}
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            Skontrolujte zhrnutie pred uložením.
+            {!form.walkIn && " Zákazník dostane potvrdzujúci email."}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+          <dt className="text-muted-foreground">{form.walkIn ? "Popis" : "Zákazník"}</dt>
+          <dd className="font-medium text-foreground">{summaryWho}</dd>
+
+          {!form.walkIn && form.phoneDigits && (
+            <>
+              <dt className="text-muted-foreground">Telefón</dt>
+              <dd className="text-foreground tabular-nums">
+                {form.phonePrefix} {form.phoneDigits}
+              </dd>
+            </>
+          )}
+
+          <dt className="text-muted-foreground">Služba</dt>
+          <dd className="text-foreground">{summaryService}</dd>
+
+          <dt className="text-muted-foreground">Barber</dt>
+          <dd className="text-foreground">{summaryBarber}</dd>
+
+          <dt className="text-muted-foreground">Dátum</dt>
+          <dd className="text-foreground">{formattedDate}</dd>
+
+          <dt className="text-muted-foreground">Čas</dt>
+          <dd className="text-foreground tabular-nums">
+            {draftEntry
+              ? `${draftEntry.startTime} – ${draftEntry.endTime}`
+              : form.time || "—"}
+          </dd>
+
+          {form.walkIn && form.customDurationMinutes && (
+            <>
+              <dt className="text-muted-foreground">Trvanie</dt>
+              <dd className="text-foreground tabular-nums">
+                {form.customDurationMinutes} min
+                {(() => {
+                  const h = formatDurationHours(Number(form.customDurationMinutes));
+                  return h ? ` (${h})` : "";
+                })()}
+              </dd>
+            </>
+          )}
+
+          {form.ignoreSchedule && (
+            <>
+              <dt className="text-muted-foreground">Režim</dt>
+              <dd className="text-foreground">Ignorovať rozvrh a prekryv</dd>
+            </>
+          )}
+        </dl>
+
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isPending}>Späť na úpravu</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={(e) => {
+              // Keep the dialog open while the action runs so the admin
+              // can't double-click submit; performSubmit closes it on
+              // error or navigates away on success.
+              e.preventDefault();
+              performSubmit();
+            }}
+            disabled={isPending}
+          >
+            {isPending && <Loader2Icon className="mr-2 size-4 animate-spin" />}
+            Potvrdiť a vytvoriť
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

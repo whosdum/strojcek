@@ -33,7 +33,7 @@ import {
 import { bookingConfirmationHtml } from "@/emails/booking-confirmation";
 import { bookingCancellationHtml } from "@/emails/booking-cancellation";
 import { format as formatDate } from "date-fns";
-import type { AppointmentStatus } from "@/lib/types";
+import type { AppointmentSource, AppointmentStatus } from "@/lib/types";
 import type {
   AppointmentDoc,
   BarberDoc,
@@ -890,4 +890,62 @@ export async function deleteAppointment(id: string): Promise<ActionResult> {
     console.error("[deleteAppointment]", e);
     return { success: false, error: "Nastala chyba pri mazaní rezervácie." };
   }
+}
+
+export interface DayAppointmentSummary {
+  id: string;
+  /** "HH:mm" in Bratislava local time. */
+  startTime: string;
+  endTime: string;
+  status: AppointmentStatus;
+  source: AppointmentSource;
+  /** Customer name for online/admin bookings, walk-in label for walk-ins.
+   *  Never includes phone/email — the panel is a quick overview, full
+   *  contact details are one click away on the reservation detail page. */
+  title: string;
+  serviceName: string;
+}
+
+/** Day overview for the admin booking form's right-side context panel.
+ *  Returns active (non-cancelled, non-no-show) appointments for one barber
+ *  on one Bratislava-local day, sorted by start time. */
+export async function fetchDayAppointments(
+  barberId: string,
+  dateStr: string,
+  excludeAppointmentId?: string,
+): Promise<DayAppointmentSummary[]> {
+  if (!(await getSession())) return [];
+  if (!barberId || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return [];
+
+  const snap = await adminDb
+    .collection("appointments")
+    .where("barberId", "==", barberId)
+    .where("startDateKey", "==", dateStr)
+    .get();
+
+  return snap.docs
+    .filter((d) => d.id !== excludeAppointmentId)
+    .map((d) => {
+      const data = d.data() as AppointmentDoc;
+      const start = data.startTime.toDate();
+      const end = data.endTime.toDate();
+      const startLocal = toZonedTime(start, TIMEZONE);
+      const endLocal = toZonedTime(end, TIMEZONE);
+      const source = data.source as AppointmentSource;
+      const title =
+        source === "walk-in"
+          ? data.customerName?.trim() || "Walk-in"
+          : data.customerName?.trim() || "Bez mena";
+      return {
+        id: d.id,
+        startTime: format(startLocal, "HH:mm"),
+        endTime: format(endLocal, "HH:mm"),
+        status: data.status as AppointmentStatus,
+        source,
+        title,
+        serviceName: data.serviceName,
+      };
+    })
+    .filter((a) => a.status !== "CANCELLED" && a.status !== "NO_SHOW")
+    .sort((a, b) => a.startTime.localeCompare(b.startTime));
 }

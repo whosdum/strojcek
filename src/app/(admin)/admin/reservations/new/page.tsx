@@ -22,10 +22,14 @@ export default async function NewReservationPage() {
       </nav>
       <h1 className="mb-6 text-2xl font-bold sm:text-3xl">Nová rezervácia</h1>
 
-      <div className="max-w-2xl">
+      <div className="max-w-2xl lg:max-w-5xl">
         <AppointmentForm
           mode="create"
-          services={services.map((s) => ({ id: s.id, name: s.name }))}
+          services={services.map((s) => ({
+            id: s.id,
+            name: s.name,
+            durationMinutes: s.durationMinutes,
+          }))}
           barbers={barbers}
         />
       </div>

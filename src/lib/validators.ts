@@ -269,7 +269,7 @@ const adminAppointmentBaseSchema = z.object({
         .number()
         .int("Musí byť celé číslo")
         .min(5, "Najmenej 5 minút")
-        .max(480, "Najviac 8 hodín (480 minút)"),
+        .max(720, "Najviac 12 hodín (720 minút)"),
       z.literal(""),
       z.null(),
     ])
