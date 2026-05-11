@@ -7,8 +7,8 @@ const APP_URL = defineSecret("NEXT_PUBLIC_APP_URL");
 
 export const sendReminders = onSchedule(
   {
-    schedule: "0 14 * * *",
-    timeZone: "Etc/UTC",
+    schedule: "0 18 * * *",
+    timeZone: "Europe/Bratislava",
     region: "europe-west1",
     secrets: [CRON_SECRET, APP_URL],
     timeoutSeconds: 540,
