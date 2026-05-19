@@ -30,7 +30,15 @@ async function tryGetSession() {
   }
 }
 
-export const revalidate = 3600;
+// Dynamic on purpose: the route reads the `__session` cookie via
+// tryGetSession() to gate the admin draft-preview path. Declaring
+// `revalidate` here would conflict with cookie access — Next.js 16
+// strictly refuses to mix ISR caching with per-request cookies and
+// throws "Page changed from static to dynamic at runtime" at request
+// time. Each public visit re-fetches the doc from Firestore (~50-100 ms);
+// at blog-post traffic levels this is fine. If/when we need ISR back,
+// split the admin preview into its own admin-scoped route.
+export const dynamic = "force-dynamic";
 export const dynamicParams = true;
 
 export async function generateStaticParams() {
