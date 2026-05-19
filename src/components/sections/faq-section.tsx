@@ -13,7 +13,7 @@ export const FAQ: Array<{ q: string; a: string }> = [
   },
   {
     q: "Kde sa barber shop v Bytči nachádza?",
-    a: "Strojček Barbershop nájdete v centre Bytče na adrese Moyzesova 379/2, 014 01 Bytča. Sme pár minút pešo od námestia a parking je dostupný priamo na ulici aj v okolí. Najbližšie autobusové zastávky sú v dochádzkovej vzdialenosti.",
+    a: "Bytča barber Strojček nájdete v centre Bytče na adrese Moyzesova 379/2, 014 01 Bytča. Sme pár minút pešo od námestia a parking je dostupný priamo na ulici aj v okolí. Najbližšie autobusové zastávky sú v dochádzkovej vzdialenosti.",
   },
   {
     q: "Z akých miest k vám chodia zákazníci?",

@@ -42,13 +42,16 @@ export function StructuredData({ openingHours, services }: StructuredDataProps) 
 
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": ["BarberShop", "HairSalon"],
+    "@type": "HairSalon",
     name: "Strojček Barbershop",
-    alternateName: [SHOP_NAME, "STROJČEK BARBERSHOP"],
+    alternateName: [SHOP_NAME, "STROJČEK BARBERSHOP", "Bytča barber Strojček"],
     legalName: SHOP_LEGAL_NAME,
     url: PUBLIC_SITE_URL,
     logo: `${PUBLIC_SITE_URL}/logo-square.jpg`,
-    image: `${PUBLIC_SITE_URL}/logo-wide.jpg`,
+    image: [
+      `${PUBLIC_SITE_URL}/logo-square.jpg`,
+      `${PUBLIC_SITE_URL}/logo-wide.jpg`,
+    ],
     telephone: SHOP_PHONE_E164,
     email: SHOP_EMAIL,
     address: {
@@ -143,7 +146,10 @@ export function StructuredData({ openingHours, services }: StructuredDataProps) 
     legalName: SHOP_LEGAL_NAME,
     url: PUBLIC_SITE_URL,
     logo: `${PUBLIC_SITE_URL}/logo-square.jpg`,
-    image: `${PUBLIC_SITE_URL}/logo-wide.jpg`,
+    image: [
+      `${PUBLIC_SITE_URL}/logo-square.jpg`,
+      `${PUBLIC_SITE_URL}/logo-wide.jpg`,
+    ],
     address: {
       "@type": "PostalAddress",
       streetAddress: SHOP_STREET,

@@ -121,7 +121,7 @@ function AboutJsonLd() {
     inLanguage: "sk-SK",
     dateModified: SITE_CONTENT_LAST_UPDATED,
     mainEntity: {
-      "@type": "BarberShop",
+      "@type": "HairSalon",
       "@id": `${PUBLIC_SITE_URL}/#localbusiness`,
       name: "Strojček Barbershop",
       url: PUBLIC_SITE_URL,
@@ -139,7 +139,7 @@ function AboutJsonLd() {
     name: "Martin",
     jobTitle: "Barber",
     worksFor: {
-      "@type": "BarberShop",
+      "@type": "HairSalon",
       "@id": `${PUBLIC_SITE_URL}/#localbusiness`,
       name: "Strojček Barbershop",
     },

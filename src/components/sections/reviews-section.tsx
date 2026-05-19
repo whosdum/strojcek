@@ -30,6 +30,7 @@ export function ReviewsSection({
 
       <div className="mt-3 flex items-center gap-2">
         <div
+          role="img"
           aria-label={`Hodnotenie ${AGGREGATE_RATING.ratingValue} z ${AGGREGATE_RATING.bestRating}`}
           className="flex items-center gap-0.5"
         >

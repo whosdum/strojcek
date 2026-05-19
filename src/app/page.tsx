@@ -107,15 +107,19 @@ export default async function HomePage({
       <header className="mb-5 flex flex-col items-center text-center sm:mb-6">
         <Image
           src="/logo.jpg"
-          alt="Strojček — pánsky barbershop Bytča"
+          alt="Bytča barber Strojček — pánsky barbershop v Bytči"
           width={140}
           height={76}
           className="rounded-xl shadow-lg shadow-black/20"
           priority
+          fetchPriority="high"
         />
         <h1 className="mt-3 text-xl font-bold tracking-tight text-primary sm:text-2xl">
           Strojček — pánsky barbershop v Bytči
         </h1>
+        <p className="mt-1.5 text-[13px] font-medium text-muted-foreground sm:text-sm">
+          Bytča barber pre klasický pánsky strih, fade a úpravu brady.
+        </p>
       </header>
 
       <main>
@@ -135,7 +139,7 @@ export default async function HomePage({
             >
               Objednajte sa online
             </h2>
-            <p className="mt-0.5 text-[12px] font-medium text-muted-foreground sm:text-[13px]">
+            <p className="mt-0.5 text-[12px] font-medium text-foreground/80 sm:text-[13px]">
               Len za 60 sekúnd
             </p>
           </div>
@@ -212,9 +216,11 @@ export default async function HomePage({
           O barbershope Strojček
         </h2>
         <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">
-          Strojček je pánsky barber shop v Bytči — pánsky kaderník v okolí
-          Žiliny pre všetkých, ktorí chcú profesionálny strih bez kompromisov.
-          Chodia k nám zákazníci z Bytče, Malej Bytče, Predmiera, Hričovského
+          V Bytči nás nájdete pod značkou <strong className="font-semibold text-foreground">Bytča barber Strojček</strong> — pánsky barber shop,
+          ktorý kombinuje klasické remeslo s online rezerváciou. Strojček je
+          pánsky barber shop v Bytči — pánsky kaderník v okolí Žiliny pre
+          všetkých, ktorí chcú profesionálny strih bez kompromisov. Chodia
+          k nám zákazníci z Bytče, Malej Bytče, Predmiera, Hričovského
           Podhradia, Súľova-Hradnej, Hvozdnice, Štiavnika, Hliníka nad Váhom,
           Kotešovej, Veľkého Rovného, Petrovíc, Kolárovíc, Jablonového, Dolného
           Hričova, Horného Hričova aj z Považskej Bystrice. Robíme{" "}
@@ -287,6 +293,7 @@ export default async function HomePage({
                   alt={photo.alt}
                   fill
                   sizes="(min-width: 640px) 130px, 22vw"
+                  quality={70}
                   className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
                 />
                 {i === arr.length - 1 ? (

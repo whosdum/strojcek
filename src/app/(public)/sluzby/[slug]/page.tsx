@@ -27,7 +27,7 @@ export async function generateMetadata({
   // Use absolute title to skip the root template ("%s | Strojček Barbershop")
   // — duration in title would otherwise overflow Google's ~60-char SERP cap
   // and lose the brand suffix on truncation.
-  const fullTitle = `${service.name} Bytča — ${service.durationLabel} | Strojček`;
+  const fullTitle = `${service.name} Bytča | Bytča barber Strojček (${service.durationLabel})`;
 
   return {
     title: { absolute: fullTitle },
@@ -57,7 +57,7 @@ function ServiceJsonLd({ service }: { service: ServiceContent }) {
     serviceType: service.name,
     dateModified: service.lastUpdated,
     provider: {
-      "@type": "BarberShop",
+      "@type": "HairSalon",
       "@id": `${PUBLIC_SITE_URL}/#localbusiness`,
       name: "Strojček Barbershop",
       url: PUBLIC_SITE_URL,

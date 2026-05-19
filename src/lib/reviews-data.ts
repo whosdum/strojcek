@@ -48,17 +48,17 @@ export const PUBLIC_REVIEWS: PublicReview[] = [
     url: "https://share.google/zzqxuvEAv7gbyHNvP",
   },
   {
-    authorName: "Adam B",
+    authorName: "Peter Janták",
     rating: 5,
-    date: "2026-05-06",
-    text: "Konečne aj v Bytči miesto, kde rozumejú tomu, čo robia 💪🏼💪🏼💪🏼",
-    url: "https://share.google/smYinkpPap2ZBvZNM",
+    date: "2026-05-15",
+    text: "Velmi pekny priestor a Martin si da naozaj zalezat na kazdom jednom ucese. Co ja extra ocenujem v porovnani s konkurenciou je ze cas urceny na Vas strih je vyuzity v plnej miere a to ze sa ide na kvalitu a nie na kvantitu. Odporucam! :)",
+    url: "https://share.google/YfDZzC3ZIe3dihAmV",
   },
 ];
 
 // Aggregate stats — z GBP. Update keď čísla narastú.
 export const AGGREGATE_RATING = {
   ratingValue: 5.0,
-  reviewCount: 28,
+  reviewCount: 25,
   bestRating: 5,
 } as const;

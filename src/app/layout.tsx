@@ -15,40 +15,26 @@ const jakarta = Plus_Jakarta_Sans({
   display: "swap",
 });
 
+const SITE_TITLE =
+  "Strojček Barbershop Bytča | Bytča barber, pánsky strih a brada";
+const SITE_DESCRIPTION =
+  "Bytča barber Strojček — pánsky barbershop v Bytči. Klasický strih, fade, úprava brady, hot towel rituál. Rezervujte si termín online za 60 sekúnd.";
+
 export const metadata: Metadata = {
   metadataBase: new URL(PUBLIC_SITE_URL),
   title: {
-    default:
-      "Strojček Barbershop Bytča — pánsky strih, fade, úprava brady",
+    default: SITE_TITLE,
     template: "%s | Strojček Barbershop",
   },
-  description:
-    "Pánsky barber shop v Bytči — Strojček. Klasický pánsky strih, fade strih, úprava brady aj hot towel rituál. Rezervujte si termín online za 60 sekúnd.",
+  description: SITE_DESCRIPTION,
   keywords: [
-    "barber",
-    "barber shop",
-    "barbershop",
-    "barber Bytča",
-    "bytča barber",
-    "barbershop Bytča",
-    "Bytča",
-    "Žilina",
-    "pánsky strih",
-    "pánsky strih Bytča",
-    "fade strih",
-    "klasický strih",
-    "úprava brady",
-    "úprava fúzov",
-    "hot towel",
-    "holič",
-    "holič Bytča",
-    "kaderník",
-    "kaderník Bytča",
-    "pánsky kaderník",
-    "Strojček",
-    "rezervácia",
-    "rezervácia online",
-    "online rezervácia holič",
+    "barber bytca",
+    "bytca barber",
+    "barbershop bytca",
+    "bytca barbershop",
+    "strojcek bytca",
+    "bytca strojcek",
+    "strojcek barber bytca",
   ],
   authors: [{ name: "STROJČEK s.r.o." }],
   creator: "STROJČEK s.r.o.",
@@ -57,15 +43,13 @@ export const metadata: Metadata = {
     locale: "sk_SK",
     url: PUBLIC_SITE_URL,
     siteName: "Strojček Barbershop",
-    title: "Strojček Barbershop Bytča — pánsky strih, fade, úprava brady",
-    description:
-      "Pánsky barber shop v Bytči — Strojček. Klasický pánsky strih, fade strih, úprava brady aj hot towel rituál. Rezervujte si termín online za 60 sekúnd.",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Strojček Barbershop Bytča — pánsky strih, fade, úprava brady",
-    description:
-      "Pánsky barber shop v Bytči — Strojček. Klasický pánsky strih, fade strih, úprava brady aj hot towel rituál. Rezervujte si termín online za 60 sekúnd.",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
   },
   robots: {
     index: true,
