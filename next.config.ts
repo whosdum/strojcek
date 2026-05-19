@@ -25,6 +25,17 @@ const nextConfig: NextConfig = {
     // 130px tiles (Lighthouse savings). Next.js v15+ requires every quality
     // we generate to be enumerated up front; default is just [75].
     qualities: [70, 75],
+    // Blog cover + inline images live in Firebase Storage. The Web SDK
+    // serves them via `firebasestorage.googleapis.com` (download-URL
+    // endpoint with a per-file token); next/image refuses unknown hosts
+    // unless we list them here.
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "firebasestorage.googleapis.com",
+        pathname: "/v0/b/**",
+      },
+    ],
   },
   experimental: {
     serverActions: {

@@ -1,6 +1,7 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeSanitize from "rehype-sanitize";
+import Image from "next/image";
 
 interface MarkdownRendererProps {
   content: string;
@@ -84,13 +85,24 @@ export function MarkdownRenderer({
           ),
           img: ({ src, alt }) => {
             if (typeof src !== "string") return null;
+            // width/height here act as an intrinsic-ratio hint (1600x900
+            // = 16:9 default) and as the upper-bound source resolution
+            // Next.js will request. `w-full h-auto` lets the rendered
+            // size follow the natural image ratio after load, so portrait
+            // or square uploads render correctly — the 16:9 reservation
+            // costs at most a brief CLS on first paint.
+            //
+            // `sizes` matches the prose column max-width (~720px). On
+            // desktop the optimizer serves a ~750px WebP variant (~80 KB
+            // for a typical photo) instead of the 5–10 MB original.
             return (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <Image
                 src={src}
                 alt={alt ?? ""}
-                className="my-6 rounded-xl border border-border/40"
-                loading="lazy"
+                width={1600}
+                height={900}
+                sizes="(min-width: 1024px) 720px, 100vw"
+                className="my-6 h-auto w-full rounded-xl border border-border/40"
               />
             );
           },
