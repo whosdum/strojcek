@@ -71,7 +71,7 @@ export function ServicesSection({
               service.span ? " sm:col-span-2" : ""
             }`}
           >
-            <h3 className="text-[15px] font-semibold text-foreground group-hover:text-primary">
+            <h3 className="text-[15px] font-semibold text-foreground group-hover:text-primary-strong">
               {service.title}
             </h3>
             <p className="mt-1.5 text-[14px] leading-relaxed text-muted-foreground">

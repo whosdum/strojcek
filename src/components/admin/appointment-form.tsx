@@ -690,7 +690,7 @@ export function AppointmentForm({
                           <div
                             className={`truncate text-[10px] ${
                               a.isDraft
-                                ? "text-primary"
+                                ? "text-primary-strong"
                                 : a.isConflict
                                   ? "text-destructive"
                                   : "text-muted-foreground"

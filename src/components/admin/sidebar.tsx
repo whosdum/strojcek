@@ -17,6 +17,7 @@ import {
   MenuIcon,
   BellIcon,
   MegaphoneIcon,
+  PenSquareIcon,
 } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase-client";
@@ -47,6 +48,7 @@ const NAV_ITEMS = [
   { href: "/admin/reservations", label: "Rezervácie", icon: ClipboardListIcon },
   { href: "/admin/notifications", label: "Notifikácie", icon: BellIcon },
   { href: "/admin/marketing", label: "Marketing", icon: MegaphoneIcon },
+  { href: "/admin/blog", label: "Blog", icon: PenSquareIcon },
   { href: "/admin/barbers", label: "Barberi", icon: ScissorsIcon },
   { href: "/admin/services", label: "Služby", icon: SparklesIcon },
   { href: "/admin/schedule", label: "Rozvrh", icon: ClockIcon },
@@ -90,7 +92,7 @@ export function Sidebar() {
             className="rounded"
           />
           <div>
-            <h2 className="text-lg font-bold text-primary">Strojček</h2>
+            <h2 className="text-lg font-bold text-primary-strong">Strojček</h2>
             <p className="text-xs text-muted-foreground">Administrácia</p>
           </div>
         </div>
@@ -108,7 +110,7 @@ export function Sidebar() {
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3.5 py-3 text-base font-medium transition-colors md:gap-2.5 md:px-3 md:py-2 md:text-sm",
                 isActive
-                  ? "bg-primary/10 text-primary"
+                  ? "bg-primary/10 text-primary-strong"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >
@@ -137,7 +139,7 @@ export function Sidebar() {
           <div className="flex items-center gap-2">
             <Image src="/logo.jpg" alt="Strojček" width={28} height={15} className="rounded" />
             <div>
-              <p className="text-sm font-semibold text-primary">Strojček</p>
+              <p className="text-sm font-semibold text-primary-strong">Strojček</p>
               <p className="text-xs text-muted-foreground">Administrácia</p>
             </div>
           </div>

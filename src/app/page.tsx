@@ -114,7 +114,7 @@ export default async function HomePage({
           priority
           fetchPriority="high"
         />
-        <h1 className="mt-3 text-xl font-bold tracking-tight text-primary sm:text-2xl">
+        <h1 className="mt-3 text-xl font-bold tracking-tight text-primary-strong sm:text-2xl">
           Strojček — pánsky barbershop v Bytči
         </h1>
         <p className="mt-1.5 text-[13px] font-medium text-muted-foreground sm:text-sm">
@@ -226,28 +226,28 @@ export default async function HomePage({
           Hričova, Horného Hričova aj z Považskej Bystrice. Robíme{" "}
           <Link
             href="/sluzby/pansky-strih"
-            className="font-medium text-foreground underline-offset-2 hover:text-primary hover:underline"
+            className="font-medium text-foreground underline-offset-2 hover:text-primary-strong hover:underline"
           >
             klasický pánsky strih
           </Link>
           ,{" "}
           <Link
             href="/sluzby/fade-strih"
-            className="font-medium text-foreground underline-offset-2 hover:text-primary hover:underline"
+            className="font-medium text-foreground underline-offset-2 hover:text-primary-strong hover:underline"
           >
             fade strih
           </Link>
           ,{" "}
           <Link
             href="/sluzby/uprava-brady"
-            className="font-medium text-foreground underline-offset-2 hover:text-primary hover:underline"
+            className="font-medium text-foreground underline-offset-2 hover:text-primary-strong hover:underline"
           >
             úpravu brady aj úpravu fúzov
           </Link>
           ,{" "}
           <Link
             href="/sluzby/hot-towel-ritual"
-            className="font-medium text-foreground underline-offset-2 hover:text-primary hover:underline"
+            className="font-medium text-foreground underline-offset-2 hover:text-primary-strong hover:underline"
           >
             hot towel rituál
           </Link>{" "}
@@ -306,7 +306,7 @@ export default async function HomePage({
               </div>
             ))}
           </div>
-          <span className="mt-2 inline-block text-[12px] text-muted-foreground transition-colors group-hover:text-primary">
+          <span className="mt-2 inline-block text-[12px] text-muted-foreground transition-colors group-hover:text-primary-strong">
             Galéria priestorov v Bytči →
           </span>
         </Link>
@@ -314,13 +314,13 @@ export default async function HomePage({
         <p className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-[14px]">
           <Link
             href="/o-nas"
-            className="font-medium text-primary underline-offset-2 hover:underline"
+            className="font-medium text-primary-strong underline-offset-2 hover:underline"
           >
             Viac o našom príbehu, barberovi Martinovi a tipoch →
           </Link>
           <Link
             href="/cennik"
-            className="font-medium text-primary underline-offset-2 hover:underline"
+            className="font-medium text-primary-strong underline-offset-2 hover:underline"
           >
             Pozrieť cenník →
           </Link>
@@ -343,7 +343,7 @@ export default async function HomePage({
               href="https://www.instagram.com/p/DSb9TjJjci1/"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-border/60 bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary hover:text-primary"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-border/60 bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary hover:text-primary-strong"
             >
               <InstagramIcon className="size-4" />
               Otvoriť na Instagrame
@@ -352,7 +352,7 @@ export default async function HomePage({
               href="https://www.instagram.com/strojcek_/"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-border/60 bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary hover:text-primary"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-border/60 bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary hover:text-primary-strong"
             >
               @strojcek_
             </a>

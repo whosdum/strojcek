@@ -143,7 +143,7 @@ export default async function ServicePage({
       <div className="mx-auto max-w-2xl px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
         <Link
           href="/"
-          className="mb-8 inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+          className="mb-8 inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-primary-strong"
         >
           <ArrowLeftIcon className="size-4" />
           Späť na rezerváciu
@@ -198,7 +198,7 @@ export default async function ServicePage({
               <li key={step} className="flex gap-3">
                 <span
                   aria-hidden="true"
-                  className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[12px] font-bold text-primary"
+                  className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[12px] font-bold text-primary-strong"
                 >
                   {i + 1}
                 </span>
@@ -233,7 +233,7 @@ export default async function ServicePage({
           <p className="mt-3 text-[12px] text-muted-foreground">
             <Link
               href="/cennik"
-              className="font-medium text-primary underline-offset-2 hover:underline"
+              className="font-medium text-primary-strong underline-offset-2 hover:underline"
             >
               Pozrieť celý cenník →
             </Link>

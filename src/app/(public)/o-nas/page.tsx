@@ -318,7 +318,7 @@ export default async function AboutPage() {
 
         <section className="mt-12 rounded-2xl border border-border/40 bg-card/40 p-6">
           <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight">
-            <InstagramIcon className="size-4 text-primary" />
+            <InstagramIcon className="size-4 text-primary-strong" />
             Pozri nás v akcii
           </h2>
           <p className="mt-2 text-[14px] leading-relaxed text-muted-foreground">
@@ -339,7 +339,7 @@ export default async function AboutPage() {
               href={INSTAGRAM_REEL_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-border/60 bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary hover:text-primary"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-border/60 bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary hover:text-primary-strong"
             >
               <InstagramIcon className="size-4" />
               Otvoriť na Instagrame
@@ -348,7 +348,7 @@ export default async function AboutPage() {
               href={INSTAGRAM_PROFILE}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-border/60 bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary hover:text-primary"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-border/60 bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary hover:text-primary-strong"
             >
               @strojcek_
             </a>
@@ -396,7 +396,7 @@ export default async function AboutPage() {
 
         <section className="mt-12">
           <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
-            <ScissorsIcon className="size-4 text-primary" />
+            <ScissorsIcon className="size-4 text-primary-strong" />
             Rady a tipy od barbera
           </h2>
           <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">

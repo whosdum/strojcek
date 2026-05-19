@@ -35,6 +35,14 @@ export function SiteFooter({
           </Link>
           <span className="text-border">|</span>
           <Link
+            href="/blog"
+            prefetch={false}
+            className="underline-offset-2 hover:text-foreground hover:underline"
+          >
+            Blog
+          </Link>
+          <span className="text-border">|</span>
+          <Link
             href="/vop"
             prefetch={false}
             className="underline-offset-2 hover:text-foreground hover:underline"

@@ -6,7 +6,7 @@ import "./globals.css";
 
 export const viewport: Viewport = {
   themeColor: "#fc873a",
-  colorScheme: "dark",
+  colorScheme: "light",
 };
 
 const jakarta = Plus_Jakarta_Sans({

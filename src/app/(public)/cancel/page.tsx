@@ -152,7 +152,7 @@ export default async function CancelPage({
       <div className="space-y-6">
         <div className="mb-6 text-center">
           <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-primary/12">
-            <CalendarXIcon className="size-7 text-primary" />
+            <CalendarXIcon className="size-7 text-primary-strong" />
           </div>
           <h2 className="mt-3 text-xl font-bold text-foreground">
             Zrušenie rezervácie

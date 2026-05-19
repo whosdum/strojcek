@@ -125,6 +125,24 @@ export type ShopSettingsView = {
   updatedAt: Date;
 };
 
+export type BlogPostStatus = "DRAFT" | "PUBLISHED";
+
+export type BlogPostView = {
+  slug: string;
+  title: string;
+  excerpt: string;
+  content: string;
+  coverImageUrl: string | null;
+  coverImagePath: string | null;
+  coverImageAlt: string | null;
+  tags: string[];
+  status: BlogPostStatus;
+  readingMinutes: number;
+  publishedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 // Composite view models used by UI
 
 export type BarberWithServicesView = BarberView & {

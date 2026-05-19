@@ -77,5 +77,10 @@ service cloud.firestore {
       allow read: if isAuthed() && request.auth.uid == uid;
       allow write: if isAdmin();
     }
+
+    match /blogPosts/{slug} {
+      allow read: if resource.data.status == "PUBLISHED" || isAdmin();
+      allow write: if isAdmin();
+    }
   }
 }

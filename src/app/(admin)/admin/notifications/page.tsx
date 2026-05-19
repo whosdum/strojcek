@@ -386,7 +386,7 @@ export default async function NotificationsPage({ searchParams }: PageProps) {
                         {e.appointmentId ? (
                           <Link
                             href={`/admin/reservations/${e.appointmentId}`}
-                            className="text-primary underline-offset-2 hover:underline"
+                            className="text-primary-strong underline-offset-2 hover:underline"
                           >
                             #{e.appointmentId.slice(0, 8)}
                           </Link>
@@ -429,7 +429,7 @@ function HealthCard({
         <CardTitle className="text-sm">{label} (7d)</CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="text-2xl font-semibold text-primary">{sent} ✓</p>
+        <p className="text-2xl font-semibold text-primary-strong">{sent} ✓</p>
         {failed > 0 && (
           <p className="text-sm text-destructive">{failed} ✗</p>
         )}

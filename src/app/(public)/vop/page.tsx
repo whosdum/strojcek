@@ -17,7 +17,7 @@ export default function VopPage() {
       <div className="mx-auto max-w-2xl px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
         <Link
           href="/"
-          className="mb-8 inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+          className="mb-8 inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-primary-strong"
         >
           <ArrowLeftIcon className="size-4" />
           Späť na rezerváciu
@@ -45,14 +45,14 @@ export default function VopPage() {
                 379/2, Bytča, IČO: 57286477, DIČ: 2122649100, e-mail:{" "}
                 <a
                   href="mailto:strojcekbarbershop@gmail.com"
-                  className="text-primary underline underline-offset-2"
+                  className="text-primary-strong underline underline-offset-2"
                 >
                   strojcekbarbershop@gmail.com
                 </a>
                 , tel.:{" "}
                 <a
                   href="tel:+421944932871"
-                  className="text-primary underline underline-offset-2"
+                  className="text-primary-strong underline underline-offset-2"
                 >
                   +421 944 932 871
                 </a>
@@ -259,7 +259,7 @@ export default function VopPage() {
                   href="https://www.soi.sk"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary underline underline-offset-2"
+                  className="text-primary-strong underline underline-offset-2"
                 >
                   www.soi.sk
                 </a>
@@ -292,7 +292,7 @@ export default function VopPage() {
                 údajov sú dostupné na{" "}
                 <Link
                   href="/ochrana-udajov"
-                  className="text-primary underline underline-offset-2"
+                  className="text-primary-strong underline underline-offset-2"
                 >
                   webovej stránke Prevádzkovateľa
                 </Link>

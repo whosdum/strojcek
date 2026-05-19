@@ -2,8 +2,6 @@
 
 import { type ReactNode, type MouseEvent } from "react";
 import { InfoIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useTheme, ThemeToggle } from "@/components/theme-toggle";
 
 interface BookingShellProps {
   children: ReactNode;
@@ -18,15 +16,8 @@ function handleAboutClick(e: MouseEvent<HTMLAnchorElement>) {
 }
 
 export function BookingShell({ children }: BookingShellProps) {
-  const { dark } = useTheme();
-
   return (
-    <div
-      className={cn(
-        "min-h-dvh bg-background text-foreground transition-colors duration-300",
-        dark && "booking-theme"
-      )}
-    >
+    <div className="min-h-dvh bg-background text-foreground">
       <div className="mx-auto max-w-xl px-4 pb-10 pt-6 sm:px-6 sm:pt-8">
         <div className="flex items-center justify-between gap-2">
           <a
@@ -37,7 +28,6 @@ export function BookingShell({ children }: BookingShellProps) {
           >
             <InfoIcon className="size-4" />
           </a>
-          <ThemeToggle />
         </div>
         {children}
       </div>

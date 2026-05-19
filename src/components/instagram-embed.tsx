@@ -38,7 +38,7 @@ export function InstagramEmbed({
       className="group flex w-full flex-col items-center justify-center gap-3 rounded-xl border border-border/40 bg-card/60 px-6 py-10 text-center transition-colors hover:border-primary hover:bg-card"
       aria-label="Načítať Instagram video"
     >
-      <span className="flex size-14 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+      <span className="flex size-14 items-center justify-center rounded-full bg-primary/10 text-primary-strong transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
         <svg
           viewBox="0 0 24 24"
           fill="currentColor"

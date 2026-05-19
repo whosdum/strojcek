@@ -90,6 +90,30 @@ export const serviceInputSchema = z.object({
 
 export type ServiceInput = z.infer<typeof serviceInputSchema>;
 
+export const blogPostInputSchema = z.object({
+  slug: z
+    .string()
+    .min(3, "Slug musí mať aspoň 3 znaky")
+    .max(80)
+    .regex(
+      /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+      "Slug môže obsahovať len malé písmená, čísla a pomlčky"
+    ),
+  title: z.string().min(3, "Názov je povinný").max(120),
+  excerpt: z
+    .string()
+    .min(20, "Krátky popis musí mať aspoň 20 znakov")
+    .max(300),
+  content: z.string().min(50, "Obsah musí mať aspoň 50 znakov"),
+  coverImageUrl: z.string().url().nullable(),
+  coverImagePath: z.string().nullable(),
+  coverImageAlt: z.string().max(200).nullable(),
+  tags: z.array(z.string().min(1).max(30)).max(8).default([]),
+  status: z.enum(["DRAFT", "PUBLISHED"]),
+});
+
+export type BlogPostInput = z.infer<typeof blogPostInputSchema>;
+
 export const barberInputSchema = z.object({
   firstName: z.string().min(1, "Meno je povinné"),
   lastName: z.string().min(1, "Priezvisko je povinné"),

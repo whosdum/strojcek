@@ -53,7 +53,7 @@ export const SectionWrapper = forwardRef<HTMLDivElement, SectionWrapperProps>(
           className={cn(
             "flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-bold transition-colors",
             isActive && "bg-primary text-primary-foreground shadow-sm",
-            isCompleted && "bg-primary/15 text-primary",
+            isCompleted && "bg-primary/15 text-primary-strong",
             isLocked && "bg-muted/50 text-muted-foreground"
           )}
         >
@@ -77,7 +77,7 @@ export const SectionWrapper = forwardRef<HTMLDivElement, SectionWrapperProps>(
             {title}
           </span>
           {isCompleted && completedSummary && (
-            <p className="mt-0.5 truncate text-[15px] text-primary font-medium">
+            <p className="mt-0.5 truncate text-[15px] text-primary-strong font-medium">
               {completedSummary}
             </p>
           )}

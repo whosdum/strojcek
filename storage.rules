@@ -1,0 +1,20 @@
+rules_version = '2';
+
+// Firebase Storage rules for the blog uploader.
+//
+// Public read on /blog/** so cover images and inline images render
+// for anonymous visitors without signed URLs (we serve via the
+// default download URL token instead). Writes go through the Next.js
+// server action via the admin SDK, which bypasses these rules — so
+// client-side writes are denied across the board.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /blog/{allPaths=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}

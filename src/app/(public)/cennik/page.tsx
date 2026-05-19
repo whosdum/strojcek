@@ -199,7 +199,7 @@ export default async function CennikPage() {
                     className="group flex items-start gap-4 px-4 py-4 transition-colors hover:bg-card/80 sm:px-6 sm:py-5"
                   >
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-[16px] font-semibold leading-tight text-foreground group-hover:text-primary">
+                      <h3 className="text-[16px] font-semibold leading-tight text-foreground group-hover:text-primary-strong">
                         {service.name}
                       </h3>
                       {service.description && (
@@ -213,10 +213,10 @@ export default async function CennikPage() {
                       </div>
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1.5">
-                      <span className="text-[18px] font-bold text-primary tabular-nums sm:text-[19px]">
+                      <span className="text-[18px] font-bold text-primary-strong tabular-nums sm:text-[19px]">
                         {service.price.toFixed(0)} €
                       </span>
-                      <span className="text-[12px] font-medium text-primary/70 group-hover:text-primary">
+                      <span className="text-[12px] font-medium text-primary-strong/70 group-hover:text-primary-strong">
                         Rezervovať →
                       </span>
                     </div>

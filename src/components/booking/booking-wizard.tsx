@@ -812,7 +812,7 @@ export function BookingWizard({
               <div className="h-px bg-border/50" />
               <div className="flex items-center justify-between gap-3">
                 <span className="font-semibold text-foreground">Cena</span>
-                <span className="text-lg font-bold text-primary tabular-nums">
+                <span className="text-lg font-bold text-primary-strong tabular-nums">
                   {parseFloat(effectivePrice ?? selectedService?.price ?? "0").toFixed(0)} €
                 </span>
               </div>
@@ -1091,7 +1091,7 @@ export function BookingWizard({
           </div>
         ) : !state.workingDays ? (
           <div role="status" aria-live="polite" className="flex items-center justify-center gap-2 py-10 text-[15px] text-muted-foreground">
-            <Loader2Icon className="size-5 animate-spin text-primary" />
+            <Loader2Icon className="size-5 animate-spin text-primary-strong" />
             <span>Načítavam rozvrh...</span>
           </div>
         ) : (
@@ -1246,7 +1246,7 @@ export function BookingWizard({
                 <Link
                   href="/vop"
                   target="_blank"
-                  className="font-semibold text-primary underline underline-offset-2"
+                  className="font-semibold text-primary-strong underline underline-offset-2"
                 >
                   obchodnými podmienkami
                 </Link>{" "}
@@ -1254,7 +1254,7 @@ export function BookingWizard({
                 <Link
                   href="/ochrana-udajov"
                   target="_blank"
-                  className="font-semibold text-primary underline underline-offset-2"
+                  className="font-semibold text-primary-strong underline underline-offset-2"
                 >
                   zásadami ochrany osobných údajov
                 </Link>
@@ -1357,7 +1357,7 @@ function ServiceCardWizard({
         className={cn(
           "flex size-10 shrink-0 items-center justify-center rounded-lg transition-colors",
           isSelected
-            ? "bg-primary/20 text-primary"
+            ? "bg-primary/20 text-primary-strong"
             : "bg-muted/50 text-muted-foreground"
         )}
       >
@@ -1379,7 +1379,7 @@ function ServiceCardWizard({
               return name.slice(0, sepIdx);
             })()}
           </h3>
-          <span className="shrink-0 text-[15px] font-bold text-primary tabular-nums">
+          <span className="shrink-0 text-[15px] font-bold text-primary-strong tabular-nums">
             {priceNum.toFixed(0)} €
           </span>
         </div>
@@ -1410,8 +1410,8 @@ function ServiceCardWizard({
               className={cn(
                 "-my-1.5 -mr-1.5 flex size-8 items-center justify-center rounded-full transition-colors active:scale-90",
                 expanded
-                  ? "bg-primary/15 text-primary"
-                  : "text-muted-foreground/60 hover:bg-muted hover:text-primary"
+                  ? "bg-primary/15 text-primary-strong"
+                  : "text-muted-foreground/60 hover:bg-muted hover:text-primary-strong"
               )}
             >
               <InfoIcon className="size-4" />

@@ -22,7 +22,7 @@ export default async function AdminDashboardPage() {
       <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card>
           <CardContent className="flex items-start gap-3 pt-4">
-            <CalendarDaysIcon className="size-8 text-primary" />
+            <CalendarDaysIcon className="size-8 text-primary-strong" />
             <div>
               <p className="text-2xl font-bold">{stats.total}</p>
               <p className="text-xs text-muted-foreground">Dnes rezervácií</p>
@@ -31,7 +31,7 @@ export default async function AdminDashboardPage() {
         </Card>
         <Card>
           <CardContent className="flex items-start gap-3 pt-4">
-            <ClockIcon className="size-8 text-primary" />
+            <ClockIcon className="size-8 text-primary-strong" />
             <div>
               <p className="text-2xl font-bold">{todayAppointments.length}</p>
               <p className="text-xs text-muted-foreground">Aktívnych</p>
@@ -40,7 +40,7 @@ export default async function AdminDashboardPage() {
         </Card>
         <Card>
           <CardContent className="flex items-start gap-3 pt-4">
-            <UsersIcon className="size-8 text-primary" />
+            <UsersIcon className="size-8 text-primary-strong" />
             <div>
               <p className="text-2xl font-bold">{stats.completed}</p>
               <p className="text-xs text-muted-foreground">Dokončených</p>
@@ -49,7 +49,7 @@ export default async function AdminDashboardPage() {
         </Card>
         <Card>
           <CardContent className="flex items-start gap-3 pt-4">
-            <TrendingUpIcon className="size-8 text-primary" />
+            <TrendingUpIcon className="size-8 text-primary-strong" />
             <div>
               <p className="text-2xl font-bold">{stats.noShow}</p>
               <p className="text-xs text-muted-foreground">Neprišiel</p>

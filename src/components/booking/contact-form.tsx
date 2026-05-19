@@ -193,7 +193,7 @@ export function ContactForm(props: ContactFormProps) {
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label htmlFor="firstName" className="text-[15px] font-medium text-foreground">
-            Meno <span className="text-primary">*</span>
+            Meno <span className="text-primary-strong">*</span>
           </Label>
           <div className="relative">
             <Input
@@ -222,7 +222,7 @@ export function ContactForm(props: ContactFormProps) {
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="lastName" className="text-[15px] font-medium text-foreground">
-            Priezvisko <span className="text-primary">*</span>
+            Priezvisko <span className="text-primary-strong">*</span>
           </Label>
           <div className="relative">
             <Input
@@ -253,7 +253,7 @@ export function ContactForm(props: ContactFormProps) {
 
       <div className="space-y-1.5">
         <Label htmlFor="phone" className="text-[15px] font-medium text-foreground">
-          Telefón <span className="text-primary">*</span>
+          Telefón <span className="text-primary-strong">*</span>
         </Label>
         <div className="flex gap-2">
           <div className="relative">
@@ -303,7 +303,7 @@ export function ContactForm(props: ContactFormProps) {
           </div>
         </div>
         {phoneZeroHint && (
-          <p className="text-[13px] font-medium text-primary">
+          <p className="text-[13px] font-medium text-primary-strong">
             Číslo bez predvoľby, bez úvodnej nuly (napr. 903123456)
           </p>
         )}
@@ -316,7 +316,7 @@ export function ContactForm(props: ContactFormProps) {
 
       <div className="space-y-1.5">
         <Label htmlFor="email" className="text-[15px] font-medium text-foreground">
-          Email <span className="text-primary">*</span>
+          Email <span className="text-primary-strong">*</span>
         </Label>
         <div className="relative">
           <Input
@@ -382,7 +382,7 @@ export function ContactForm(props: ContactFormProps) {
         <button
           type="button"
           onClick={() => setShowNote(true)}
-          className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 -ml-2 text-[14px] font-medium text-primary/85 transition-colors hover:text-primary hover:bg-primary/5"
+          className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 -ml-2 text-[14px] font-medium text-primary-strong/85 transition-colors hover:text-primary-strong hover:bg-primary/5"
         >
           <PlusIcon className="size-4" />
           Pridať poznámku (nepovinné)

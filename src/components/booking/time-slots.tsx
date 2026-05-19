@@ -23,7 +23,7 @@ export function TimeSlots({ slots, selectedTime, onSelect, onChangeDate }: TimeS
           <button
             type="button"
             onClick={onChangeDate}
-            className="mt-2 text-[14px] font-medium text-primary hover:underline"
+            className="mt-2 text-[14px] font-medium text-primary-strong hover:underline"
           >
             Vybrať iný deň
           </button>

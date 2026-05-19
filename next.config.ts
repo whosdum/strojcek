@@ -20,6 +20,12 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "*": ["./public/**/*"],
   },
+  images: {
+    // Homepage gallery thumbs use quality={70} to shave bytes on tiny
+    // 130px tiles (Lighthouse savings). Next.js v15+ requires every quality
+    // we generate to be enumerated up front; default is just [75].
+    qualities: [70, 75],
+  },
 };
 
 export default nextConfig;

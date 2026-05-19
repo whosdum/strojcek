@@ -64,9 +64,9 @@ export function BookingSummary({
         {/* Price row — highlighted */}
         <div className="ml-7 h-px bg-border/40" />
         <div className="flex items-center gap-3 text-[15px]">
-          <BanknoteIcon className="size-4 shrink-0 text-primary" />
+          <BanknoteIcon className="size-4 shrink-0 text-primary-strong" />
           <span className="font-semibold text-foreground">Cena</span>
-          <span className="ml-auto text-lg font-bold text-primary tabular-nums">
+          <span className="ml-auto text-lg font-bold text-primary-strong tabular-nums">
             {price} €
           </span>
         </div>

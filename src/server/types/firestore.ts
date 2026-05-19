@@ -215,3 +215,21 @@ export type NotificationLogDoc = {
   /** Watched by the Firestore TTL policy on this collection. */
   expireAt: Timestamp;
 };
+
+export type BlogPostStatus = "DRAFT" | "PUBLISHED";
+
+export type BlogPostDoc = {
+  slug: string;
+  title: string;
+  excerpt: string;
+  content: string;
+  coverImageUrl: string | null;
+  coverImagePath: string | null;
+  coverImageAlt: string | null;
+  tags: string[];
+  status: BlogPostStatus;
+  readingMinutes: number;
+  publishedAt: Timestamp | null;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+};
