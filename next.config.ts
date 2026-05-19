@@ -26,6 +26,14 @@ const nextConfig: NextConfig = {
     // we generate to be enumerated up front; default is just [75].
     qualities: [70, 75],
   },
+  experimental: {
+    serverActions: {
+      // Blog image uploads (cover + inline) cap at 10 MB on both client and
+      // server. Next.js's default Server Action body limit is 1 MB, which
+      // rejects anything larger with a 500 before our action handler runs.
+      bodySizeLimit: "10mb",
+    },
+  },
 };
 
 export default nextConfig;
