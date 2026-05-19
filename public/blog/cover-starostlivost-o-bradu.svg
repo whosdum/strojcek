@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Holiaca štetka a miska na penu — vintage barber set">
+  <rect width="800" height="450" fill="#f5f1ea"/>
+  <!-- Shaving bowl (right) -->
+  <g transform="translate(420 240)">
+    <!-- Bowl shadow -->
+    <ellipse cx="100" cy="135" rx="110" ry="18" fill="#c25a1f" opacity="0.55"/>
+    <!-- Bowl body -->
+    <path d="M 0 0 L 200 0 L 180 130 Q 100 150 20 130 Z" fill="#fc873a" stroke="#2b1810" stroke-width="5" stroke-linejoin="round"/>
+    <!-- Bowl rim line -->
+    <line x1="6" y1="0" x2="194" y2="0" stroke="#2b1810" stroke-width="5"/>
+    <!-- Foam in the bowl (cream-colored mound) -->
+    <path d="M 30 -8 Q 50 -38 80 -22 Q 100 -50 130 -22 Q 160 -42 180 -8 Q 100 4 30 -8 Z" fill="#f5f1ea" stroke="#2b1810" stroke-width="4" stroke-linejoin="round"/>
+    <!-- Tiny foam bubbles above -->
+    <circle cx="80" cy="-46" r="6" fill="#f5f1ea" stroke="#2b1810" stroke-width="3"/>
+    <circle cx="130" cy="-52" r="4" fill="#f5f1ea" stroke="#2b1810" stroke-width="3"/>
+  </g>
+  <!-- Shaving brush (left, tilted) -->
+  <g transform="translate(220 70) rotate(-15)">
+    <!-- Handle (orange) -->
+    <rect x="0" y="120" width="80" height="200" rx="14" fill="#fc873a" stroke="#2b1810" stroke-width="5"/>
+    <!-- Handle band (darker accent) -->
+    <rect x="0" y="200" width="80" height="22" fill="#c25a1f" stroke="#2b1810" stroke-width="4"/>
+    <!-- Metal collar -->
+    <rect x="-6" y="90" width="92" height="36" rx="4" fill="#2b1810"/>
+    <!-- Bristle dome (cream) -->
+    <path d="M -8 100 Q -16 30 40 0 Q 96 30 88 100 Z" fill="#f5f1ea" stroke="#2b1810" stroke-width="5" stroke-linejoin="round"/>
+    <!-- Bristle texture lines -->
+    <g stroke="#2b1810" stroke-width="2" opacity="0.5">
+      <line x1="14" y1="86" x2="10" y2="46"/>
+      <line x1="28" y1="86" x2="26" y2="34"/>
+      <line x1="40" y1="86" x2="40" y2="22"/>
+      <line x1="52" y1="86" x2="54" y2="34"/>
+      <line x1="66" y1="86" x2="70" y2="46"/>
+    </g>
+  </g>
+</svg>

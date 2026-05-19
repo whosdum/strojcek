@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Apothecary fľaštička toniku alebo oleja — vintage produkt">
+  <rect width="800" height="450" fill="#f5f1ea"/>
+  <!-- Apothecary bottle centered -->
+  <g transform="translate(310 50)">
+    <!-- Bottle shadow ellipse -->
+    <ellipse cx="90" cy="350" rx="90" ry="14" fill="#c25a1f" opacity="0.5"/>
+    <!-- Bottle stopper / cork (top) -->
+    <rect x="60" y="0" width="60" height="32" rx="4" fill="#2b1810"/>
+    <rect x="68" y="-4" width="44" height="14" rx="4" fill="#2b1810"/>
+    <!-- Bottle neck -->
+    <rect x="64" y="32" width="52" height="40" fill="#fc873a" stroke="#2b1810" stroke-width="5"/>
+    <!-- Bottle shoulder transition -->
+    <path d="M 24 72 Q 24 92 44 92 L 136 92 Q 156 92 156 72 L 116 72 L 64 72 Z" fill="#fc873a" stroke="#2b1810" stroke-width="5" stroke-linejoin="round"/>
+    <!-- Bottle body -->
+    <rect x="24" y="92" width="132" height="250" rx="14" fill="#fc873a" stroke="#2b1810" stroke-width="5"/>
+    <!-- Inner darker shadow strip (right edge) -->
+    <rect x="138" y="100" width="14" height="234" fill="#c25a1f"/>
+    <!-- Label band -->
+    <rect x="36" y="160" width="108" height="120" rx="4" fill="#f5f1ea" stroke="#2b1810" stroke-width="4"/>
+    <!-- Label decorative top border -->
+    <line x1="46" y1="174" x2="134" y2="174" stroke="#2b1810" stroke-width="3"/>
+    <line x1="46" y1="180" x2="134" y2="180" stroke="#2b1810" stroke-width="2"/>
+    <!-- Label center motif (apothecary cross or simple emblem) -->
+    <g transform="translate(90 220)">
+      <!-- Vintage apothecary star/emblem -->
+      <circle cx="0" cy="0" r="22" fill="#fc873a" stroke="#2b1810" stroke-width="4"/>
+      <!-- Cross inside -->
+      <rect x="-3" y="-14" width="6" height="28" fill="#2b1810"/>
+      <rect x="-14" y="-3" width="28" height="6" fill="#2b1810"/>
+    </g>
+    <!-- Label decorative bottom border -->
+    <line x1="46" y1="262" x2="134" y2="262" stroke="#2b1810" stroke-width="2"/>
+    <line x1="46" y1="268" x2="134" y2="268" stroke="#2b1810" stroke-width="3"/>
+  </g>
+</svg>

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Ručné zrkadlo s ozdobným rámom">
+  <rect width="800" height="450" fill="#f5f1ea"/>
+  <!-- Hand mirror centered, slightly tilted -->
+  <g transform="translate(280 60) rotate(8 130 195)">
+    <!-- Handle -->
+    <rect x="100" y="280" width="60" height="100" rx="10" fill="#fc873a" stroke="#2b1810" stroke-width="5"/>
+    <!-- Handle decorative band -->
+    <rect x="100" y="320" width="60" height="14" fill="#2b1810"/>
+    <!-- Handle bottom finial -->
+    <ellipse cx="130" cy="386" rx="40" ry="14" fill="#2b1810"/>
+    <!-- Mirror frame neck -->
+    <rect x="110" y="250" width="40" height="40" fill="#fc873a" stroke="#2b1810" stroke-width="5"/>
+    <!-- Mirror outer frame (oval) -->
+    <ellipse cx="130" cy="140" rx="130" ry="160" fill="#fc873a" stroke="#2b1810" stroke-width="6"/>
+    <!-- Mirror inner frame line -->
+    <ellipse cx="130" cy="140" rx="115" ry="145" fill="#fc873a" stroke="#2b1810" stroke-width="3" opacity="0.5"/>
+    <!-- Reflective surface -->
+    <ellipse cx="130" cy="140" rx="98" ry="128" fill="#f5f1ea" stroke="#2b1810" stroke-width="4"/>
+    <!-- Reflection highlight stripes -->
+    <ellipse cx="100" cy="100" rx="20" ry="50" fill="#fc873a" opacity="0.3" transform="rotate(-25 100 100)"/>
+    <ellipse cx="155" cy="170" rx="14" ry="40" fill="#fc873a" opacity="0.18" transform="rotate(-25 155 170)"/>
+    <!-- Decorative top finial -->
+    <circle cx="130" cy="-26" r="14" fill="#fc873a" stroke="#2b1810" stroke-width="5"/>
+    <rect x="124" y="-22" width="12" height="32" fill="#2b1810"/>
+  </g>
+</svg>

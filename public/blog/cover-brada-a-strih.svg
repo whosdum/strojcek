@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Klasická otvorená britva — straight razor">
+  <rect width="800" height="450" fill="#f5f1ea"/>
+  <!-- Open straight razor, slightly angled, centered -->
+  <g transform="translate(110 170) rotate(-10)">
+    <!-- Handle (dark wood look) -->
+    <rect x="0" y="0" width="280" height="60" rx="10" fill="#2b1810" stroke="#0f0f0f" stroke-width="4"/>
+    <!-- Handle inlay/decorative center -->
+    <rect x="20" y="14" width="240" height="32" rx="4" fill="#fc873a"/>
+    <!-- Handle inlay line detail -->
+    <rect x="30" y="22" width="220" height="6" fill="#2b1810"/>
+    <rect x="30" y="34" width="220" height="6" fill="#2b1810"/>
+    <!-- Pivot screw (joint between handle and blade) -->
+    <circle cx="294" cy="30" r="16" fill="#2b1810" stroke="#0f0f0f" stroke-width="4"/>
+    <circle cx="294" cy="30" r="6" fill="#fc873a"/>
+    <!-- Tang (the small ear extension below blade base) -->
+    <path d="M 280 50 L 320 50 L 320 70 L 280 70 Z" fill="#2b1810"/>
+    <!-- Blade (large, points to the right, slightly curved spine) -->
+    <path d="M 310 0
+             Q 320 -2 330 0
+             L 620 30
+             Q 640 32 638 50
+             L 640 60
+             Q 642 70 622 72
+             L 320 60
+             Q 310 58 310 50 Z"
+          fill="#fc873a" stroke="#2b1810" stroke-width="5" stroke-linejoin="round"/>
+    <!-- Blade highlight (cream stripe) -->
+    <path d="M 330 14 L 615 40 L 615 48 L 330 24 Z" fill="#f5f1ea"/>
+    <!-- Blade etching mark -->
+    <line x1="430" y1="34" x2="470" y2="38" stroke="#2b1810" stroke-width="2" opacity="0.6"/>
+    <line x1="430" y1="42" x2="470" y2="46" stroke="#2b1810" stroke-width="2" opacity="0.6"/>
+    <!-- Blade tip point -->
+    <path d="M 615 32 L 645 48 L 622 70 Z" fill="#fc873a" stroke="#2b1810" stroke-width="5" stroke-linejoin="round"/>
+  </g>
+</svg>

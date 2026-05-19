@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Kalendár s vyznačeným dátumom strihu">
+  <rect width="800" height="450" fill="#f5f1ea"/>
+  <!-- Calendar body -->
+  <g transform="translate(280 90)">
+    <!-- Backplate shadow -->
+    <rect x="6" y="6" width="240" height="280" rx="14" fill="#c25a1f"/>
+    <!-- Main body -->
+    <rect x="0" y="0" width="240" height="280" rx="14" fill="#fc873a" stroke="#2b1810" stroke-width="5"/>
+    <!-- Header strip -->
+    <rect x="0" y="0" width="240" height="60" rx="14" fill="#2b1810"/>
+    <rect x="0" y="46" width="240" height="14" fill="#2b1810"/>
+    <!-- Binder rings -->
+    <rect x="50" y="-14" width="14" height="40" rx="4" fill="#2b1810"/>
+    <rect x="176" y="-14" width="14" height="40" rx="4" fill="#2b1810"/>
+    <!-- Date dots grid -->
+    <g fill="#f5f1ea">
+      <circle cx="40"  cy="100" r="10"/>
+      <circle cx="80"  cy="100" r="10"/>
+      <circle cx="120" cy="100" r="10"/>
+      <circle cx="160" cy="100" r="10"/>
+      <circle cx="200" cy="100" r="10"/>
+      <circle cx="40"  cy="140" r="10"/>
+      <circle cx="80"  cy="140" r="10"/>
+      <circle cx="120" cy="140" r="10"/>
+      <circle cx="160" cy="140" r="10"/>
+      <circle cx="200" cy="140" r="10"/>
+      <circle cx="40"  cy="180" r="10"/>
+      <circle cx="80"  cy="180" r="10"/>
+    </g>
+    <!-- Highlighted "next visit" day -->
+    <circle cx="120" cy="200" r="32" fill="#f5f1ea" stroke="#2b1810" stroke-width="5"/>
+    <!-- Checkmark inside -->
+    <path d="M 104 200 L 116 212 L 138 188" stroke="#2b1810" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Bottom subtle line -->
+    <line x1="40" y1="248" x2="200" y2="248" stroke="#2b1810" stroke-width="3" opacity="0.4"/>
+  </g>
+</svg>

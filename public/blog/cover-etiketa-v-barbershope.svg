@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Barber pole — symbol klasického barbershopu">
+  <rect width="800" height="450" fill="#f5f1ea"/>
+  <!-- Barber pole centered vertically -->
+  <g transform="translate(340 50)">
+    <!-- Top cap (large) -->
+    <rect x="-10" y="0" width="140" height="30" rx="6" fill="#2b1810"/>
+    <ellipse cx="60" cy="30" rx="70" ry="14" fill="#2b1810"/>
+    <!-- Top sphere -->
+    <circle cx="60" cy="10" r="22" fill="#fc873a" stroke="#2b1810" stroke-width="5"/>
+    <!-- Upper neck -->
+    <rect x="20" y="30" width="80" height="20" fill="#2b1810"/>
+    <!-- Upper cap plate -->
+    <ellipse cx="60" cy="56" rx="60" ry="10" fill="#2b1810"/>
+    <!-- Pole cylinder body (cream background with stripes) -->
+    <rect x="10" y="56" width="100" height="240" fill="#f5f1ea" stroke="#2b1810" stroke-width="5"/>
+    <!-- Diagonal stripes (orange + dark) — classic barber pattern -->
+    <g clip-path="inset(0)">
+      <defs>
+        <clipPath id="poleClip">
+          <rect x="10" y="56" width="100" height="240"/>
+        </clipPath>
+      </defs>
+      <g clip-path="url(#poleClip)">
+        <!-- 5 orange stripes diagonally -->
+        <g fill="#fc873a">
+          <path d="M -20 56 L 40 56 L 100 240 L 40 240 Z"/>
+          <path d="M 30 56 L 90 56 L 150 240 L 90 240 Z"/>
+          <path d="M 80 56 L 140 56 L 200 240 L 140 240 Z"/>
+        </g>
+        <!-- Thin dark accent stripes between -->
+        <g stroke="#2b1810" stroke-width="3" fill="none">
+          <line x1="-10" y1="100" x2="120" y2="170"/>
+          <line x1="-10" y1="160" x2="120" y2="230"/>
+          <line x1="-10" y1="220" x2="120" y2="290"/>
+        </g>
+      </g>
+    </g>
+    <!-- Lower cap plate -->
+    <ellipse cx="60" cy="296" rx="60" ry="10" fill="#2b1810"/>
+    <!-- Lower neck -->
+    <rect x="20" y="296" width="80" height="20" fill="#2b1810"/>
+    <!-- Bottom cap -->
+    <rect x="-10" y="316" width="140" height="30" rx="6" fill="#2b1810"/>
+    <ellipse cx="60" cy="316" rx="70" ry="14" fill="#2b1810"/>
+    <!-- Bottom sphere/finial -->
+    <rect x="46" y="346" width="28" height="30" fill="#2b1810"/>
+    <circle cx="60" cy="385" r="14" fill="#fc873a" stroke="#2b1810" stroke-width="5"/>
+  </g>
+</svg>

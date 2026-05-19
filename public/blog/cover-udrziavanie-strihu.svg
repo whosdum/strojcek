@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Klasický barberský hrebeň">
+  <rect width="800" height="450" fill="#f5f1ea"/>
+  <!-- Comb, horizontal, centered, slight tilt -->
+  <g transform="translate(110 170) rotate(-6)">
+    <!-- Comb spine (top, thicker portion) -->
+    <rect x="0" y="0" width="580" height="60" rx="10" fill="#fc873a" stroke="#2b1810" stroke-width="5"/>
+    <!-- Spine inner detail (gives flat-vector depth) -->
+    <rect x="10" y="10" width="560" height="14" rx="3" fill="#c25a1f"/>
+    <!-- Brand stripe -->
+    <rect x="80" y="34" width="440" height="6" fill="#2b1810" opacity="0.75"/>
+    <!-- Teeth — coarse (wider) on the left half, fine (narrower) on the right -->
+    <g fill="#fc873a" stroke="#2b1810" stroke-width="4" stroke-linejoin="round">
+      <!-- Coarse teeth -->
+      <rect x="18"  y="60" width="14" height="80" rx="3"/>
+      <rect x="44"  y="60" width="14" height="80" rx="3"/>
+      <rect x="70"  y="60" width="14" height="80" rx="3"/>
+      <rect x="96"  y="60" width="14" height="80" rx="3"/>
+      <rect x="122" y="60" width="14" height="80" rx="3"/>
+      <rect x="148" y="60" width="14" height="80" rx="3"/>
+      <rect x="174" y="60" width="14" height="80" rx="3"/>
+      <rect x="200" y="60" width="14" height="80" rx="3"/>
+      <rect x="226" y="60" width="14" height="80" rx="3"/>
+      <rect x="252" y="60" width="14" height="80" rx="3"/>
+      <!-- Transition gap -->
+      <!-- Fine teeth -->
+      <rect x="290" y="60" width="7" height="80" rx="2"/>
+      <rect x="304" y="60" width="7" height="80" rx="2"/>
+      <rect x="318" y="60" width="7" height="80" rx="2"/>
+      <rect x="332" y="60" width="7" height="80" rx="2"/>
+      <rect x="346" y="60" width="7" height="80" rx="2"/>
+      <rect x="360" y="60" width="7" height="80" rx="2"/>
+      <rect x="374" y="60" width="7" height="80" rx="2"/>
+      <rect x="388" y="60" width="7" height="80" rx="2"/>
+      <rect x="402" y="60" width="7" height="80" rx="2"/>
+      <rect x="416" y="60" width="7" height="80" rx="2"/>
+      <rect x="430" y="60" width="7" height="80" rx="2"/>
+      <rect x="444" y="60" width="7" height="80" rx="2"/>
+      <rect x="458" y="60" width="7" height="80" rx="2"/>
+      <rect x="472" y="60" width="7" height="80" rx="2"/>
+      <rect x="486" y="60" width="7" height="80" rx="2"/>
+      <rect x="500" y="60" width="7" height="80" rx="2"/>
+      <rect x="514" y="60" width="7" height="80" rx="2"/>
+      <rect x="528" y="60" width="7" height="80" rx="2"/>
+      <rect x="542" y="60" width="7" height="80" rx="2"/>
+      <rect x="556" y="60" width="7" height="80" rx="2"/>
+    </g>
+  </g>
+</svg>

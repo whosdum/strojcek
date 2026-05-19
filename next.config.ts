@@ -25,6 +25,14 @@ const nextConfig: NextConfig = {
     // 130px tiles (Lighthouse savings). Next.js v15+ requires every quality
     // we generate to be enumerated up front; default is just [75].
     qualities: [70, 75],
+    // Blog covers in /public/blog/*.svg need this — Next.js's image
+    // optimizer refuses to serve SVG by default (SVG can contain script
+    // tags). We control these SVGs (committed in repo, no user upload),
+    // so allowing them is safe. CSP below pins them to image-only
+    // rendering so even if a future SVG slipped a <script>, the browser
+    // wouldn't execute it.
+    dangerouslyAllowSVG: true,
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     // Blog cover + inline images live in Firebase Storage. The Web SDK
     // serves them via `firebasestorage.googleapis.com` (download-URL
     // endpoint with a per-file token); next/image refuses unknown hosts
