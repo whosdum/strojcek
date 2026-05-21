@@ -1,36 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Otvorené barberské nožnice">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Otvorené barberské nožnice — symbol fade strihu">
   <rect width="800" height="450" fill="#f5f1ea"/>
-  <!-- Scissors — flat vector, two finger rings + crossed blades -->
-  <g transform="translate(180 90)">
-    <!-- Lower blade (longer, in foreground) -->
-    <path d="M 80 240
-             L 100 230
-             L 440 50
-             Q 460 42 458 60
-             L 458 88
-             Q 458 100 446 104
-             L 110 268
-             L 92 256 Z"
-          fill="#fc873a" stroke="#2b1810" stroke-width="5" stroke-linejoin="round"/>
-    <!-- Upper blade (crossed) -->
-    <path d="M 80 30
-             L 100 40
-             L 440 220
-             Q 460 230 458 248
-             L 458 270
-             Q 458 282 446 282
-             L 110 118
-             L 92 100 Z"
-          fill="#fc873a" stroke="#2b1810" stroke-width="5" stroke-linejoin="round"/>
-    <!-- Pivot screw -->
-    <circle cx="100" cy="135" r="14" fill="#2b1810"/>
-    <circle cx="100" cy="135" r="5" fill="#fc873a"/>
-    <!-- Lower finger ring -->
-    <circle cx="60" cy="232" r="46" fill="none" stroke="#2b1810" stroke-width="14"/>
-    <!-- Upper finger ring -->
-    <circle cx="60" cy="40" r="46" fill="none" stroke="#2b1810" stroke-width="14"/>
-    <!-- Subtle blade highlights -->
-    <line x1="200" y1="120" x2="430" y2="78" stroke="#2b1810" stroke-width="2" opacity="0.5"/>
-    <line x1="200" y1="150" x2="430" y2="192" stroke="#2b1810" stroke-width="2" opacity="0.5"/>
+  <g transform="translate(220 45) scale(3)">
+    <line x1="60" y1="60" x2="78" y2="82" stroke="#2b1810" stroke-width="6" stroke-linecap="round"/>
+    <line x1="60" y1="60" x2="42" y2="82" stroke="#2b1810" stroke-width="6" stroke-linecap="round"/>
+    <path d="M60 60 L35 14 L42 14 L64 58 Z" fill="#fc873a" stroke="#2b1810" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M60 60 L85 14 L78 14 L56 58 Z" fill="#fc873a" stroke="#2b1810" stroke-width="2" stroke-linejoin="round"/>
+    <circle cx="40" cy="92" r="11" fill="none" stroke="#2b1810" stroke-width="3.5"/>
+    <circle cx="80" cy="92" r="11" fill="none" stroke="#2b1810" stroke-width="3.5"/>
+    <circle cx="60" cy="60" r="3.5" fill="#fc873a" stroke="#2b1810" stroke-width="1.5"/>
   </g>
 </svg>

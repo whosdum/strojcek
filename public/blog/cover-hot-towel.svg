@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Horúci uterák s parou — klasický barberský rituál">
+  <rect width="800" height="450" fill="#f5f1ea"/>
+  <g transform="translate(220 45) scale(3)">
+    <path d="M35 38 Q30 30, 35 22 Q40 14, 35 6" stroke="#fc873a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <path d="M60 36 Q55 28, 60 20 Q65 12, 60 4" stroke="#fc873a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <path d="M85 38 Q80 30, 85 22 Q90 14, 85 6" stroke="#fc873a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <rect x="12" y="50" width="96" height="58" rx="3" fill="#fc873a" stroke="#2b1810" stroke-width="2"/>
+    <line x1="12" y1="66" x2="108" y2="66" stroke="#c25a1f" stroke-width="1.5"/>
+    <line x1="12" y1="80" x2="108" y2="80" stroke="#c25a1f" stroke-width="1.5"/>
+    <line x1="12" y1="94" x2="108" y2="94" stroke="#c25a1f" stroke-width="1.5"/>
+  </g>
+</svg>

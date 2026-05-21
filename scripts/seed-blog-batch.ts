@@ -55,6 +55,147 @@ type Article = {
 };
 
 const ARTICLES: Article[] = [
+  // Backdated articles — published BEFORE the launch announcement
+  // ("presli-sme-na-novy-rezervacny-system" lives on production already with
+  // publishedAt = today). These two seed the blog with content so /blog
+  // doesn't look empty between launch and the first scheduled future post.
+  {
+    slug: "barbershop-vs-holicstvo",
+    title: "Barbershop alebo obyčajné holičstvo? 5 hlavných rozdielov",
+    excerpt:
+      "Na prvý pohľad obe miesta robia to isté — strihajú a holia. V skutočnosti je rozdiel ako medzi kaviarňou a Starbucks. Tu je čo dostaneš navyše v barbershope a kedy stačí holičstvo.",
+    tags: ["barbershop", "tipy", "rozdiely"],
+    publishedAt: publishAt("2026-03-17"),
+    coverImageUrl: "/blog/cover-barbershop-vs-holicstvo.svg",
+    coverImageAlt: "Klasické barberské kreslo — symbol pravého barbershopu",
+    content: `**„A v čom je vlastne rozdiel?"** — otázka, ktorú dostávame od ľudí čo doteraz chodili k svojmu lokálnemu pánovi holičovi.
+
+Krátka odpoveď: rovnaký výsledok dostaneš na oboch miestach. **Iný výsledok ale dostaneš iba v jednom z nich.**
+
+Tu je 5 vecí, ktoré barbershop robí inak.
+
+## 1. Špecializácia na chlapov
+
+Klasické holičstvo strihá všetkých — muž, žena, dieťa. Strihy sú **univerzálne**, nástroje sú zdielané a barber prepína kontext každých 30 minút.
+
+Barbershop strihá iba **chlapov a chlapcov**. Každý nástroj, každý produkt, každá technika je optimalizovaná pre pánsky strih a starostlivosť o tvár. Konkrétne to znamená že fade vie barber spraviť 10x denne — má v ňom roky praxe.
+
+## 2. Brada a holenie nie sú prílohou
+
+V holičstve "občas" strihajú aj bradu, ale len ako bonus. V barbershope je brada **rovnocenná služba**: tvarovanie, styling, hot towel, prípadne klasické holenie britvou.
+
+Ak nosíš bradu, tento bod je sám o sebe dôvod prejsť. **Žiadne holičstvo neudrží líniu brady tak ako profesionálny barber** — pretože to nerobí každý deň.
+
+## 3. Nástroje a technika
+
+Barber používa:
+- **Strojček** s viacerými nadstavcami pre rôzne fade techniky
+- **Profesionálne nožnice** (väčšie + scissor-over-comb na crop a fade)
+- **Britvu (straight razor)** na ostré línie a klasické holenie
+- **Hot towel** a kvalitnejšie produkty (oleje, pomády, tonik)
+- **Detail trimmer** na ohraničenie krku a brady
+
+V klasickom holičstve je často jedna sada nástrojov pre všetky strihy. Funkčné — ale obmedzené.
+
+## 4. Atmosféra a čas
+
+Holičstvo: vstúpiš, sadneš, ostriháš sa, ideš. 15-25 minút. Funkčné, lacné, OK.
+
+Barbershop: **dostaneš svoj čas**. 30-45 minút na strih, ďalších 15-20 ak ideš s bradou. Káva, hudba, dialog ak chceš. Strih je rituál, nie chemická čistiareň.
+
+**Toto je vec ktorú nedoceníš až do prvej návštevy** — ako veľmi sa cítiš inak keď ti niekto venuje plnú pozornosť.
+
+## 5. Cena vs. hodnota
+
+Tu nebudem klamať: **barbershop je drahší**. Klasické holičstvo: 6-10 €. Barbershop: 18-25 € za samotný strih, 30+ € s bradou.
+
+Ale spočítaj si:
+- **Vyzeráš dobre 3-4 týždne** namiesto 2 (lepšia technika = pomalšie prerast)
+- **Investícia do brady** ti ušetrí 100+ € na produktoch ktoré si zle vyberáš doma
+- **Konzistencia výsledku** — vždy presne tak ako naposledy
+
+Pre niektorých chlapov 6 € strih stačí. Pre tých čo si chcú vyzerať dobre konzistentne, **barbershop je lacnejší v dlhodobom horizonte**.
+
+## Kedy holičstvo stačí
+
+Buďme úprimní: ak nosíš jednoduchý strih (rovnaká dĺžka, žiadny fade, žiadna brada), holičstvo je v poriadku. Nemusíš platiť 2x viac za to že chĺpok ti odstrihne niekto s tetovaním.
+
+Barber má hodnotu vtedy, keď ti záleží na **detaile**, **bráde** alebo **konzistencii**.
+
+## Pre kohokoľvek kto váha
+
+Vyskúšaj barbershop **raz**. Žiadny tlak, žiadny upselling, len úprimný strih. Ak ti to za to nestojí, vrátiš sa k holičovi a nestratíš nič okrem 25 € a hodiny.
+
+V Strojček-u robíme strihy + brady už vyše roka. Príď, sadni do kresla, posúdi sám.
+
+[Rezervácia online](/) za minútu.`,
+  },
+  {
+    slug: "hot-towel-a-klasicke-holenie",
+    title: "Hot towel a klasické holenie u barbera: čo to vlastne robí?",
+    excerpt:
+      "Horúci uterák, britva, pena — vyzerá to ako rituál zo starého filmu. Reálne to ale rieši veci, ktoré jednorázový holiaci stroj v kúpeľni nikdy nevyrieši. Tu je čo sa naozaj deje.",
+    tags: ["holenie", "tradicia", "tipy"],
+    publishedAt: publishAt("2026-04-21"),
+    coverImageUrl: "/blog/cover-hot-towel.svg",
+    coverImageAlt: "Horúci uterák s parou — klasický barberský rituál",
+    content: `**„Hot towel? Ja sa každé ráno oholím sám, načo by mi to bolo?"**
+
+Klasická reakcia keď klient prvýkrát počuje že to vieme zaradiť. A pochopiteľná — z domácej kúpeľne to vyzerá ako zbytočná ozdoba pre nostalgikov.
+
+Realita je iná. Tu je čo hot towel reálne robí — a prečo to vie u barbera napraviť veci, ktoré doma nikdy nevyriešiš.
+
+## Čo to fyzicky robí
+
+Horúci uterák (teplota ~40-45 °C) na tvári po dobu 2-3 minút spôsobí:
+
+1. **Otvorenie pórov** — koža sa zahreje, póry sa rozšíria
+2. **Zmäkčenie chĺpkov brady** — vlhko + teplo robí každý chĺpok flexibilnejším o ~40 %. Čistejší rez, menšie poranenie kože.
+3. **Hydratáciu vrchnej vrstvy pokožky** — para sa dostane tam, kam denný krém nedoženieš
+4. **Príprava na olej / penu** — pokožka v tom stave absorbuje produkt 3x lepšie ako bežne
+
+## Prečo to doma neurobíš tak dobre
+
+Vieš si v kúpeľni dať teplý uterák na tvár, isto. Ale:
+- **Teplota:** uterák doma stráca teplo za 30 sekúnd. U barbera používame **uteráky z parného ohrievača** — držia 45 °C konzistentne 3+ minúty.
+- **Vlhkosť:** uterák musí byť vlhký, nie premočený. Doma sa to ťažko trafí presne.
+- **Tlak:** my ho aplikujeme **rovnomerne na celú spodnú polovicu tváre** vrátane krku — domáci uterák držíš jednou rukou a aplikuješ nesymetricky.
+- **Načasovanie:** my ho dáme **pred holením + po holení**. Dvojkrok.
+
+## Kedy sa hot towel oplatí
+
+### 1. Pred klasickým holením britvou
+Toto je archetypálne použitie. Para zmäkčí bradu, britva kĺže, žiadne škrabnutie, žiadny ingrown chĺpok. **Najhladšie holenie ktoré v živote dostaneš.**
+
+### 2. Pred tvarovaním brady
+Ak nosíš bradu a chceš ostrú líniu na lícach a krku, hot towel pred ňou znamená že britva sa zariadi presne tam kde má. Žiadne ťahanie chĺpkov.
+
+### 3. Ako samostatná služba (express facial)
+Niekedy klient nepotrebuje strih, ale dáva si pred svadbou alebo pohovorom rituál pre pleť. **15-minútová relaxácia** + hydratácia + tonik. Vyjdeš s pleťou ktorá vyzerá oddýchnutá.
+
+### 4. Po náročnom týždni
+Toto je tichý dôvod prečo barbershop existuje. Hot towel je v podstate **mini-spa rituál pre chlapov**. Nikto nepovie že to je dôvod prečo chodí — ale je to dôvod prečo chodí často.
+
+## Čo s tým doma
+
+Ak chceš aspoň niečo z tohto:
+- **Pred holením daj teplý uterák na tvár na 1 minútu** — najlepšie pred sprchou
+- **Použij pre-shave olej** — pár kvapiek, vmasíruj, počkaj 30 sekúnd
+- **Vyhraď si na holenie viac času** — rýchle holenie = škrabance + ingrown
+
+Ale úprimne: domáce holenie + barbershop holenie sú dve odlišné disciplíny. Domáce je rýchle a praktické. Barbershop je **zážitok** ktorý zlepší pleť aj náladu.
+
+## Skúšame v Strojček-u
+
+Ak si to ešte nevyskúšal, môžeš:
+- **Hot towel ako súčasť brady** (zahrnuté v cene brady)
+- **Express hot towel facial** — samostatne, ~15 min
+- **Klasické holenie britvou s hot towel** — najkomplexnejšia služba pre tvár
+
+[Rezervácia online](/) — vyber službu „Brada" alebo zavolaj a dohodneme detaily na 0944 932 871.
+
+Skús to raz. Garantujem že ďalšie ranné holenie doma ti bude pripadať príliš funkčné.`,
+  },
   {
     slug: "ako-casto-chodit-na-strih",
     title: "Ako často chodiť na strih? Sprievodca podľa typu účesu",

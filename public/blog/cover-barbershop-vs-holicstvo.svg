@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Klasické barberské kreslo — symbol pravého barbershopu">
+  <rect width="800" height="450" fill="#f5f1ea"/>
+  <g transform="translate(220 45) scale(3)">
+    <ellipse cx="60" cy="108" rx="32" ry="5" fill="#2b1810"/>
+    <rect x="55" y="82" width="10" height="24" fill="#2b1810"/>
+    <rect x="26" y="68" width="64" height="14" rx="3" fill="#2b1810"/>
+    <rect x="28" y="28" width="22" height="42" rx="4" fill="#2b1810"/>
+    <rect x="24" y="18" width="30" height="14" rx="4" fill="#2b1810"/>
+    <rect x="48" y="60" width="42" height="6" rx="3" fill="#fc873a"/>
+    <line x1="90" y1="82" x2="90" y2="100" stroke="#2b1810" stroke-width="3"/>
+    <rect x="84" y="74" width="14" height="6" rx="2" fill="#fc873a"/>
+    <rect x="34" y="34" width="12" height="30" rx="2" fill="#fc873a" opacity="0.22"/>
+  </g>
+</svg>
