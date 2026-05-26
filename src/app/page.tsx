@@ -110,6 +110,8 @@ export default async function HomePage({
           alt="Bytča barber Strojček — pánsky barbershop v Bytči"
           width={140}
           height={76}
+          sizes="140px"
+          quality={75}
           className="rounded-xl shadow-lg shadow-black/20"
           priority
           fetchPriority="high"
@@ -286,7 +288,7 @@ export default async function HomePage({
             ].map((photo, i, arr) => (
               <div
                 key={photo.src}
-                className="relative aspect-[4/5] overflow-hidden rounded-lg border border-border/40 bg-card transition-all duration-300 group-hover:border-primary/40 group-focus-visible:ring-2 group-focus-visible:ring-primary/60"
+                className="relative aspect-[4/5] overflow-hidden rounded-lg border border-border/40 bg-card transition-colors duration-300 group-hover:border-primary/40 group-focus-visible:ring-2 group-focus-visible:ring-primary/60"
               >
                 <Image
                   src={photo.src}
@@ -294,7 +296,8 @@ export default async function HomePage({
                   fill
                   sizes="(min-width: 640px) 130px, 22vw"
                   quality={70}
-                  className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+                  loading="lazy"
+                  className="object-cover"
                 />
                 {i === arr.length - 1 ? (
                   <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-t from-black/65 via-black/30 to-transparent">
