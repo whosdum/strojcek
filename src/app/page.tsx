@@ -268,21 +268,27 @@ export default async function HomePage({
           className="group mt-5 block focus:outline-none"
         >
           <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
+            {/* Uses pre-baked -thumb.webp (320px wide, ~13 KB each) generated
+                by scripts/generate-image-variants.ts. Firebase App Hosting's
+                outdated FAH adapter doesn't expose /_next/image on Next.js 16
+                (returns 404), so we serve the right size statically instead
+                of relying on the broken runtime optimizer. See
+                github.com/firebase/apphosting-adapters/issues/564. */}
             {[
               {
-                src: "/barbershop/interier-bytca-1-p.webp",
+                src: "/barbershop/interier-bytca-1-p-thumb.webp",
                 alt: "Interiér barbershopu Strojček v Bytči",
               },
               {
-                src: "/barbershop/barberske-kreslo-bytca-p.webp",
+                src: "/barbershop/barberske-kreslo-bytca-p-thumb.webp",
                 alt: "Barberské kreslo a pracovisko v Strojčeku Bytča",
               },
               {
-                src: "/barbershop/pracovisko-barber-bytca-p.webp",
+                src: "/barbershop/pracovisko-barber-bytca-p-thumb.webp",
                 alt: "Detail pracoviska barbera v Strojčeku Bytča",
               },
               {
-                src: "/barbershop/priestory-strojcek-bytca-p.webp",
+                src: "/barbershop/priestory-strojcek-bytca-p-thumb.webp",
                 alt: "Priestory pánskeho barbershopu Strojček v Bytči",
               },
             ].map((photo, i, arr) => (

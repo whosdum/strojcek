@@ -21,6 +21,15 @@ const nextConfig: NextConfig = {
     "*": ["./public/**/*"],
   },
   images: {
+    // Firebase App Hosting's adapter v14.0.21 (that's Firebase's own
+    // versioning, not "Next.js 14") returns 4xx on /_next/image when running
+    // Next.js 16. Browser falls back to the full-size source — costs ~340 KB
+    // on the homepage thumbnails. Firebase closed the report as "expected
+    // versioning" without addressing the underlying bug, so we pre-bake size
+    // variants via scripts/generate-image-variants.ts and disable Next.js's
+    // broken srcset emission here.
+    // Issue: github.com/firebase/apphosting-adapters/issues/564
+    unoptimized: true,
     // Homepage gallery thumbs use quality={70} to shave bytes on tiny
     // 130px tiles (Lighthouse savings). Next.js v15+ requires every quality
     // we generate to be enumerated up front; default is just [75].
