@@ -244,6 +244,11 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
     // bookings with the same phone resolve to one customerId, and so
     // a failed booking doesn't leave an orphan customer + phone index.
     let customerId = "";
+    // Captured inside the tx for the admin Telegram alert: how many
+    // *completed* visits this customer already has (visitCount only
+    // increments on COMPLETED, so it's "previous visits", not "bookings
+    // made"). Stays 0 for a brand-new customer.
+    let previousVisitCount = 0;
     try {
       await adminDb.runTransaction(async (tx) => {
         const now = new Date();
@@ -342,6 +347,8 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
         ]);
         if (existingCustomerId && existingCustomerSnap?.exists) {
           customerId = existingCustomerId;
+          previousVisitCount =
+            (existingCustomerSnap.data()?.visitCount as number | undefined) ?? 0;
           tx.update(adminDb.doc(`customers/${customerId}`), {
             firstName: data.firstName,
             lastName: data.lastName,
@@ -550,7 +557,8 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
             `Služba: ${escapeTelegramHtml(bs.serviceName)}\n` +
             `Dátum: ${escapeTelegramHtml(formattedDate)} o ${escapeTelegramHtml(formattedTime)}\n` +
             `Tel: ${escapeTelegramHtml(phone)}\n` +
-            `Email: ${escapeTelegramHtml(data.email)}` +
+            `Email: ${escapeTelegramHtml(data.email)}\n` +
+            `Počet predchádzajúcich návštev: ${previousVisitCount}` +
             (data.note
               ? `\nPoznámka: ${escapeTelegramHtml(data.note)}`
               : ""),
