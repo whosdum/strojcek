@@ -550,7 +550,10 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
             `Služba: ${escapeTelegramHtml(bs.serviceName)}\n` +
             `Dátum: ${escapeTelegramHtml(formattedDate)} o ${escapeTelegramHtml(formattedTime)}\n` +
             `Tel: ${escapeTelegramHtml(phone)}\n` +
-            `Email: ${escapeTelegramHtml(data.email)}`,
+            `Email: ${escapeTelegramHtml(data.email)}` +
+            (data.note
+              ? `\nPoznámka: ${escapeTelegramHtml(data.note)}`
+              : ""),
         })
           .then(() =>
             recordNotification({
