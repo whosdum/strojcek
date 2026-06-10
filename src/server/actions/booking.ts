@@ -244,11 +244,6 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
     // bookings with the same phone resolve to one customerId, and so
     // a failed booking doesn't leave an orphan customer + phone index.
     let customerId = "";
-    // Captured inside the tx for the admin Telegram alert: how many
-    // *completed* visits this customer already has (visitCount only
-    // increments on COMPLETED, so it's "previous visits", not "bookings
-    // made"). Stays 0 for a brand-new customer.
-    let previousVisitCount = 0;
     try {
       await adminDb.runTransaction(async (tx) => {
         const now = new Date();
@@ -347,8 +342,6 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
         ]);
         if (existingCustomerId && existingCustomerSnap?.exists) {
           customerId = existingCustomerId;
-          previousVisitCount =
-            (existingCustomerSnap.data()?.visitCount as number | undefined) ?? 0;
           tx.update(adminDb.doc(`customers/${customerId}`), {
             firstName: data.firstName,
             lastName: data.lastName,
@@ -548,6 +541,30 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
     const chatId = process.env.TELEGRAM_CHAT_ID;
     if (chatId) {
       const tgStart = Date.now();
+
+      // Count this customer's *previous* bookings for the admin alert.
+      // We don't rely on customers.visitCount because that only tracks
+      // COMPLETED appointments, which this shop rarely sets — almost all
+      // bookings stay CONFIRMED. So we count the customer's own
+      // appointments directly, excluding cancellations/no-shows and the
+      // one we just created. Best-effort: a failed read must not break
+      // the (already-committed) booking, so we default to 0.
+      let previousVisitCount = 0;
+      try {
+        const priorSnap = await adminDb
+          .collection("appointments")
+          .where("customerId", "==", customerId)
+          .select("status")
+          .get();
+        previousVisitCount = priorSnap.docs.filter((d) => {
+          if (d.id === appointmentId) return false; // exclude this booking
+          const status = d.get("status") as AppointmentStatus | undefined;
+          return status !== "CANCELLED" && status !== "NO_SHOW";
+        }).length;
+      } catch (err) {
+        console.error("[booking][visit-count]", err);
+      }
+
       await Promise.allSettled([
         sendTelegramNotification({
           chatId,
@@ -558,7 +575,9 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
             `Dátum: ${escapeTelegramHtml(formattedDate)} o ${escapeTelegramHtml(formattedTime)}\n` +
             `Tel: ${escapeTelegramHtml(phone)}\n` +
             `Email: ${escapeTelegramHtml(data.email)}\n` +
-            `Počet predchádzajúcich návštev: ${previousVisitCount}` +
+            (previousVisitCount > 0
+              ? `Počet predchádzajúcich návštev: ${previousVisitCount}`
+              : `🆕 Nový zákazník`) +
             (data.note
               ? `\nPoznámka: ${escapeTelegramHtml(data.note)}`
               : ""),
