@@ -129,6 +129,8 @@ export function AdminCalendar() {
               barberName: string;
               status: string;
               source?: string;
+              hasNote?: boolean;
+              note?: string | null;
             };
           }) => {
             const color = getBarberColor(
@@ -137,10 +139,17 @@ export function AdminCalendar() {
             );
             const status = evt.extendedProps.status;
             const isWalkIn = evt.extendedProps.source === "walk-in";
+            const hasNote = Boolean(evt.extendedProps.hasNote);
+            // Bookings whose slot has already ended are dimmed so the day's
+            // remaining (upcoming) appointments stand out. They stay on the
+            // calendar — just visually "done".
+            const isPast = new Date(evt.end).getTime() < Date.now();
 
             return {
               id: evt.id,
-              title: isWalkIn ? `🔒 ${evt.title}` : evt.title,
+              // 📝 marks a booking that carries a customer note, so the
+              // admin can spot it at a glance and open it to read the note.
+              title: `${isWalkIn ? "🔒 " : ""}${hasNote ? "📝 " : ""}${evt.title}`,
               start: evt.start,
               end: evt.end,
               // Walk-in events use a muted neutral so they read as
@@ -153,6 +162,8 @@ export function AdminCalendar() {
               classNames: [
                 `cal-status-${status.toLowerCase()}`,
                 ...(isWalkIn ? ["cal-walk-in"] : []),
+                ...(hasNote ? ["cal-has-note"] : []),
+                ...(isPast ? ["cal-past"] : []),
               ],
             };
           }
@@ -237,6 +248,12 @@ export function AdminCalendar() {
             <span className="text-xs">Neprišiel</span>
           </div>
         </div>
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <span className="text-sm font-medium text-muted-foreground">Ikony:</span>
+          <span className="text-xs">📝 Má poznámku</span>
+          <span className="text-xs">🔒 Walk-in</span>
+          <span className="text-xs text-muted-foreground">Stlmené = už prebehlo</span>
+        </div>
       </div>
 
       <style>{`
@@ -288,6 +305,19 @@ export function AdminCalendar() {
         .fc .fc-event:focus-visible {
           outline: 2px solid hsl(var(--ring));
           outline-offset: 2px;
+        }
+        /* Note marker: a bright amber stripe down the left edge, in
+           addition to the 📝 in the title, so a booking with a customer
+           note is impossible to miss. High specificity so it wins over
+           the per-status border styles. */
+        .fc .fc-event.cal-has-note {
+          box-shadow: inset 4px 0 0 0 #facc15 !important;
+        }
+        /* Past bookings (slot already ended) stay on the calendar but are
+           dimmed + desaturated so the upcoming ones stand out. */
+        .fc .fc-event.cal-past {
+          filter: grayscale(55%);
+          opacity: 0.75;
         }
         @media (max-width: 767px) {
           .fc .fc-toolbar-title {
@@ -362,6 +392,17 @@ export function AdminCalendar() {
           height="auto"
           events={fetchEvents}
           eventClick={handleEventClick}
+          eventDidMount={(info) => {
+            // Native tooltip showing the customer note on hover, so the
+            // admin can preview it without opening the reservation.
+            const note = info.event.extendedProps.note as
+              | string
+              | null
+              | undefined;
+            if (note) {
+              info.el.setAttribute("title", `Poznámka: ${note}`);
+            }
+          }}
           nowIndicator
           slotDuration={isMobile ? "00:30:00" : "00:15:00"}
           slotLabelInterval={isMobile ? "01:00:00" : "00:30:00"}

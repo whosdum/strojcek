@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
     const title = isWalkIn
       ? customer
       : `${customer} — ${appt.service.name}`;
+    const note = appt.notes?.trim() || null;
     return {
       id: appt.id,
       title,
@@ -45,6 +46,8 @@ export async function GET(request: NextRequest) {
         barberName: `${appt.barber.firstName} ${appt.barber.lastName}`,
         status: appt.status,
         source: appt.source,
+        hasNote: note !== null,
+        note,
       },
     };
   });
