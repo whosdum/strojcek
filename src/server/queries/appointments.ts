@@ -285,6 +285,31 @@ export async function getAppointmentsForCalendar(
     .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 }
 
+/**
+ * All appointments whose start falls within [startDate, endDate], for CSV
+ * export. Unlike getAppointmentsForCalendar this does NOT drop CANCELLED /
+ * NO_SHOW — an export is a full record of the period, including cancellations
+ * and no-shows. Range-only on `startTime` (single-field index), no pagination.
+ */
+export async function getAppointmentsForExport(
+  startDate: Date,
+  endDate: Date
+): Promise<AppointmentWithBarberServiceView[]> {
+  const snap = await adminDb
+    .collection("appointments")
+    .where("startTime", ">=", Timestamp.fromDate(startDate))
+    .where("startTime", "<=", Timestamp.fromDate(endDate))
+    .get();
+
+  return snap.docs
+    .map((d) => {
+      const data = d.data() as AppointmentDoc;
+      const base = mapAppointment(d);
+      return withBarberService(base, data);
+    })
+    .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+}
+
 export async function getDayStats(date: Date = nowInTz()): Promise<{
   total: number;
   completed: number;

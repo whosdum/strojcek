@@ -66,6 +66,30 @@ export async function getCustomers(
   return { items, nextCursor };
 }
 
+/**
+ * Every customer, newest-updated first, for CSV export. Bounded by a safety
+ * cap so a runaway dataset can't be pulled in one unbounded read; the cap sits
+ * well above current scale (hundreds–low thousands). getCustomers is
+ * paginated, hence this separate non-paginated path.
+ */
+export async function getAllCustomersForExport(): Promise<CustomerView[]> {
+  // Fetch one over the cap so truncation is detectable (logged) instead of
+  // silently dropping rows. The cap sits far above current scale; a hit means
+  // the export needs real pagination.
+  const CAP = 5000;
+  const snap = await adminDb
+    .collection("customers")
+    .orderBy("updatedAt", "desc")
+    .limit(CAP + 1)
+    .get();
+  if (snap.size > CAP) {
+    console.warn(
+      `[export] customers export truncated at ${CAP} rows — add pagination if this recurs.`
+    );
+  }
+  return snap.docs.slice(0, CAP).map((d) => mapCustomer(d));
+}
+
 export async function getCustomerById(
   id: string
 ): Promise<CustomerWithAppointmentsView | null> {

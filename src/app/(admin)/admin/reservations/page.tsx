@@ -3,6 +3,7 @@ import { getAppointments } from "@/server/queries/appointments";
 import { getAllBarbers } from "@/server/queries/barbers";
 import { Badge } from "@/components/ui/badge";
 import { BarberFilter } from "@/components/admin/barber-filter";
+import { ExportCsvButton } from "@/components/admin/export-csv-button";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -78,6 +79,12 @@ export default async function ReservationsPage({
             Nová rezervácia
           </Button>
         </Link>
+      </div>
+
+      {/* Export */}
+      <div className="mb-4 flex flex-col gap-2 rounded-xl border bg-card p-3 sm:flex-row sm:items-end sm:justify-between">
+        <p className="text-sm font-medium">Export do CSV</p>
+        <ExportCsvButton type="reservations" />
       </div>
 
       {/* Filters */}

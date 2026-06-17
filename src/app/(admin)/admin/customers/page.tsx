@@ -11,6 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ClickableTableRow } from "@/components/admin/clickable-table-row";
+import { ExportCsvButton } from "@/components/admin/export-csv-button";
 import { ChevronRightIcon, EyeIcon, SearchIcon } from "lucide-react";
 
 export default async function CustomersPage({
@@ -32,7 +33,10 @@ export default async function CustomersPage({
         <span className="mx-1.5">/</span>
         <span className="text-foreground" aria-current="page">Zákazníci</span>
       </nav>
-      <h1 className="mb-6 text-2xl font-bold sm:text-3xl">Zákazníci</h1>
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-2xl font-bold sm:text-3xl">Zákazníci</h1>
+        <ExportCsvButton type="customers" />
+      </div>
 
       {/* Search */}
       <form className="mb-4 flex max-w-md flex-col gap-2 sm:flex-row">

@@ -46,6 +46,12 @@ export const STATUS_LABELS: Record<string, string> = {
   NO_SHOW: "Neprišiel",
 };
 
+export const SOURCE_LABELS: Record<string, string> = {
+  online: "Online",
+  admin: "Admin",
+  "walk-in": "Bez objednávky",
+};
+
 export const STATUS_VARIANTS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   PENDING: "outline",
   CONFIRMED: "default",
