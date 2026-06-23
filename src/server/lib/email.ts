@@ -27,8 +27,7 @@ const transporter =
       })
     : null;
 
-const EMAIL_FROM =
-  process.env.EMAIL_FROM || "Strojcek <barbershopstrojcek@gmail.com>";
+const EMAIL_FROM = "Strojček <strojcekbarbershop@gmail.com>";
 
 interface SendEmailOptions {
   to: string;

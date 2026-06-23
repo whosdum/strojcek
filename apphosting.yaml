@@ -81,7 +81,7 @@ env:
 
   # ---- Email (nodemailer SMTP) ----
   - variable: EMAIL_FROM
-    value: Strojcek <barbershopstrojcek@gmail.com>
+    value: Strojcek <strojcekbarbershop@gmail.com>
     availability:
       - RUNTIME
   - variable: SMTP_HOST
