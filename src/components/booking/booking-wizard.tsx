@@ -891,6 +891,22 @@ export function BookingWizard({
   );
   const calendarToMonth = endOfMonth(parseISO(horizonEndKey));
 
+  // Open the calendar on the month that actually has free slots. At the end
+  // of a month where nothing is left (e.g. 30. 6. with no slots today), this
+  // jumps the initial view to the next month's first available day instead of
+  // showing an all-grey current month. If the user already picked a date,
+  // respect that month so going back to edit doesn't yank the view.
+  const firstAvailableKey = state.slotsByDate
+    ? Object.keys(state.slotsByDate)
+        .filter((k) => (state.slotsByDate![k]?.length ?? 0) > 0)
+        .sort()[0]
+    : undefined;
+  const calendarDefaultMonth = state.date
+    ? parseISO(state.date)
+    : firstAvailableKey
+      ? parseISO(firstAvailableKey)
+      : todayStart;
+
   const calendarDisabledMatcher = (date: Date) => {
     // The Date received from react-day-picker is local-midnight of the
     // user's clicked day; format() in the user's TZ gives us the
@@ -901,6 +917,16 @@ export function BookingWizard({
     if (dateKey > horizonEndKey) return true;
     // Block ALL days until working days are loaded from the server
     if (!state.workingDays) return true;
+
+    // Once the per-day slot list is loaded it is the authoritative source
+    // of bookability: a day with zero bookable slots is greyed out. This
+    // covers a fully-booked future day AND today once its remaining slots
+    // have passed the booking lead time (the server filters those via
+    // earliestStartMs), so "today" stops appearing selectable when nothing
+    // is left to book.
+    if (state.slotsByDate && (state.slotsByDate[dateKey]?.length ?? 0) === 0) {
+      return true;
+    }
 
     // Per-date override wins over the weekly schedule. This makes a
     // normally non-working day (e.g. Sunday) selectable when the barber
@@ -1103,6 +1129,7 @@ export function BookingWizard({
                 selected={state.date ? parseISO(state.date) : undefined}
                 onSelect={handleSelectDate}
                 disabled={calendarDisabledMatcher}
+                defaultMonth={calendarDefaultMonth}
                 startMonth={todayStart}
                 endMonth={calendarToMonth}
               />
