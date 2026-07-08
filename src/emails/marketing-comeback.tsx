@@ -43,26 +43,12 @@ export function marketingComebackHtml(): string {
         <p class="email-text" style="color: #333; margin: 0 0 16px; font-size: 22px; font-weight: bold; line-height: 1.3;">
           Nie je čas na nový strih? ✂️
         </p>
-        <p class="email-text" style="color: #333; margin: 0 0 20px; font-size: 15px; line-height: 1.6;">
-          Dobrý deň,
+        <p class="email-text" style="color: #333; margin: 0 0 16px; font-size: 15px; line-height: 1.6;">
+          Ahoj,
         </p>
-        <p class="email-text" style="color: #333; margin: 0 0 20px; font-size: 15px; line-height: 1.6;">
-          ozývame sa zo Strojčeka s pár novinkami.
+        <p class="email-text" style="color: #333; margin: 0 0 12px; font-size: 15px; line-height: 1.6;">
+          tešíme sa na tvoju ďalšiu návštevu. Stačí si vybrať termín, ktorý ti vyhovuje.
         </p>
-
-        <div class="email-quote" style="background-color: #fff7ed; border-left: 3px solid #fc873a; border-radius: 6px; padding: 16px 20px; margin: 0 0 20px;">
-          <p class="email-text" style="color: #333; margin: 0 0 8px; font-size: 15px; font-weight: bold; line-height: 1.5;">
-            🆕 Nový rezervačný systém
-          </p>
-          <p class="email-text" style="color: #333; margin: 0; font-size: 14px; line-height: 1.6;">
-            Spustili sme nový rezervačný formulár priamo na našom webe — termín si zarezervujete za pár klikov, bez registrácie.
-          </p>
-        </div>
-
-        <p class="email-text" style="color: #333; margin: 0 0 20px; font-size: 15px; line-height: 1.6;">
-          A ak je to od poslednej návštevy už nejaký ten týždeň, radi vás opäť uvidíme v kresle.
-        </p>
-
         <table width="100%" cellpadding="0" cellspacing="0">
           <tr>
             <td align="center" style="padding: 8px 0 24px;">
@@ -74,13 +60,13 @@ export function marketingComebackHtml(): string {
         </table>
 
         <p class="email-muted" style="color: #666; margin: 0 0 4px; font-size: 13px; text-align: center; line-height: 1.5;">
-          alebo nám zavolajte na <a href="tel:${SHOP_PHONE_E164}" style="color: #333; font-weight: bold; text-decoration: underline;">${SHOP_PHONE_DISPLAY}</a>
+          alebo nám zavolaj na <a href="tel:${SHOP_PHONE_E164}" style="color: #333; font-weight: bold; text-decoration: underline;">${SHOP_PHONE_DISPLAY}</a>
         </p>
 
         <hr class="email-divider" style="border: none; border-top: 1px solid #f0f0f0; margin: 28px 0 20px;">
 
         <p class="email-text" style="color: #333; margin: 0; font-size: 15px;">
-          Tešíme sa na vás.
+          Vidíme sa v kresle.
         </p>
         <p class="email-muted" style="color: #666; margin: 4px 0 0; font-size: 14px;">
           Tím Strojček
@@ -92,7 +78,7 @@ export function marketingComebackHtml(): string {
         <p style="color: #888; margin: 0 0 8px; font-size: 12px;">${SHOP_NAME} Barbershop · ${SHOP_STREET}, ${SHOP_CITY}</p>
         <p style="color: #666; margin: 0; font-size: 11px;">Tel: ${SHOP_PHONE_DISPLAY}</p>
         <p class="email-footer-link" style="color: #555; margin: 12px 0 0; font-size: 11px; line-height: 1.5;">
-          Tento email ste dostali ako náš zákazník. Ak si podobné novinky neželáte dostávať, stačí odpovedať a my vás odstránime zo zoznamu.
+          Tento email ti posielame, keďže patríš medzi našich zákazníkov. Ak si podobné novinky neželáš dostávať, stačí odpovedať a my ťa odstránime zo zoznamu.
         </p>
       </td>
     </tr>
