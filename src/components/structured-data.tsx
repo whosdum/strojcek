@@ -12,7 +12,8 @@ import {
   SHOP_MAPS_URL,
   SHOP_SOCIAL_PROFILES,
 } from "@/lib/business-info";
-import { AGGREGATE_RATING, PUBLIC_REVIEWS } from "@/lib/reviews-data";
+import { PUBLIC_REVIEWS } from "@/lib/reviews-data";
+import { getAggregateRating } from "@/server/lib/google-rating";
 
 interface OpeningHoursSpec {
   dayOfWeek: string;
@@ -34,11 +35,16 @@ const DEFAULT_HOURS: OpeningHoursSpec[] = [
   { dayOfWeek: "Saturday", opens: "09:00", closes: "13:00" },
 ];
 
-export function StructuredData({ openingHours, services }: StructuredDataProps) {
+export async function StructuredData({
+  openingHours,
+  services,
+}: StructuredDataProps) {
   // Empty array is a valid signal of "no schedule yet" — fall back only
   // when caller didn't supply anything at all.
   const hours =
     openingHours && openingHours.length > 0 ? openingHours : DEFAULT_HOURS;
+
+  const aggregateRating = await getAggregateRating();
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -91,9 +97,9 @@ export function StructuredData({ openingHours, services }: StructuredDataProps) 
     sameAs: SHOP_SOCIAL_PROFILES,
     aggregateRating: {
       "@type": "AggregateRating",
-      ratingValue: AGGREGATE_RATING.ratingValue.toFixed(1),
-      reviewCount: AGGREGATE_RATING.reviewCount,
-      bestRating: AGGREGATE_RATING.bestRating,
+      ratingValue: aggregateRating.ratingValue.toFixed(1),
+      reviewCount: aggregateRating.reviewCount,
+      bestRating: aggregateRating.bestRating,
     },
     review: PUBLIC_REVIEWS.map((r) => ({
       "@type": "Review",

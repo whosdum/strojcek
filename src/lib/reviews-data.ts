@@ -56,7 +56,9 @@ export const PUBLIC_REVIEWS: PublicReview[] = [
   },
 ];
 
-// Aggregate stats — z GBP. Update keď čísla narastú.
+// FALLBACK aggregate stats — reálne čísla sa dotahujú z Google Places API
+// (src/server/lib/google-rating.ts). Toto sa použije len keď API zlyhá
+// alebo chýba GOOGLE_PLACES_API_KEY. Občas zosynchronizuj s GBP.
 export const AGGREGATE_RATING = {
   ratingValue: 5.0,
   reviewCount: 25,

@@ -1,14 +1,17 @@
 import { StarIcon } from "lucide-react";
-import { PUBLIC_REVIEWS, AGGREGATE_RATING } from "@/lib/reviews-data";
+import { PUBLIC_REVIEWS } from "@/lib/reviews-data";
 import { SHOP_MAPS_URL } from "@/lib/business-info";
+import { getAggregateRating } from "@/server/lib/google-rating";
 
 interface ReviewsSectionProps {
   className?: string;
 }
 
-export function ReviewsSection({
+export async function ReviewsSection({
   className = "mt-8 rounded-2xl border border-border/40 bg-card/40 p-6 sm:p-8",
 }: ReviewsSectionProps) {
+  const rating = await getAggregateRating();
+
   return (
     <section aria-labelledby="recenzie" className={className}>
       <div className="flex items-baseline justify-between gap-4">
@@ -31,15 +34,15 @@ export function ReviewsSection({
       <div className="mt-3 flex items-center gap-2">
         <div
           role="img"
-          aria-label={`Hodnotenie ${AGGREGATE_RATING.ratingValue} z ${AGGREGATE_RATING.bestRating}`}
+          aria-label={`Hodnotenie ${rating.ratingValue} z ${rating.bestRating}`}
           className="flex items-center gap-0.5"
         >
-          {Array.from({ length: AGGREGATE_RATING.bestRating }).map((_, i) => (
+          {Array.from({ length: rating.bestRating }).map((_, i) => (
             <StarIcon
               key={i}
               aria-hidden="true"
               className={
-                i < Math.round(AGGREGATE_RATING.ratingValue)
+                i < Math.round(rating.ratingValue)
                   ? "size-4 fill-amber-400 text-amber-400"
                   : "size-4 text-muted-foreground/40"
               }
@@ -48,9 +51,9 @@ export function ReviewsSection({
         </div>
         <p className="text-[13px] text-muted-foreground">
           <span className="font-semibold text-foreground">
-            {AGGREGATE_RATING.ratingValue.toFixed(1)}
+            {rating.ratingValue.toFixed(1)}
           </span>{" "}
-          z {AGGREGATE_RATING.reviewCount} recenzií na Google
+          z {rating.reviewCount} recenzií na Google
         </p>
       </div>
 

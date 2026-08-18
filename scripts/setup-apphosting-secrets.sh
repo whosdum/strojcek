@@ -47,6 +47,7 @@ push SMSTOOLS_API_KEY
 push TELEGRAM_BOT_TOKEN
 push TELEGRAM_CHAT_ID
 push CRON_SECRET
+push GOOGLE_PLACES_API_KEY
 
 echo
 echo "Done. Verify in Firebase Console → App Hosting → backend → Secrets,"

@@ -153,6 +153,7 @@ SMSTOOLS_API_KEY
 TELEGRAM_BOT_TOKEN
 TELEGRAM_CHAT_ID
 CRON_SECRET                  # Bearer token for /api/cron/* endpoints
+GOOGLE_PLACES_API_KEY        # Places API (New) — dynamický aggregate rating + počet recenzií
 NEXT_PUBLIC_APP_URL
 ```
 

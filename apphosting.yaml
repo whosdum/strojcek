@@ -123,6 +123,14 @@ env:
     availability:
       - RUNTIME
 
+  # ---- Google Places API (dynamický rating + počet recenzií) ----
+  # BUILD aj RUNTIME: ISR stránky sa prerendrujú už pri `next build`.
+  - variable: GOOGLE_PLACES_API_KEY
+    secret: GOOGLE_PLACES_API_KEY
+    availability:
+      - BUILD
+      - RUNTIME
+
   # ============================================================
   # NOTES on multi-environment:
   #
@@ -133,7 +141,7 @@ env:
   #
   # Currently shared across both projects (same value):
   #   SMTP_USER, SMTP_PASS, SMSTOOLS_API_KEY,
-  #   TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, CRON_SECRET
+  #   TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, CRON_SECRET, GOOGLE_PLACES_API_KEY
   #
   # Per-project (different values pushed manually per env):
   #   NEXT_PUBLIC_FIREBASE_*, NEXT_PUBLIC_APP_URL, FIREBASE_PROJECT_ID_SECRET
