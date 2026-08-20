@@ -175,10 +175,15 @@ export async function StructuredData({
   };
 
   // WebSite entity ties the brand to a stable @id Google can reference
-  // across the Knowledge Graph. potentialAction wires a SearchAction at
-  // /?service= so SERP *may* render a sitelinks search box for the brand
-  // query. Activation is rare and at Google's discretion — the entity
-  // linkage is the durable win regardless.
+  // across the Knowledge Graph.
+  //
+  // A SearchAction/potentialAction pointing at /?service={search_term_string}
+  // used to live here for the sitelinks search box. Google retired that SERP
+  // element globally on 2024-11-21, so the markup bought nothing — and
+  // Googlebot crawled the template URL *literally*, landing
+  // /?service={search_term_string} in Search Console under "Alternate page
+  // with proper canonical tag" alongside real /?service=<uuid> variants.
+  // Removed 2026-08-20.
   const websiteLd = {
     "@context": "https://schema.org",
     "@type": "WebSite",
@@ -188,14 +193,6 @@ export async function StructuredData({
     alternateName: SHOP_NAME,
     inLanguage: "sk-SK",
     publisher: { "@id": `${PUBLIC_SITE_URL}/#organization` },
-    potentialAction: {
-      "@type": "SearchAction",
-      target: {
-        "@type": "EntryPoint",
-        urlTemplate: `${PUBLIC_SITE_URL}/?service={search_term_string}`,
-      },
-      "query-input": "required name=search_term_string",
-    },
   };
 
   return (

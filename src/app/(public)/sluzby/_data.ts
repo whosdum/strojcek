@@ -156,4 +156,4 @@ export const ALL_SERVICE_SLUGS: readonly string[] = SERVICES.map((s) => s.slug);
 // updated. Drives sitemap.xml lastmod + AboutPage JSON-LD dateModified.
 // Bump manually when content changes — never `new Date()` (Google starts
 // ignoring lastmod if every URL ticks on every build).
-export const SITE_CONTENT_LAST_UPDATED = "2026-05-08";
+export const SITE_CONTENT_LAST_UPDATED = "2026-08-18";
