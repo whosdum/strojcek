@@ -69,7 +69,7 @@ export const config = {
   // flow so a narrow matcher worked locally.
   //
   // Generated routes (robots.txt, sitemap.xml, opengraph-image,
-  // twitter-image, apple-icon, icon.svg) are NOT listed — they are
+  // twitter-image, apple-icon, icon.png) are NOT listed — they are
   // real app/ routes and middleware can run on them safely; next() is
   // resolved by Next.js itself. Only physical files under /public
   // need to be excluded.
