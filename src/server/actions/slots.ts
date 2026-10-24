@@ -83,6 +83,7 @@ export async function fetchAvailability(
     barberId,
     serviceId,
     horizonWeeks,
-    settings.slotIntervalMinutes
+    settings.slotIntervalMinutes,
+    settings.minBookingLeadMinutes
   );
 }

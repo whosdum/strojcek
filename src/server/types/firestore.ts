@@ -167,6 +167,10 @@ export type ScheduleOverrideDoc = {
 
 export type ShopSettingsDoc = {
   slotIntervalMinutes: SlotInterval;
+  /** Online bookings only — how far ahead of the slot start a customer
+   *  must book. Optional; older docs predate the field and fall back to
+   *  MIN_BOOKING_LEAD_MINUTES. */
+  minBookingLeadMinutes?: number;
   updatedAt: Timestamp;
 };
 

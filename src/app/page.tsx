@@ -84,7 +84,8 @@ export default async function HomePage({
           barberId,
           initialServiceId,
           horizonWeeks,
-          settings.slotIntervalMinutes
+          settings.slotIntervalMinutes,
+          settings.minBookingLeadMinutes
         );
         initialAvailabilityBarberId = barberId;
       } catch (err) {

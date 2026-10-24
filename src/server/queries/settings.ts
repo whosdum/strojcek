@@ -4,6 +4,7 @@ import { Timestamp } from "firebase-admin/firestore";
 import { tsToDate } from "@/server/lib/firestore-utils";
 import type { ShopSettingsView, SlotInterval } from "@/lib/types";
 import type { ShopSettingsDoc } from "@/server/types/firestore";
+import { MIN_BOOKING_LEAD_MINUTES } from "@/lib/business-info";
 
 const SETTINGS_DOC = "shopSettings/default";
 
@@ -16,6 +17,7 @@ export async function getShopSettings(): Promise<ShopSettingsView> {
     return {
       id: snap.id,
       slotIntervalMinutes: d.slotIntervalMinutes,
+      minBookingLeadMinutes: d.minBookingLeadMinutes ?? MIN_BOOKING_LEAD_MINUTES,
       updatedAt: tsToDate(d.updatedAt),
     };
   }
@@ -28,6 +30,7 @@ export async function getShopSettings(): Promise<ShopSettingsView> {
   return {
     id: "default",
     slotIntervalMinutes: initial.slotIntervalMinutes,
+    minBookingLeadMinutes: MIN_BOOKING_LEAD_MINUTES,
     updatedAt: tsToDate(initial.updatedAt),
   };
 }

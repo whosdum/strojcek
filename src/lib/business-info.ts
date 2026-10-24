@@ -45,5 +45,6 @@ export const SHOP_SOCIAL_PROFILES = [
   "https://www.facebook.com/p/Stroj%C4%8Dek-61576655767286/",
 ] as const;
 
-// Lead-time before a slot can be booked (so a customer has time to arrive).
+// Default lead-time before a slot can be booked online (so a customer has
+// time to arrive). The live value is shopSettings/default.minBookingLeadMinutes.
 export const MIN_BOOKING_LEAD_MINUTES = 15;

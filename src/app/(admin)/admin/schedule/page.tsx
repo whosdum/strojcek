@@ -2,6 +2,7 @@ import { getAllBarbersWithSchedules } from "@/server/queries/barbers";
 import { getShopSettings } from "@/server/queries/settings";
 import { ScheduleManager } from "@/components/admin/schedule-manager";
 import { SlotIntervalSetting } from "@/components/admin/slot-interval-setting";
+import { MinBookingLeadSetting } from "@/components/admin/min-booking-lead-setting";
 import Link from "next/link";
 
 export default async function SchedulePage() {
@@ -18,8 +19,9 @@ export default async function SchedulePage() {
         <span className="text-foreground" aria-current="page">Rozvrh</span>
       </nav>
       <h1 className="mb-6 text-2xl font-bold">Rozvrh</h1>
-      <div className="mb-8">
+      <div className="mb-8 grid gap-6 lg:grid-cols-2">
         <SlotIntervalSetting currentInterval={settings.slotIntervalMinutes} />
+        <MinBookingLeadSetting currentLead={settings.minBookingLeadMinutes} />
       </div>
       <ScheduleManager barbers={barbers} />
     </div>

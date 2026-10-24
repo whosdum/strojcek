@@ -186,9 +186,9 @@ export async function getAvailableSlots(
   const workingEndUtc = fromZonedTime(`${dateStr}T${workEnd}:00`, TIMEZONE);
   const nowUtc = new Date();
 
-  // Customers need lead time to actually arrive — never offer a slot
-  // that starts within MIN_BOOKING_LEAD_MINUTES from now.
-  const earliestStartMs = nowUtc.getTime() + MIN_BOOKING_LEAD_MINUTES * 60_000;
+  // Admin-only path (appointment-form) — the online lead time doesn't
+  // apply, so a walk-in can be booked right now. Past slots stay hidden.
+  const earliestStartMs = nowUtc.getTime();
 
   return generateSlotStrings({
     workingStartUtc,
@@ -268,7 +268,8 @@ export async function getAvailabilityBundle(
   barberId: string,
   serviceId: string,
   horizonWeeks: number,
-  slotInterval?: number
+  slotInterval?: number,
+  minLeadMinutes: number = MIN_BOOKING_LEAD_MINUTES
 ): Promise<AvailabilityBundle> {
   const intervalMinutes = slotInterval ?? SLOT_INTERVAL_MINUTES;
 
@@ -364,7 +365,9 @@ export async function getAvailabilityBundle(
   const duration = bs.customDuration ?? bs.defaultDuration;
   const buffer = bs.bufferMinutes;
 
-  const earliestStartMs = Date.now() + MIN_BOOKING_LEAD_MINUTES * 60_000;
+  // Customers need lead time to actually arrive — never offer a slot
+  // that starts within minLeadMinutes from now.
+  const earliestStartMs = Date.now() + minLeadMinutes * 60_000;
 
   const slotsByDate: Record<string, string[]> = {};
   for (let i = 0; i <= horizonDays; i++) {

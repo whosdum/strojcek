@@ -122,6 +122,7 @@ export type AppointmentStatusHistoryView = {
 export type ShopSettingsView = {
   id: string;
   slotIntervalMinutes: SlotInterval;
+  minBookingLeadMinutes: number;
   updatedAt: Date;
 };
 

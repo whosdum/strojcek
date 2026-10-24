@@ -17,6 +17,7 @@ import {
   cancelBookingInputSchema,
 } from "@/lib/validators";
 import { normalizePhone } from "@/server/lib/phone";
+import { getShopSettings } from "@/server/queries/settings";
 import {
   generateToken,
   getTokenLookupValues,
@@ -77,6 +78,13 @@ const EMAIL_COUNTER_DOC = (email: string) =>
     .digest("hex")
     .slice(0, 32)}`;
 
+/** "15 minút" / "1 hodinu" / "2 hodiny" — accusative after "najneskôr". */
+function formatLead(minutes: number): string {
+  if (minutes < 60) return `${minutes} minút`;
+  const hours = minutes / 60;
+  return hours === 1 ? "1 hodinu" : `${hours} hodiny`;
+}
+
 export async function createBooking(input: unknown): Promise<ActionResult> {
   try {
     // Honeypot: a hidden "website" input that real users never see.
@@ -104,7 +112,7 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
     );
     const dayOfWeek = localDateForDay.getDay();
 
-    const [barberSnap, bsSnap, overrideSnap, scheduleSnap, breaksSnap] =
+    const [barberSnap, bsSnap, overrideSnap, scheduleSnap, breaksSnap, settings] =
       await Promise.all([
         adminDb.doc(`barbers/${data.barberId}`).get(),
         adminDb.doc(`barbers/${data.barberId}/services/${data.serviceId}`).get(),
@@ -114,6 +122,7 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
           .collection(`barbers/${data.barberId}/breaks`)
           .where("dayOfWeek", "==", dayOfWeek)
           .get(),
+        getShopSettings(),
       ]);
     if (!barberSnap.exists || !bsSnap.exists) {
       return { success: false, error: "Barber neponúka túto službu." };
@@ -160,6 +169,17 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
       return {
         success: false,
         error: "Termín v minulosti nie je možné rezervovať.",
+      };
+    }
+
+    // Same lead time the wizard's slot generator applies. Without this a
+    // customer who loaded the slot list earlier could still submit a slot
+    // that is now inside the lead window.
+    const leadMinutes = settings.minBookingLeadMinutes;
+    if (startTime.getTime() < Date.now() + leadMinutes * 60_000) {
+      return {
+        success: false,
+        error: `Online je možné rezervovať najneskôr ${formatLead(leadMinutes)} pred termínom. Vyberte neskorší čas alebo nám zavolajte na ${SHOP_PHONE_DISPLAY}.`,
       };
     }
 

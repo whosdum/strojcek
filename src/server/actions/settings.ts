@@ -33,3 +33,32 @@ export async function updateSlotInterval(
   revalidatePath("/admin/schedule");
   return { success: true };
 }
+
+const VALID_LEAD_MINUTES = [15, 30, 60, 120, 180] as const;
+
+export async function updateMinBookingLead(
+  minutes: number
+): Promise<ActionResult> {
+  if (!(await getSession())) {
+    return { success: false, error: "Neautorizovaný prístup." };
+  }
+  if (
+    !VALID_LEAD_MINUTES.includes(minutes as (typeof VALID_LEAD_MINUTES)[number])
+  ) {
+    return {
+      success: false,
+      error: `Neplatná hodnota. Povolené hodnoty: ${VALID_LEAD_MINUTES.join(", ")} minút.`,
+    };
+  }
+
+  await adminDb.doc("shopSettings/default").set(
+    {
+      minBookingLeadMinutes: minutes,
+      updatedAt: Timestamp.now(),
+    },
+    { merge: true }
+  );
+
+  revalidatePath("/admin/schedule");
+  return { success: true };
+}
