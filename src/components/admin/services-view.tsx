@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ServiceView } from "@/lib/types";
+import { formatServiceAvailability } from "@/lib/service-availability";
 import { ServiceForm } from "@/components/admin/service-form";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -113,6 +114,11 @@ export function ServicesView({ services }: ServicesViewProps) {
               <Badge variant={service.isActive ? "default" : "secondary"}>
                 {service.isActive ? "Aktívna" : "Neaktívna"}
               </Badge>
+              {formatServiceAvailability(service.availability) && (
+                <Badge variant="outline">
+                  🕒 {formatServiceAvailability(service.availability)}
+                </Badge>
+              )}
             </div>
           </div>
         ))}
@@ -156,6 +162,11 @@ export function ServicesView({ services }: ServicesViewProps) {
                     {service.description && (
                       <p className="truncate text-xs text-muted-foreground">
                         {service.description}
+                      </p>
+                    )}
+                    {formatServiceAvailability(service.availability) && (
+                      <p className="truncate text-xs text-muted-foreground">
+                        🕒 Online: {formatServiceAvailability(service.availability)}
                       </p>
                     )}
                   </div>

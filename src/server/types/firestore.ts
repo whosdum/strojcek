@@ -1,4 +1,5 @@
 import type { Timestamp } from "firebase-admin/firestore";
+import type { ServiceAvailability } from "@/lib/service-availability";
 
 export type AppointmentStatus =
   | "PENDING"
@@ -47,6 +48,9 @@ export type ServiceDoc = {
   bufferMinutes: number;
   isActive: boolean;
   sortOrder: number;
+  /** Online-only per-day booking window. Optional — older docs predate it
+   *  and are treated as unrestricted. */
+  availability?: ServiceAvailability;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 };

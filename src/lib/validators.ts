@@ -86,6 +86,20 @@ export const serviceInputSchema = z.object({
   bufferMinutes: z.coerce.number().min(0).max(60).default(5),
   isActive: z.boolean().default(true),
   sortOrder: z.coerce.number().default(0),
+  // Keys "0".."6" (0 = Sunday). Missing key = whole working day,
+  // null = not bookable online that day. See lib/service-availability.ts.
+  availability: z
+    .partialRecord(
+      z.enum(["0", "1", "2", "3", "4", "5", "6"]),
+      z
+        .object({ startTime: timeString, endTime: timeString })
+        .refine((w) => w.startTime < w.endTime, {
+          message: "Koniec musí byť po začiatku",
+          path: ["endTime"],
+        })
+        .nullable()
+    )
+    .default({}),
 });
 
 export type ServiceInput = z.infer<typeof serviceInputSchema>;

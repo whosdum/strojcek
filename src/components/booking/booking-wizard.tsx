@@ -61,6 +61,8 @@ interface ServiceData {
   description: string | null;
   durationMinutes: number;
   price: string;
+  /** e.g. "Po–Pi 7:00–12:00" — null when the service has no time limit. */
+  availabilityHint: string | null;
 }
 
 interface BookingWizardProps {
@@ -1015,6 +1017,7 @@ export function BookingWizard({
                 description={service.description}
                 durationMinutes={service.durationMinutes}
                 price={service.price}
+                availabilityHint={service.availabilityHint}
                 isSelected={state.serviceId === service.id}
                 onClick={() => handleSelectService(service.id)}
               />
@@ -1333,6 +1336,7 @@ interface ServiceCardWizardProps {
   description: string | null;
   durationMinutes: number;
   price: string;
+  availabilityHint: string | null;
   isSelected: boolean;
   onClick: () => void;
 }
@@ -1342,6 +1346,7 @@ function ServiceCardWizard({
   description,
   durationMinutes,
   price,
+  availabilityHint,
   isSelected,
   onClick,
 }: ServiceCardWizardProps) {
@@ -1445,6 +1450,11 @@ function ServiceCardWizard({
             </button>
           )}
         </div>
+        {availabilityHint && (
+          <p className="mt-1 text-[13px] leading-snug text-muted-foreground">
+            Online len: {availabilityHint}
+          </p>
+        )}
         {expanded && trimmed && (
           <p className="mt-2 rounded-lg bg-background/60 p-2.5 text-[14px] leading-snug text-muted-foreground">
             {trimmed}

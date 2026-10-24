@@ -13,6 +13,8 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createService, updateService } from "@/server/actions/services";
 import { toast } from "sonner";
+import { ServiceAvailabilityFields } from "@/components/admin/service-availability-fields";
+import type { ServiceAvailability } from "@/lib/service-availability";
 
 interface ServiceFormProps {
   service?: {
@@ -24,6 +26,7 @@ interface ServiceFormProps {
     bufferMinutes: number;
     isActive: boolean;
     sortOrder: number;
+    availability: ServiceAvailability;
   };
   onClose?: () => void;
 }
@@ -32,6 +35,9 @@ export function ServiceForm({ service, onClose }: ServiceFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isActive, setIsActive] = useState(service?.isActive ?? true);
+  const [availability, setAvailability] = useState<ServiceAvailability>(
+    service?.availability ?? {}
+  );
   const isEdit = !!service;
 
   const {
@@ -50,8 +56,18 @@ export function ServiceForm({ service, onClose }: ServiceFormProps) {
       bufferMinutes: service?.bufferMinutes ?? 5,
       isActive: service?.isActive ?? true,
       sortOrder: service?.sortOrder ?? 0,
+      availability: service?.availability ?? {},
     },
   });
+
+  // Zod puts per-day window errors at availability.<day>.endTime.
+  const availabilityErrors = Object.fromEntries(
+    Object.entries(
+      (errors.availability ?? {}) as Record<string, { endTime?: { message?: string } }>
+    )
+      .map(([day, e]) => [day, e?.endTime?.message] as const)
+      .filter(([, msg]) => !!msg)
+  );
 
   const onSubmit = (data: ServiceInput) => {
     startTransition(async () => {
@@ -148,6 +164,15 @@ export function ServiceForm({ service, onClose }: ServiceFormProps) {
         />
         <Label htmlFor="isActive">Aktívna</Label>
       </div>
+
+      <ServiceAvailabilityFields
+        value={availability}
+        onChange={(next) => {
+          setAvailability(next);
+          setValue("availability", next);
+        }}
+        errors={availabilityErrors}
+      />
 
       <div className="flex flex-col-reverse justify-end gap-2 sm:flex-row">
         {onClose && (

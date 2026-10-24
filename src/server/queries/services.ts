@@ -15,6 +15,7 @@ function mapService(doc: FirebaseFirestore.QueryDocumentSnapshot): ServiceView {
     bufferMinutes: d.bufferMinutes,
     isActive: d.isActive,
     sortOrder: d.sortOrder,
+    availability: d.availability ?? {},
     createdAt: tsToDate(d.createdAt),
     updatedAt: tsToDate(d.updatedAt),
   };

@@ -36,6 +36,7 @@ export type ServiceView = {
   bufferMinutes: number;
   isActive: boolean;
   sortOrder: number;
+  availability: ServiceAvailability;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -208,6 +209,7 @@ export type ActiveBarberWithServiceIdsView = {
 // Notification dashboard view types — re-exports for client/UI consumers
 // so they don't reach into server/types.
 
+import type { ServiceAvailability } from "@/lib/service-availability";
 import type {
   NotificationKind,
   NotificationStatus,

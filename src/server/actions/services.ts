@@ -29,6 +29,7 @@ function toDoc(data: ReturnType<typeof serviceInputSchema.parse>) {
     bufferMinutes: data.bufferMinutes,
     isActive: data.isActive,
     sortOrder: data.sortOrder,
+    availability: data.availability,
   });
 }
 

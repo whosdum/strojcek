@@ -19,6 +19,7 @@ import {
 import { normalizePhone } from "@/server/lib/phone";
 import { getShopSettings } from "@/server/queries/settings";
 import { countVisits } from "@/server/queries/visits";
+import { clipToServiceWindow } from "@/lib/service-availability";
 import {
   generateToken,
   getTokenLookupValues,
@@ -53,6 +54,7 @@ import type {
   ScheduleDoc,
   ScheduleBreakDoc,
   ScheduleOverrideDoc,
+  ServiceDoc,
 } from "@/server/types/firestore";
 
 type ActionResult = {
@@ -113,18 +115,26 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
     );
     const dayOfWeek = localDateForDay.getDay();
 
-    const [barberSnap, bsSnap, overrideSnap, scheduleSnap, breaksSnap, settings] =
-      await Promise.all([
-        adminDb.doc(`barbers/${data.barberId}`).get(),
-        adminDb.doc(`barbers/${data.barberId}/services/${data.serviceId}`).get(),
-        adminDb.doc(`barbers/${data.barberId}/overrides/${data.date}`).get(),
-        adminDb.doc(`barbers/${data.barberId}/schedules/${dayOfWeek}`).get(),
-        adminDb
-          .collection(`barbers/${data.barberId}/breaks`)
-          .where("dayOfWeek", "==", dayOfWeek)
-          .get(),
-        getShopSettings(),
-      ]);
+    const [
+      barberSnap,
+      bsSnap,
+      overrideSnap,
+      scheduleSnap,
+      breaksSnap,
+      settings,
+      serviceSnap,
+    ] = await Promise.all([
+      adminDb.doc(`barbers/${data.barberId}`).get(),
+      adminDb.doc(`barbers/${data.barberId}/services/${data.serviceId}`).get(),
+      adminDb.doc(`barbers/${data.barberId}/overrides/${data.date}`).get(),
+      adminDb.doc(`barbers/${data.barberId}/schedules/${dayOfWeek}`).get(),
+      adminDb
+        .collection(`barbers/${data.barberId}/breaks`)
+        .where("dayOfWeek", "==", dayOfWeek)
+        .get(),
+      getShopSettings(),
+      adminDb.doc(`services/${data.serviceId}`).get(),
+    ]);
     if (!barberSnap.exists || !bsSnap.exists) {
       return { success: false, error: "Barber neponúka túto službu." };
     }
@@ -230,6 +240,29 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
       return {
         success: false,
         error: "Tento termín je mimo pracovných hodín.",
+      };
+    }
+
+    // Per-day service window (online only) — same clip the wizard's slot
+    // generator applies. The service must end by the window's end.
+    const serviceWindow = clipToServiceWindow(
+      workStart,
+      workEnd,
+      serviceSnap.exists
+        ? (serviceSnap.data() as ServiceDoc).availability
+        : undefined,
+      dayOfWeek
+    );
+    if (
+      !serviceWindow ||
+      startTime.getTime() <
+        fromZonedTime(`${data.date}T${serviceWindow.start}:00`, TIMEZONE).getTime() ||
+      endTime.getTime() >
+        fromZonedTime(`${data.date}T${serviceWindow.end}:00`, TIMEZONE).getTime()
+    ) {
+      return {
+        success: false,
+        error: "Táto služba sa v tomto čase nedá rezervovať online. Vyberte iný termín.",
       };
     }
 

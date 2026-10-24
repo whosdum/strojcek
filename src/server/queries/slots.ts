@@ -4,6 +4,7 @@ import { Timestamp } from "firebase-admin/firestore";
 import { tsToDate } from "@/server/lib/firestore-utils";
 import { SLOT_INTERVAL_MINUTES, TIMEZONE } from "@/lib/constants";
 import { MIN_BOOKING_LEAD_MINUTES } from "@/lib/business-info";
+import { clipToServiceWindow } from "@/lib/service-availability";
 import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import { addMinutes, isBefore, isAfter, addDays, format } from "date-fns";
 import type {
@@ -12,6 +13,7 @@ import type {
   ScheduleBreakDoc,
   ScheduleOverrideDoc,
   BarberServiceDoc,
+  ServiceDoc,
 } from "@/server/types/firestore";
 
 interface TimeRange {
@@ -288,22 +290,30 @@ export async function getAvailabilityBundle(
   const rangeEndUtc = fromZonedTime(`${horizonEndKey}T00:00:00`, TIMEZONE);
   const rangeEndUtcExclusive = addDays(rangeEndUtc, 1);
 
-  const [schedSnap, breakSnap, ovrSnap, apptsSnap, bsSnap] = await Promise.all([
-    adminDb.collection(`barbers/${barberId}/schedules`).get(),
-    adminDb.collection(`barbers/${barberId}/breaks`).get(),
-    adminDb
-      .collection(`barbers/${barberId}/overrides`)
-      .where("overrideDate", ">=", todayKey)
-      .where("overrideDate", "<=", horizonEndKey)
-      .get(),
-    adminDb
-      .collection("appointments")
-      .where("barberId", "==", barberId)
-      .where("startTime", ">=", Timestamp.fromDate(rangeStartUtc))
-      .where("startTime", "<", Timestamp.fromDate(rangeEndUtcExclusive))
-      .get(),
-    adminDb.doc(`barbers/${barberId}/services/${serviceId}`).get(),
-  ]);
+  const [schedSnap, breakSnap, ovrSnap, apptsSnap, bsSnap, serviceSnap] =
+    await Promise.all([
+      adminDb.collection(`barbers/${barberId}/schedules`).get(),
+      adminDb.collection(`barbers/${barberId}/breaks`).get(),
+      adminDb
+        .collection(`barbers/${barberId}/overrides`)
+        .where("overrideDate", ">=", todayKey)
+        .where("overrideDate", "<=", horizonEndKey)
+        .get(),
+      adminDb
+        .collection("appointments")
+        .where("barberId", "==", barberId)
+        .where("startTime", ">=", Timestamp.fromDate(rangeStartUtc))
+        .where("startTime", "<", Timestamp.fromDate(rangeEndUtcExclusive))
+        .get(),
+      adminDb.doc(`barbers/${barberId}/services/${serviceId}`).get(),
+      adminDb.doc(`services/${serviceId}`).get(),
+    ]);
+
+  // Online-only per-day service window (e.g. student cut until 12:00).
+  // The admin path (getAvailableSlots) deliberately ignores it.
+  const serviceAvailability = serviceSnap.exists
+    ? (serviceSnap.data() as ServiceDoc).availability
+    : undefined;
 
   // Schedule lookup tables
   const schedulesByDow = new Map<number, ScheduleDoc>();
@@ -399,6 +409,19 @@ export async function getAvailabilityBundle(
       workStart = sched.startTime;
       workEnd = sched.endTime;
     }
+
+    const serviceWindow = clipToServiceWindow(
+      workStart,
+      workEnd,
+      serviceAvailability,
+      dayOfWeek
+    );
+    if (!serviceWindow) {
+      slotsByDate[dateKey] = [];
+      continue;
+    }
+    workStart = serviceWindow.start;
+    workEnd = serviceWindow.end;
 
     const breaks: TimeRange[] = isOverrideDay
       ? []
