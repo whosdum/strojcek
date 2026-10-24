@@ -36,17 +36,24 @@ export async function GET(request: NextRequest) {
   const customerIds = [
     ...new Set(appointments.map((a) => a.customerId).filter((id): id is string => !!id)),
   ];
+  // Best-effort: if these extra reads fail, the calendar still renders the
+  // appointments — just without notes, and with no visit counts (null, not
+  // 0, so nobody is wrongly shown as 🆕).
   const customerNotes = new Map<string, string>();
-  let visitCounts = new Map<string, number>();
+  let visitCounts: Map<string, number> | null = null;
   if (customerIds.length > 0) {
-    const [snaps, counts] = await Promise.all([
-      adminDb.getAll(...customerIds.map((cid) => adminDb.doc(`customers/${cid}`))),
-      countVisits(customerIds),
-    ]);
-    visitCounts = counts;
-    for (const snap of snaps) {
-      const notes = (snap.get("notes") as string | null | undefined)?.trim();
-      if (notes) customerNotes.set(snap.id, notes);
+    try {
+      const [snaps, counts] = await Promise.all([
+        adminDb.getAll(...customerIds.map((cid) => adminDb.doc(`customers/${cid}`))),
+        countVisits(customerIds),
+      ]);
+      visitCounts = counts;
+      for (const snap of snaps) {
+        const notes = (snap.get("notes") as string | null | undefined)?.trim();
+        if (notes) customerNotes.set(snap.id, notes);
+      }
+    } catch (err) {
+      console.error("[admin/calendar] customer notes / visit counts", err);
     }
   }
 
@@ -55,7 +62,8 @@ export async function GET(request: NextRequest) {
     const customer = appt.customerName?.trim() || (isWalkIn ? "Walk-in" : "");
     // Visit count right in the event title — "3×" for a returning
     // customer, 🆕 for one who hasn't been in yet.
-    const visits = appt.customerId ? visitCounts.get(appt.customerId) ?? 0 : null;
+    const visits =
+      appt.customerId && visitCounts ? visitCounts.get(appt.customerId) ?? 0 : null;
     const visitLabel =
       visits == null ? "" : visits > 0 ? ` (${visits}×)` : " 🆕";
     const title = isWalkIn
@@ -75,7 +83,7 @@ export async function GET(request: NextRequest) {
         hasNote: note !== null,
         note,
         customerNote: appt.customerId ? customerNotes.get(appt.customerId) ?? null : null,
-        visitCount: appt.customerId ? visitCounts.get(appt.customerId) ?? 0 : null,
+        visitCount: visits,
       },
     };
   });
