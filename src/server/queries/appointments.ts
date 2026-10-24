@@ -20,7 +20,7 @@ import type {
 } from "@/server/types/firestore";
 import { getBarberById } from "@/server/queries/barbers";
 import { getServiceById } from "@/server/queries/services";
-import { countVisits } from "@/server/queries/visits";
+import { getVisitStarts, visitsBefore } from "@/server/queries/visits";
 
 function nowInTz(): Date {
   return toZonedTime(new Date(), TIMEZONE);
@@ -205,16 +205,19 @@ export async function getAppointmentById(
   const data = snap.data() as AppointmentDoc;
   const base = mapAppointment(snap);
 
-  const [barber, service, historySnap, customerSnap, visitCounts] =
+  const [barber, service, historySnap, customerSnap, visitStarts] =
     await Promise.all([
       getBarberById(data.barberId),
       getServiceById(data.serviceId),
       ref.collection("history").orderBy("changedAt", "desc").get(),
       data.customerId ? adminDb.doc(`customers/${data.customerId}`).get() : null,
-      data.customerId ? countVisits([data.customerId]) : null,
+      data.customerId ? getVisitStarts([data.customerId]) : null,
     ]);
-  const visitCount =
-    (data.customerId && visitCounts?.get(data.customerId)) || 0;
+  // Visits before THIS appointment — the detail page answers "had they
+  // been here before?", so a past first visit still reads as new.
+  const visitCount = data.customerId
+    ? visitsBefore(visitStarts?.get(data.customerId), data.startTime.toMillis())
+    : 0;
 
   if (!barber || !service) return null;
 

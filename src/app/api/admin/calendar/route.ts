@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/server/lib/auth";
 import { getAppointmentsForCalendar } from "@/server/queries/appointments";
 import { adminDb } from "@/server/lib/firebase-admin";
-import { countVisits } from "@/server/queries/visits";
+import { getVisitStarts, visitsBefore } from "@/server/queries/visits";
 import { parseISO } from "date-fns";
 
 export const dynamic = "force-dynamic";
@@ -40,14 +40,14 @@ export async function GET(request: NextRequest) {
   // appointments — just without notes, and with no visit counts (null, not
   // 0, so nobody is wrongly shown as 🆕).
   const customerNotes = new Map<string, string>();
-  let visitCounts: Map<string, number> | null = null;
+  let visitStarts: Map<string, number[]> | null = null;
   if (customerIds.length > 0) {
     try {
       const [snaps, counts] = await Promise.all([
         adminDb.getAll(...customerIds.map((cid) => adminDb.doc(`customers/${cid}`))),
-        countVisits(customerIds),
+        getVisitStarts(customerIds),
       ]);
-      visitCounts = counts;
+      visitStarts = counts;
       for (const snap of snaps) {
         const notes = (snap.get("notes") as string | null | undefined)?.trim();
         if (notes) customerNotes.set(snap.id, notes);
@@ -60,10 +60,12 @@ export async function GET(request: NextRequest) {
   const events = appointments.map((appt) => {
     const isWalkIn = appt.source === "walk-in";
     const customer = appt.customerName?.trim() || (isWalkIn ? "Walk-in" : "");
-    // Visit count right in the event title — "3×" for a returning
-    // customer, 🆕 for one who hasn't been in yet.
+    // Visits BEFORE this appointment, right in the event title — "3×" for
+    // a returning customer, 🆕 for a first visit (also on past days).
     const visits =
-      appt.customerId && visitCounts ? visitCounts.get(appt.customerId) ?? 0 : null;
+      appt.customerId && visitStarts
+        ? visitsBefore(visitStarts.get(appt.customerId), appt.startTime.getTime())
+        : null;
     const visitLabel =
       visits == null ? "" : visits > 0 ? ` (${visits}×)` : " 🆕";
     const title = isWalkIn

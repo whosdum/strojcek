@@ -77,7 +77,7 @@ export default async function ReservationDetailPage({
               <>
                 <Separator />
                 <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                  <span className="text-muted-foreground">Návštevy</span>
+                  <span className="text-muted-foreground">Predchádzajúce návštevy</span>
                   <span className="sm:text-right">
                     {appointment.customer.visitCount > 0
                       ? `${appointment.customer.visitCount}×`

@@ -6,16 +6,17 @@ import type { AppointmentStatus } from "@/lib/types";
 const IN_CHUNK = 30;
 
 /**
- * Visits per customer = appointments that already started and weren't
- * cancelled / no-show. Computed from appointments rather than read from
- * `customers.visitCount`, which only counts COMPLETED — a status this
- * shop rarely sets, so the stored counter stays near 0.
+ * Start times (ms) of each customer's visits. A visit = an appointment that
+ * already started and wasn't cancelled / no-show. Computed from
+ * appointments rather than read from `customers.visitCount`, which only
+ * counts COMPLETED — a status this shop rarely sets, so the stored counter
+ * stays near 0.
  */
-export async function countVisits(
+export async function getVisitStarts(
   customerIds: string[]
-): Promise<Map<string, number>> {
+): Promise<Map<string, number[]>> {
   const ids = [...new Set(customerIds)];
-  const counts = new Map<string, number>(ids.map((id) => [id, 0]));
+  const starts = new Map<string, number[]>(ids.map((id) => [id, []]));
   const nowMs = Date.now();
 
   const chunks: string[][] = [];
@@ -36,11 +37,25 @@ export async function countVisits(
     for (const d of snap.docs) {
       const status = d.get("status") as AppointmentStatus;
       if (status === "CANCELLED" || status === "NO_SHOW") continue;
-      const start = d.get("startTime") as FirebaseFirestore.Timestamp;
-      if (start.toMillis() > nowMs) continue;
-      const cid = d.get("customerId") as string;
-      counts.set(cid, (counts.get(cid) ?? 0) + 1);
+      const startMs = (d.get("startTime") as FirebaseFirestore.Timestamp).toMillis();
+      if (startMs > nowMs) continue;
+      starts.get(d.get("customerId") as string)?.push(startMs);
     }
   }
-  return counts;
+  return starts;
+}
+
+/** Total visits per customer as of now. */
+export async function countVisits(
+  customerIds: string[]
+): Promise<Map<string, number>> {
+  const starts = await getVisitStarts(customerIds);
+  return new Map([...starts].map(([id, s]) => [id, s.length]));
+}
+
+/** Visits that happened before the given appointment start — used where
+ *  the admin looks at one booking ("had they been here before this?"). An
+ *  appointment never counts itself. */
+export function visitsBefore(starts: number[] | undefined, startMs: number): number {
+  return (starts ?? []).filter((t) => t < startMs).length;
 }

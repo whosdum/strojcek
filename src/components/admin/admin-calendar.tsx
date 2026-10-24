@@ -257,7 +257,7 @@ export function AdminCalendar() {
           <span className="text-xs">📝 Má poznámku</span>
           <span className="text-xs">📌 Interná poznámka o zákazníkovi</span>
           <span className="text-xs">🔒 Walk-in</span>
-          <span className="text-xs">(3×) Počet návštev</span>
+          <span className="text-xs">(3×) Predchádzajúce návštevy</span>
           <span className="text-xs">🆕 Nový zákazník</span>
           <span className="text-xs text-muted-foreground">Stlmené = už prebehlo</span>
         </div>
@@ -416,7 +416,7 @@ export function AdminCalendar() {
               | undefined;
             const lines = [
               ...(visitCount != null
-                ? [visitCount > 0 ? `Návštevy: ${visitCount}×` : "🆕 Nový zákazník"]
+                ? [visitCount > 0 ? `Predchádzajúce návštevy: ${visitCount}×` : "🆕 Nový zákazník"]
                 : []),
               ...(customerNote ? [`📌 Interná poznámka: ${customerNote}`] : []),
               ...(note ? [`Poznámka: ${note}`] : []),
