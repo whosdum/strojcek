@@ -53,9 +53,14 @@ export async function GET(request: NextRequest) {
   const events = appointments.map((appt) => {
     const isWalkIn = appt.source === "walk-in";
     const customer = appt.customerName?.trim() || (isWalkIn ? "Walk-in" : "");
+    // Visit count right in the event title — "3×" for a returning
+    // customer, 🆕 for one who hasn't been in yet.
+    const visits = appt.customerId ? visitCounts.get(appt.customerId) ?? 0 : null;
+    const visitLabel =
+      visits == null ? "" : visits > 0 ? ` (${visits}×)` : " 🆕";
     const title = isWalkIn
       ? customer
-      : `${customer} — ${appt.service.name}`;
+      : `${customer}${visitLabel} — ${appt.service.name}`;
     const note = appt.notes?.trim() || null;
     return {
       id: appt.id,
