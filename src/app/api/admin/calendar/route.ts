@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/server/lib/auth";
 import { getAppointmentsForCalendar } from "@/server/queries/appointments";
 import { adminDb } from "@/server/lib/firebase-admin";
+import { countVisits } from "@/server/queries/visits";
 import { parseISO } from "date-fns";
 
 export const dynamic = "force-dynamic";
@@ -30,16 +31,19 @@ export async function GET(request: NextRequest) {
     barberId
   );
 
-  // Admin-only customer notes aren't denormalized onto appointments —
-  // one batched read for every distinct customer in the visible range.
+  // Admin-only customer notes and visit counts aren't denormalized onto
+  // appointments — batched reads for every distinct customer in range.
   const customerIds = [
     ...new Set(appointments.map((a) => a.customerId).filter((id): id is string => !!id)),
   ];
   const customerNotes = new Map<string, string>();
+  let visitCounts = new Map<string, number>();
   if (customerIds.length > 0) {
-    const snaps = await adminDb.getAll(
-      ...customerIds.map((cid) => adminDb.doc(`customers/${cid}`))
-    );
+    const [snaps, counts] = await Promise.all([
+      adminDb.getAll(...customerIds.map((cid) => adminDb.doc(`customers/${cid}`))),
+      countVisits(customerIds),
+    ]);
+    visitCounts = counts;
     for (const snap of snaps) {
       const notes = (snap.get("notes") as string | null | undefined)?.trim();
       if (notes) customerNotes.set(snap.id, notes);
@@ -66,6 +70,7 @@ export async function GET(request: NextRequest) {
         hasNote: note !== null,
         note,
         customerNote: appt.customerId ? customerNotes.get(appt.customerId) ?? null : null,
+        visitCount: appt.customerId ? visitCounts.get(appt.customerId) ?? 0 : null,
       },
     };
   });

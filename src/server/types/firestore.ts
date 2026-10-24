@@ -60,6 +60,8 @@ export type CustomerDoc = {
   email: string | null;
   emailSearch: string | null;
   notes: string | null;
+  /** COMPLETED-only counter. The admin UI shows the computed count from
+   *  countVisits() instead — this shop rarely marks bookings COMPLETED. */
   visitCount: number;
   searchTokens: string[];
   createdAt: Timestamp;

@@ -18,6 +18,7 @@ import {
 } from "@/lib/validators";
 import { normalizePhone } from "@/server/lib/phone";
 import { getShopSettings } from "@/server/queries/settings";
+import { countVisits } from "@/server/queries/visits";
 import {
   generateToken,
   getTokenLookupValues,
@@ -568,25 +569,15 @@ export async function createBooking(input: unknown): Promise<ActionResult> {
     if (chatId) {
       const tgStart = Date.now();
 
-      // Count this customer's *previous* bookings for the admin alert.
-      // We don't rely on customers.visitCount because that only tracks
-      // COMPLETED appointments, which this shop rarely sets — almost all
-      // bookings stay CONFIRMED. So we count the customer's own
-      // appointments directly, excluding cancellations/no-shows and the
-      // one we just created. Best-effort: a failed read must not break
-      // the (already-committed) booking, so we default to 0.
+      // Count this customer's past visits for the admin alert — same
+      // definition as the admin UI (see countVisits). The booking we just
+      // created is in the future, so it isn't counted. Best-effort: a
+      // failed read must not break the (already-committed) booking, so we
+      // default to 0.
       let previousVisitCount = 0;
       try {
-        const priorSnap = await adminDb
-          .collection("appointments")
-          .where("customerId", "==", customerId)
-          .select("status")
-          .get();
-        previousVisitCount = priorSnap.docs.filter((d) => {
-          if (d.id === appointmentId) return false; // exclude this booking
-          const status = d.get("status") as AppointmentStatus | undefined;
-          return status !== "CANCELLED" && status !== "NO_SHOW";
-        }).length;
+        previousVisitCount =
+          (await countVisits([customerId])).get(customerId) ?? 0;
       } catch (err) {
         console.error("[booking][visit-count]", err);
       }

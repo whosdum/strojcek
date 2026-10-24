@@ -20,6 +20,7 @@ import type {
 } from "@/server/types/firestore";
 import { getBarberById } from "@/server/queries/barbers";
 import { getServiceById } from "@/server/queries/services";
+import { countVisits } from "@/server/queries/visits";
 
 function nowInTz(): Date {
   return toZonedTime(new Date(), TIMEZONE);
@@ -204,12 +205,16 @@ export async function getAppointmentById(
   const data = snap.data() as AppointmentDoc;
   const base = mapAppointment(snap);
 
-  const [barber, service, historySnap, customerSnap] = await Promise.all([
-    getBarberById(data.barberId),
-    getServiceById(data.serviceId),
-    ref.collection("history").orderBy("changedAt", "desc").get(),
-    data.customerId ? adminDb.doc(`customers/${data.customerId}`).get() : null,
-  ]);
+  const [barber, service, historySnap, customerSnap, visitCounts] =
+    await Promise.all([
+      getBarberById(data.barberId),
+      getServiceById(data.serviceId),
+      ref.collection("history").orderBy("changedAt", "desc").get(),
+      data.customerId ? adminDb.doc(`customers/${data.customerId}`).get() : null,
+      data.customerId ? countVisits([data.customerId]) : null,
+    ]);
+  const visitCount =
+    (data.customerId && visitCounts?.get(data.customerId)) || 0;
 
   if (!barber || !service) return null;
 
@@ -247,7 +252,7 @@ export async function getAppointmentById(
       phone: cd.phone,
       email: cd.email ?? null,
       notes: cd.notes ?? null,
-      visitCount: cd.visitCount,
+      visitCount,
       createdAt: tsToDate(cd.createdAt),
       updatedAt: tsToDate(cd.updatedAt),
     };

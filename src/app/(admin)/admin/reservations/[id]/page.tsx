@@ -76,6 +76,15 @@ export default async function ReservationDetailPage({
             {appointment.customer && (
               <>
                 <Separator />
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                  <span className="text-muted-foreground">Návštevy</span>
+                  <span className="sm:text-right">
+                    {appointment.customer.visitCount > 0
+                      ? `${appointment.customer.visitCount}×`
+                      : "Nový zákazník"}
+                  </span>
+                </div>
+                <Separator />
                 <CustomerNoteEditor
                   customerId={appointment.customer.id}
                   notes={appointment.customer.notes}

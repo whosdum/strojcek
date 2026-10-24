@@ -9,6 +9,13 @@ import type {
   AppointmentStatus,
 } from "@/lib/types";
 import type { CustomerDoc, AppointmentDoc } from "@/server/types/firestore";
+import { countVisits } from "@/server/queries/visits";
+
+/** Replaces the stored COMPLETED-only counter with the computed visit count. */
+async function withVisitCounts(items: CustomerView[]): Promise<CustomerView[]> {
+  const counts = await countVisits(items.map((c) => c.id));
+  return items.map((c) => ({ ...c, visitCount: counts.get(c.id) ?? 0 }));
+}
 
 function mapCustomer(doc: FirebaseFirestore.DocumentSnapshot): CustomerView {
   const d = doc.data() as CustomerDoc;
@@ -42,7 +49,7 @@ export async function getCustomers(
     const items = snap.docs
       .map((d) => mapCustomer(d))
       .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
-    return { items, nextCursor: null };
+    return { items: await withVisitCounts(items), nextCursor: null };
   }
 
   // Cursor pagination on updatedAt DESC. Reads only PAGE_SIZE+1 per page.
@@ -63,7 +70,7 @@ export async function getCustomers(
       ? items[items.length - 1].updatedAt.getTime().toString()
       : null;
 
-  return { items, nextCursor };
+  return { items: await withVisitCounts(items), nextCursor };
 }
 
 /**
@@ -87,7 +94,7 @@ export async function getAllCustomersForExport(): Promise<CustomerView[]> {
       `[export] customers export truncated at ${CAP} rows — add pagination if this recurs.`
     );
   }
-  return snap.docs.slice(0, CAP).map((d) => mapCustomer(d));
+  return withVisitCounts(snap.docs.slice(0, CAP).map((d) => mapCustomer(d)));
 }
 
 export async function getCustomerById(
@@ -95,7 +102,7 @@ export async function getCustomerById(
 ): Promise<CustomerWithAppointmentsView | null> {
   const snap = await adminDb.doc(`customers/${id}`).get();
   if (!snap.exists) return null;
-  const base = mapCustomer(snap);
+  const [base] = await withVisitCounts([mapCustomer(snap)]);
 
   // Bounded read — a long-tenured customer's full history was previously
   // pulled in one go, which scales linearly with usage. 100 most-recent

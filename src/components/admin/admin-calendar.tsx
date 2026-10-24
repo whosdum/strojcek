@@ -132,6 +132,7 @@ export function AdminCalendar() {
               hasNote?: boolean;
               note?: string | null;
               customerNote?: string | null;
+              visitCount?: number | null;
             };
           }) => {
             const color = getBarberColor(
@@ -407,7 +408,14 @@ export function AdminCalendar() {
               | string
               | null
               | undefined;
+            const visitCount = info.event.extendedProps.visitCount as
+              | number
+              | null
+              | undefined;
             const lines = [
+              ...(visitCount != null
+                ? [visitCount > 0 ? `Návštevy: ${visitCount}×` : "🆕 Nový zákazník"]
+                : []),
               ...(customerNote ? [`📌 Interná poznámka: ${customerNote}`] : []),
               ...(note ? [`Poznámka: ${note}`] : []),
             ];
