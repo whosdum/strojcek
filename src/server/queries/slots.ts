@@ -420,8 +420,16 @@ export async function getAvailabilityBundle(
       slotsByDate[dateKey] = [];
       continue;
     }
-    workStart = serviceWindow.start;
+    // Only the window END clips the working day. The window START is
+    // applied as a lower bound below, so the slot grid stays anchored to
+    // the barber's workStart — otherwise an off-grid window (10:15) would
+    // give this service a different grid than all the others and leave
+    // unusable gaps in the day.
     workEnd = serviceWindow.end;
+    const windowStartMs = fromZonedTime(
+      `${dateKey}T${serviceWindow.start}:00`,
+      TIMEZONE
+    ).getTime();
 
     const breaks: TimeRange[] = isOverrideDay
       ? []
@@ -451,7 +459,7 @@ export async function getAvailabilityBundle(
       buffer,
       breaks,
       bookedRanges,
-      earliestStartMs,
+      earliestStartMs: Math.max(earliestStartMs, windowStartMs),
     });
   }
 
