@@ -3,7 +3,6 @@ export const revalidate = 1800;
 import type { Metadata } from "next";
 import { unstable_noStore as noStore } from "next/cache";
 import { getActiveServices } from "@/server/queries/services";
-import { formatServiceAvailability } from "@/lib/service-availability";
 import {
   getActiveBarbersWithServices,
   getShopOpeningHours,
@@ -52,7 +51,6 @@ export default async function HomePage({
     description: s.description,
     durationMinutes: s.durationMinutes,
     price: s.price.toString(),
-    availabilityHint: formatServiceAvailability(s.availability),
   }));
 
   const requestedServiceId = Array.isArray(sp?.service)
