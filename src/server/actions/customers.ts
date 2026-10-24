@@ -77,6 +77,37 @@ export async function updateCustomer(
   }
 }
 
+/** Inline edit of the admin-only customer note from the reservation
+ *  detail — avoids round-tripping the full customer form (phone index etc.). */
+export async function updateCustomerNotes(
+  id: string,
+  input: unknown
+): Promise<ActionResult> {
+  if (!(await getSession())) return UNAUTH;
+  const parsed = customerInputSchema.shape.notes.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message };
+  }
+  try {
+    const ref = adminDb.doc(`customers/${id}`);
+    const snap = await ref.get();
+    if (!snap.exists) {
+      return { success: false, error: "Zákazník nenájdený." };
+    }
+    await ref.update({
+      notes: parsed.data.trim() || null,
+      updatedAt: Timestamp.now(),
+    });
+    revalidatePath(`/admin/customers/${id}`);
+    revalidatePath("/admin/customers");
+    revalidatePath("/admin/reservations", "layout");
+    return { success: true };
+  } catch (e) {
+    console.error("[updateCustomerNotes]", e);
+    return { success: false, error: "Nastala chyba pri ukladaní poznámky." };
+  }
+}
+
 export async function deleteCustomer(id: string): Promise<ActionResult> {
   if (!(await getSession())) return UNAUTH;
   try {

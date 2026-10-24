@@ -10,6 +10,7 @@ import { sk } from "date-fns/locale";
 import { StatusActions } from "@/components/admin/status-actions";
 import Link from "next/link";
 import { AppointmentDeleteButton } from "@/components/admin/appointment-delete-button";
+import { CustomerNoteEditor } from "@/components/admin/customer-note-editor";
 import { STATUS_LABELS, TIMEZONE, formatCurrency } from "@/lib/constants";
 import { PencilIcon } from "lucide-react";
 
@@ -72,6 +73,15 @@ export default async function ReservationDetailPage({
                 </span>
               )}
             </div>
+            {appointment.customer && (
+              <>
+                <Separator />
+                <CustomerNoteEditor
+                  customerId={appointment.customer.id}
+                  notes={appointment.customer.notes}
+                />
+              </>
+            )}
             <Separator />
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
               <span className="text-muted-foreground">Telefón</span>

@@ -131,6 +131,7 @@ export function AdminCalendar() {
               source?: string;
               hasNote?: boolean;
               note?: string | null;
+              customerNote?: string | null;
             };
           }) => {
             const color = getBarberColor(
@@ -140,6 +141,7 @@ export function AdminCalendar() {
             const status = evt.extendedProps.status;
             const isWalkIn = evt.extendedProps.source === "walk-in";
             const hasNote = Boolean(evt.extendedProps.hasNote);
+            const hasCustomerNote = Boolean(evt.extendedProps.customerNote);
             // Bookings whose slot has already ended are dimmed so the day's
             // remaining (upcoming) appointments stand out. They stay on the
             // calendar — just visually "done".
@@ -149,7 +151,8 @@ export function AdminCalendar() {
               id: evt.id,
               // 📝 marks a booking that carries a customer note, so the
               // admin can spot it at a glance and open it to read the note.
-              title: `${isWalkIn ? "🔒 " : ""}${hasNote ? "📝 " : ""}${evt.title}`,
+              // 📌 marks a customer with an admin-only internal note.
+              title: `${isWalkIn ? "🔒 " : ""}${hasNote ? "📝 " : ""}${hasCustomerNote ? "📌 " : ""}${evt.title}`,
               start: evt.start,
               end: evt.end,
               // Walk-in events use a muted neutral so they read as
@@ -251,6 +254,7 @@ export function AdminCalendar() {
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <span className="text-sm font-medium text-muted-foreground">Ikony:</span>
           <span className="text-xs">📝 Má poznámku</span>
+          <span className="text-xs">📌 Interná poznámka o zákazníkovi</span>
           <span className="text-xs">🔒 Walk-in</span>
           <span className="text-xs text-muted-foreground">Stlmené = už prebehlo</span>
         </div>
@@ -399,8 +403,16 @@ export function AdminCalendar() {
               | string
               | null
               | undefined;
-            if (note) {
-              info.el.setAttribute("title", `Poznámka: ${note}`);
+            const customerNote = info.event.extendedProps.customerNote as
+              | string
+              | null
+              | undefined;
+            const lines = [
+              ...(customerNote ? [`📌 Interná poznámka: ${customerNote}`] : []),
+              ...(note ? [`Poznámka: ${note}`] : []),
+            ];
+            if (lines.length > 0) {
+              info.el.setAttribute("title", lines.join("\n"));
             }
           }}
           nowIndicator

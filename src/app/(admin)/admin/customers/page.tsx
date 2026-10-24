@@ -78,6 +78,9 @@ export default async function CustomersPage({
                 <p className="text-sm text-muted-foreground">
                   {customer.email || "Bez emailu"}
                 </p>
+                {customer.notes && (
+                  <p className="mt-1 line-clamp-2 text-sm">📌 {customer.notes}</p>
+                )}
               </div>
               <ChevronRightIcon className="mt-1 size-4 shrink-0 text-muted-foreground" />
             </div>
@@ -108,6 +111,14 @@ export default async function CustomersPage({
               >
                 <TableCell className="font-medium">
                   {customer.firstName} {customer.lastName}
+                  {customer.notes && (
+                    <p
+                      className="max-w-xs truncate text-xs font-normal text-muted-foreground"
+                      title={customer.notes}
+                    >
+                      📌 {customer.notes}
+                    </p>
+                  )}
                 </TableCell>
                 <TableCell>{customer.phone}</TableCell>
                 <TableCell>{customer.email || "—"}</TableCell>

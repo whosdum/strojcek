@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/server/lib/auth";
 import { getAppointmentsForCalendar } from "@/server/queries/appointments";
+import { adminDb } from "@/server/lib/firebase-admin";
 import { parseISO } from "date-fns";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +30,22 @@ export async function GET(request: NextRequest) {
     barberId
   );
 
+  // Admin-only customer notes aren't denormalized onto appointments —
+  // one batched read for every distinct customer in the visible range.
+  const customerIds = [
+    ...new Set(appointments.map((a) => a.customerId).filter((id): id is string => !!id)),
+  ];
+  const customerNotes = new Map<string, string>();
+  if (customerIds.length > 0) {
+    const snaps = await adminDb.getAll(
+      ...customerIds.map((cid) => adminDb.doc(`customers/${cid}`))
+    );
+    for (const snap of snaps) {
+      const notes = (snap.get("notes") as string | null | undefined)?.trim();
+      if (notes) customerNotes.set(snap.id, notes);
+    }
+  }
+
   const events = appointments.map((appt) => {
     const isWalkIn = appt.source === "walk-in";
     const customer = appt.customerName?.trim() || (isWalkIn ? "Walk-in" : "");
@@ -48,6 +65,7 @@ export async function GET(request: NextRequest) {
         source: appt.source,
         hasNote: note !== null,
         note,
+        customerNote: appt.customerId ? customerNotes.get(appt.customerId) ?? null : null,
       },
     };
   });
