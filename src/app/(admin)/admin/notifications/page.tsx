@@ -268,7 +268,7 @@ export default async function NotificationsPage({ searchParams }: PageProps) {
               <p className="font-medium">Test odoslania</p>
               <p className="text-xs text-muted-foreground">
                 Pošle skúšobnú správu na shop email / telefón / Telegram chat
-                — užitočné po výmene secrets.
+                (email a telefón sa dajú v dialógu zmeniť) — užitočné po výmene secrets.
               </p>
             </div>
             <TestSendButtons />

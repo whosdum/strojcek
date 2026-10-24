@@ -4,6 +4,8 @@ import { adminDb } from "@/server/lib/firebase-admin";
 import { getSession } from "@/server/lib/auth";
 import { sendEmail } from "@/server/lib/email";
 import { sendSMS } from "@/server/lib/sms";
+import { normalizePhone } from "@/server/lib/phone";
+import { z } from "zod";
 import { stripDiacritics } from "@/server/lib/strings";
 import {
   extractSendError,
@@ -334,18 +336,21 @@ export async function runRemindersNow(): Promise<{
 }
 
 // ---------------------------------------------------------------------------
-// Test send actions — diagnostic-only sends to the shop's own contacts.
+// Test send actions — diagnostic-only sends, by default to the shop's own
+// contacts (the admin can type another email / phone in the dialog).
 // They DO write to notificationLog (so the admin sees them flow through the
-// audit log, confirming the pipeline end-to-end) but tag the recipient with
-// the SHOP_EMAIL/SHOP_PHONE so they're easy to distinguish from real customer
-// events.
+// audit log, confirming the pipeline end-to-end) with trigger "manual".
 // ---------------------------------------------------------------------------
 
-export async function sendTestEmail(): Promise<ActionResult> {
+export async function sendTestEmail(recipient?: string): Promise<ActionResult> {
   if (!(await getSession())) return UNAUTH;
+  const to = recipient?.trim() || SHOP_EMAIL;
+  if (!z.string().email().safeParse(to).success) {
+    return { success: false, error: "Neplatná emailová adresa." };
+  }
   const start = Date.now();
   const result = await sendEmail({
-    to: SHOP_EMAIL,
+    to,
     subject: "Test — Strojček notifikačný systém",
     html: `<p>Toto je testovací email zo Strojček admin panelu.</p>
 <p>Ak ho čítaš, SMTP funguje. Čas: ${new Date().toISOString()}</p>`,
@@ -355,7 +360,7 @@ export async function sendTestEmail(): Promise<ActionResult> {
     kind: "email-confirmation",
     status: result.success ? "sent" : "failed",
     appointmentId: null,
-    recipient: SHOP_EMAIL,
+    recipient: to,
     error: result.success ? null : extractSendError(result.error),
     durationMs: Date.now() - start,
     trigger: "manual",
@@ -367,12 +372,18 @@ export async function sendTestEmail(): Promise<ActionResult> {
     : { success: false, error: "Email sa nepodarilo odoslať." };
 }
 
-export async function sendTestSms(): Promise<ActionResult> {
+export async function sendTestSms(recipient?: string): Promise<ActionResult> {
   if (!(await getSession())) return UNAUTH;
+  let phone: string;
+  try {
+    phone = normalizePhone(recipient?.trim() || SHOP_PHONE_E164);
+  } catch {
+    return { success: false, error: "Neplatné telefónne číslo." };
+  }
   const start = Date.now();
   try {
     await sendSMS({
-      phone: SHOP_PHONE_E164,
+      phone,
       message: `Strojcek: testovacia SMS z admin panelu, ${new Date()
         .toISOString()
         .slice(11, 19)}.`,
@@ -381,7 +392,7 @@ export async function sendTestSms(): Promise<ActionResult> {
       kind: "sms-reminder",
       status: "sent",
       appointmentId: null,
-      recipient: SHOP_PHONE_E164,
+      recipient: phone,
       durationMs: Date.now() - start,
       trigger: "manual",
     });
@@ -392,7 +403,7 @@ export async function sendTestSms(): Promise<ActionResult> {
       kind: "sms-reminder",
       status: "failed",
       appointmentId: null,
-      recipient: SHOP_PHONE_E164,
+      recipient: phone,
       error: extractSendError(err),
       durationMs: Date.now() - start,
       trigger: "manual",
