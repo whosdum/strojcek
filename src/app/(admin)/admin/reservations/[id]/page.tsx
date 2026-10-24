@@ -12,7 +12,7 @@ import Link from "next/link";
 import { AppointmentDeleteButton } from "@/components/admin/appointment-delete-button";
 import { CustomerNoteEditor } from "@/components/admin/customer-note-editor";
 import { STATUS_LABELS, TIMEZONE, formatCurrency } from "@/lib/constants";
-import { PencilIcon } from "lucide-react";
+import { ChevronRightIcon, PencilIcon } from "lucide-react";
 
 export default async function ReservationDetailPage({
   params,
@@ -63,9 +63,11 @@ export default async function ReservationDetailPage({
               {appointment.customerId ? (
                 <Link
                   href={`/admin/customers/${appointment.customerId}`}
-                  className="break-words font-medium hover:underline sm:text-right"
+                  className="inline-flex items-center gap-0.5 break-words font-medium text-primary-strong underline-offset-4 hover:underline sm:justify-end sm:text-right"
+                  title="Otvoriť detail zákazníka"
                 >
                   {appointment.customerName}
+                  <ChevronRightIcon className="size-4 shrink-0" aria-hidden />
                 </Link>
               ) : (
                 <span className="break-words font-medium sm:text-right">
