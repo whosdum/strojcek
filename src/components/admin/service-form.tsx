@@ -89,7 +89,7 @@ export function ServiceForm({ service, onClose }: ServiceFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(onSubmit)} className="min-w-0 space-y-4">
       <div className="space-y-1.5">
         <Label htmlFor="name">Názov *</Label>
         <Input

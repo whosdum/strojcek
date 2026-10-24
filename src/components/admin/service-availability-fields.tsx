@@ -55,13 +55,13 @@ export function ServiceAvailabilityFields({
           const w = value[day.key];
           return (
             <div key={day.key} className="space-y-1">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <Label htmlFor={`avail-${day.key}`} className="sm:w-20">
-                  {day.long}
-                </Label>
+              {/* Mobile: day + select on one row, times wrap under the
+                  select. sm+: day | select | times in one row. */}
+              <div className="grid grid-cols-[5.5rem_minmax(0,1fr)] items-center gap-x-3 gap-y-2 sm:grid-cols-[6rem_11rem_minmax(0,1fr)]">
+                <Label htmlFor={`avail-${day.key}`}>{day.long}</Label>
                 <select
                   id={`avail-${day.key}`}
-                  className="block w-full rounded-lg border px-3 py-2 text-sm sm:w-48"
+                  className="block w-full min-w-0 rounded-lg border px-3 py-2 text-sm"
                   value={mode}
                   onChange={(e) => setDay(day.key, e.target.value as Mode)}
                 >
@@ -70,13 +70,13 @@ export function ServiceAvailabilityFields({
                   <option value="off">Nedostupná</option>
                 </select>
                 {mode === "custom" && w && (
-                  <div className="flex items-center gap-2">
+                  <div className="col-start-2 flex min-w-0 items-center gap-2 sm:col-start-3">
                     <Input
                       type="time"
                       aria-label={`${day.long} od`}
                       value={w.startTime}
                       onChange={(e) => setTime(day.key, "startTime", e.target.value)}
-                      className="w-full sm:w-28"
+                      className="min-w-0 flex-1"
                     />
                     <span className="text-muted-foreground">—</span>
                     <Input
@@ -84,7 +84,7 @@ export function ServiceAvailabilityFields({
                       aria-label={`${day.long} do`}
                       value={w.endTime}
                       onChange={(e) => setTime(day.key, "endTime", e.target.value)}
-                      className="w-full sm:w-28"
+                      className="min-w-0 flex-1"
                     />
                   </div>
                 )}
